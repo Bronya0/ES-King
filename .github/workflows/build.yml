@@ -1,0 +1,176 @@
+# https://docs.github.com/zh/actions/using-jobs/choosing-the-runner-for-a-job
+name: build-xxx
+
+on:
+  release:
+    types: [ created ]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        platform:
+          - windows/amd64
+          - windows/arm64
+
+    # 步骤合集
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Normalise platform tag
+      id: normalise_platform
+      shell: bash
+      run: |
+        tag=$(echo ${{ matrix.platform }} | sed -e 's/\//_/g')
+        echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+    - name: Normalise version tag
+      id: normalise_version
+      shell: bash
+      run: |
+        version=$(echo ${{ github.event.release.tag_name }} | sed -e 's/v//g')
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.11"
+
+    - name: Install dependencies
+      run: |
+        echo -n ${{ github.event.release.tag_name }} > assets/version.txt
+        
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        flet pack main.py -i assets/icon.ico -n kafka-king_v${{ steps.normalise_version.outputs.version }} --distpath dist/Kafka-King --add-data=assets/*:assets --product-name kafka-king
+        
+        copy README.md dist/Kafka-King/
+        copy LICENSE dist/Kafka-King/
+        Compress-Archive -Path ./dist/kafka-king -DestinationPath dist.zip -CompressionLevel Optimal
+
+    - name: Upload Release Asset
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./dist.zip
+        asset_name: kafka-king_v${{ steps.normalise_version.outputs.version }}_${{ steps.normalise_platform.outputs.tag }}.zip # 替换成适当的版本和平台标记
+        asset_content_type: application/octet-stream # 对于.exe文件，可以是application/octet-stream
+
+  build-macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        platform:
+          - darwin/amd64
+          - darwin/arm64
+
+    # 步骤合集
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Normalise platform tag
+      id: normalise_platform
+      shell: bash
+      run: |
+        tag=$(echo ${{ matrix.platform }} | sed -e 's/\//_/g' -e 's/darwin/mac/g' -e 's/amd64/intel/g')
+        echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+    - name: Normalise version tag
+      id: normalise_version
+      shell: bash
+      run: |
+        version=$(echo ${{ github.event.release.tag_name }} | sed -e 's/v//g')
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+          
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.11"
+        
+    - name: Install dependencies
+      run: |
+        echo -n ${{ github.event.release.tag_name }} > assets/version.txt
+        
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        flet pack main.py -i assets/icon.icns  -n kafka-king_v${{ steps.normalise_version.outputs.version }} --add-data=assets/*:assets --product-name kafka-king
+        ls -al dist/
+
+    # 打包.app文件夹为zip或tar.gz以方便传输
+    - name: Package .app folder
+      run: |
+         cd dist
+         tar -czf kafka-king_v${{ steps.normalise_version.outputs.version }}.tar.gz kafka-king_v${{ steps.normalise_version.outputs.version }}.app
+
+    - name: Upload Release Asset
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./dist/kafka-king_v${{ steps.normalise_version.outputs.version }}.tar.gz
+        asset_name: kafka-king_v${{ steps.normalise_version.outputs.version }}_${{ steps.normalise_platform.outputs.tag }}.tar.gz
+        asset_content_type: application/octet-stream
+
+  build-ubuntu:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        platform:
+          - linux/amd64
+
+    # 步骤合集
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Normalise platform tag
+      id: normalise_platform
+      shell: bash
+      run: |
+        tag=$(echo ${{ matrix.platform }} | sed -e 's/\//_/g' -e 's/darwin/mac/g' -e 's/amd64/intel/g')
+        echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+    - name: Normalise version tag
+      id: normalise_version
+      shell: bash
+      run: |
+        version=$(echo ${{ github.event.release.tag_name }} | sed -e 's/v//g')
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.11"
+
+    - name: Install dependencies
+      run: |
+        echo -n ${{ github.event.release.tag_name }} > assets/version.txt
+        
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        flet pack main.py -i assets/icon.ico  -n kafka-king_v${{ steps.normalise_version.outputs.version }} --add-data=assets/*:assets --product-name kafka-king
+        ls -al dist/
+
+    # 打包.app文件夹为zip或tar.gz以方便传输
+    # 为啥linux的要cp，因为我测试老是文件变动无法压缩
+    - name: Package .app folder
+      run: |
+        cp -r dist temp_dist
+        cd temp_dist
+        tar -czf kafka-king_v${{ steps.normalise_version.outputs.version }}.tar.gz kafka-king_v${{ steps.normalise_version.outputs.version }}
+
+    - name: Upload Release Asset
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./temp_dist/kafka-king_v${{ steps.normalise_version.outputs.version }}.tar.gz
+        asset_name: kafka-king_v${{ steps.normalise_version.outputs.version }}_${{ steps.normalise_platform.outputs.tag }}.tar.gz
+        asset_content_type: application/octet-stream
