@@ -3,7 +3,7 @@
 """
 @Time    : 2024/5/11 15:58
 @File    : font.py
-@Project : Kafka-King
+@Project : ES-King
 @Desc    : 
 """
 import platform

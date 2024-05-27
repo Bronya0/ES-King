@@ -3,7 +3,7 @@
 """
 @Time    : 2024/2/5 19:25
 @File    : common.py
-@Project : kafka-king
+@Project : ES-king
 @Desc    : 
 """
 import os
@@ -18,11 +18,11 @@ from service.translate import i18n
 prefix = "__es_connects__"
 KAFKA_KING_GROUP = "__es_king_group"
 CONFIG_KEY = "__config"
-GITHUB_URL = "https://github.com/Bronya0/Kafka-King"
-GITHUB_REPOS_URL = "https://api.github.com/repos/Bronya0/Kafka-King"
-UPDATE_URL = "https://api.github.com/repos/Bronya0/Kafka-King/releases/latest"
-ISSUES_URL = "https://github.com/Bronya0/Kafka-King/issues"
-ISSUES_API_URL = "https://api.github.com/repos/Bronya0/Kafka-King/issues?state=open"
+GITHUB_URL = "https://github.com/Bronya0/ES-King"
+GITHUB_REPOS_URL = "https://api.github.com/repos/Bronya0/ES-King"
+UPDATE_URL = "https://api.github.com/repos/Bronya0/ES-King/releases/latest"
+ISSUES_URL = "https://github.com/Bronya0/ES-King/issues"
+ISSUES_API_URL = "https://api.github.com/repos/Bronya0/ES-King/issues?state=open"
 
 BASEDIR = os.path.dirname(os.path.dirname(__file__))
 
