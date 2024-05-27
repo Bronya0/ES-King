@@ -60,14 +60,8 @@ class Broker(object):
             columns=[
                 ft.DataColumn(S_Text("ip")),
                 ft.DataColumn(S_Text("name")),
-                ft.DataColumn(S_Text("堆总量")),
-                ft.DataColumn(S_Text("堆使用")),
                 ft.DataColumn(S_Text("堆使用率")),
-                ft.DataColumn(S_Text("内存总量")),
-                ft.DataColumn(S_Text("内存使用")),
                 ft.DataColumn(S_Text("内存使用率")),
-                ft.DataColumn(S_Text("磁盘总量")),
-                ft.DataColumn(S_Text("磁盘使用")),
                 ft.DataColumn(S_Text("磁盘使用率")),
                 ft.DataColumn(S_Text("角色")),
                 ft.DataColumn(S_Text("是否为master")),
@@ -80,15 +74,23 @@ class Broker(object):
                     cells=[
                         ft.DataCell(S_Text(f"{_node['ip']}")),
                         ft.DataCell(S_Text(f"{_node['name']}")),
-                        ft.DataCell(S_Text(f"{_node['heap.max']}")),
-                        ft.DataCell(S_Text(f"{_node['heap.current']}")),
-                        ft.DataCell(S_Text(f"{_node['heap.percent']}%")),
-                        ft.DataCell(S_Text(f"{_node['ram.max']}")),
-                        ft.DataCell(S_Text(f"{_node['ram.current']}")),
-                        ft.DataCell(S_Text(f"{_node['ram.percent']}%")),
-                        ft.DataCell(S_Text(f"{_node['disk.total']}")),
-                        ft.DataCell(S_Text(f"{_node['disk.used']}")),
-                        ft.DataCell(S_Text(f"{_node['disk.used_percent']}%")),
+                        ft.DataCell(
+                            ft.Column([
+                                ft.Text(f"{_node['heap.current']}/{_node['heap.max']}={_node['heap.percent']}%", size=12),
+                                ft.ProgressBar(value=float(_node['heap.percent']) / 100.0, color="amber",bgcolor="#eeeeee")
+                            ], alignment=ft.MainAxisAlignment.CENTER)),
+                        ft.DataCell(
+                            ft.Column([
+                                ft.Text(f"{_node['ram.current']}/{_node['ram.max']}={_node['ram.percent']}%", size=12),
+                                ft.ProgressBar(value=float(_node['ram.percent']) / 100.0, color="amber",
+                                               bgcolor="#eeeeee")
+                            ], alignment=ft.MainAxisAlignment.CENTER)),
+                        ft.DataCell(
+                            ft.Column([
+                                ft.Text(f"{_node['disk.used']}/{_node['disk.total']}={_node['disk.used_percent']}%",size=12),
+                                ft.ProgressBar(value=float(_node['disk.used_percent']) / 100.0, color="amber",
+                                               bgcolor="#eeeeee")
+                            ], alignment=ft.MainAxisAlignment.CENTER)),
                         ft.DataCell(S_Text(f"{_node['node.role']}")),
                         ft.DataCell(S_Text(f"{_node['master']}")),
                         ft.DataCell(S_Text(f"{_node['cpu']}")),
