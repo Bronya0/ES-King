@@ -27,7 +27,7 @@ ISSUES_API_URL = "https://api.github.com/repos/Bronya0/Kafka-King/issues?state=o
 BASEDIR = os.path.dirname(os.path.dirname(__file__))
 
 c_version = open(f'{BASEDIR}/assets/version.txt', 'r', encoding='utf-8').read().rstrip().replace('\n', '')
-TITLE = "ES King {}".format(c_version)
+TITLE = "ES-King {}".format(c_version)
 CURRENT_ES_CONNECT_KEY = "current_es_connect"
 
 view_instance_map = {}

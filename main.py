@@ -96,8 +96,7 @@ class Main:
         # 顶部导航
         # 如果 AppBar.adaptive=True 且应用程序在 iOS 或 macOS 设备上打开，则仅使用此列表的第一个元素!!!!!!
         self.page.appbar = ft.AppBar(
-            leading=ft.Image(src="icon.png"),
-            leading_width=40,
+            leading=ft.Image(src="icon.png", expand=True),
             title=S_Text(TITLE),
             bgcolor=ft.colors.SURFACE_VARIANT,
             actions=[
