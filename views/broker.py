@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 # -*-coding:utf-8 -*-
+import json
 
 import flet as ft
 from flet_core import ControlEvent
 
-from service.common import S_Text, build_tab_container
+from service.common import S_Text, build_tab_container, human_size
 from service.es_service import es_service
 
 
@@ -15,6 +16,8 @@ class Broker(object):
     """
 
     def __init__(self):
+        self.stats_info = None
+        self.stats = None
         self.nodes_table = None
         self.nodes = None
         self.base_info = None
@@ -26,7 +29,7 @@ class Broker(object):
         #     raise Exception("请先选择一个可用的kafka连接！")
 
         # 先加载框架
-        self.base_info_tab = ft.Tab(
+        self.stats_tab = ft.Tab(
             text="基础信息", content=ft.Column(), icon=ft.icons.INFO_OUTLINE
         )
 
@@ -42,7 +45,7 @@ class Broker(object):
         self.tab = ft.Tabs(
             tabs=[
                 self.node_tab,
-                # self.base_info_tab,
+                self.stats_tab,
                 # self.config_tab,
             ],
         )
@@ -56,6 +59,7 @@ class Broker(object):
             return "请先选择一个可用的ES连接！\nPlease select an available kafka connection first!"
 
         self.nodes = es_service.get_nodes()
+        self.stats = es_service.get_stats()
         self.cluster_table = ft.DataTable(
             columns=[
                 ft.DataColumn(S_Text("ip")),
@@ -76,8 +80,10 @@ class Broker(object):
                         ft.DataCell(S_Text(f"{_node['name']}")),
                         ft.DataCell(
                             ft.Column([
-                                ft.Text(f"{_node['heap.current']}/{_node['heap.max']}={_node['heap.percent']}%", size=12),
-                                ft.ProgressBar(value=float(_node['heap.percent']) / 100.0, color="amber",bgcolor="#eeeeee")
+                                ft.Text(f"{_node['heap.current']}/{_node['heap.max']}={_node['heap.percent']}%",
+                                        size=12),
+                                ft.ProgressBar(value=float(_node['heap.percent']) / 100.0, color="amber",
+                                               bgcolor="#eeeeee")
                             ], alignment=ft.MainAxisAlignment.CENTER)),
                         ft.DataCell(
                             ft.Column([
@@ -87,7 +93,8 @@ class Broker(object):
                             ], alignment=ft.MainAxisAlignment.CENTER)),
                         ft.DataCell(
                             ft.Column([
-                                ft.Text(f"{_node['disk.used']}/{_node['disk.total']}={_node['disk.used_percent']}%",size=12),
+                                ft.Text(f"{_node['disk.used']}/{_node['disk.total']}={_node['disk.used_percent']}%",
+                                        size=12),
                                 ft.ProgressBar(value=float(_node['disk.used_percent']) / 100.0, color="amber",
                                                bgcolor="#eeeeee")
                             ], alignment=ft.MainAxisAlignment.CENTER)),
@@ -101,14 +108,76 @@ class Broker(object):
             column_spacing=20,
             expand=True
         )
+        stats_indices = self.stats['indices']
+        self.stats_tab.content = build_tab_container(
+            col_controls=[
+                ft.Row([
+                    ft.Card(ft.DataTable(columns=[
+                        ft.DataColumn(S_Text("分片")), ft.DataColumn(S_Text("")),
+                    ], rows=[
+                        ft.DataRow(
+                            cells=[ft.DataCell(S_Text("分片总数")), ft.DataCell(S_Text(f"{stats_indices['count']}")),
+                                   ]),
+                        ft.DataRow(cells=[ft.DataCell(S_Text("主分片数")),
+                                   ft.DataCell(S_Text(f"{stats_indices['shards']['primaries']}")),]),
+                        ft.DataRow(cells=[ft.DataCell(S_Text("副本分片数")),
+                                   ft.DataCell(S_Text(f"{stats_indices['shards']['replication']}")),]),
+                        ft.DataRow(cells=[ft.DataCell(S_Text("最少索引分片数")),
+                                   ft.DataCell(S_Text(f"{stats_indices['shards']['index']['shards']['min']}")),]),
+                        ft.DataRow(cells=[ft.DataCell(S_Text("最大索引分片数")),
+                                   ft.DataCell(S_Text(f"{stats_indices['shards']['index']['shards']['max']}")),]),
+                        ft.DataRow(cells=[ft.DataCell(S_Text("平均索引分片数")),
+                                   ft.DataCell(S_Text(f"{stats_indices['shards']['index']['shards']['avg']}")),]),
+                    ])),
+                    ft.Card(ft.DataTable(columns=[
+                        ft.DataColumn(S_Text("文档")), ft.DataColumn(S_Text("")),
+                    ], rows=[
+                        ft.DataRow(
+                            cells=[
+                                ft.DataCell(S_Text("文档总数")),
+                                ft.DataCell(S_Text(f"{stats_indices['docs']['count']}")),
 
-        # self.base_info_tab.content = build_tab_container(
-        #     col_controls=[
-        #         ft.Row([
-        #             self.base_info,
-        #         ])
-        #     ]
-        # )
+                            ]),
+                        ft.DataRow(
+                            cells=[ft.DataCell(S_Text("已删除文档数")),
+                                ft.DataCell(S_Text(f"{stats_indices['docs']['deleted']}")),])
+                    ])),
+                    ft.Card(ft.DataTable(columns=[
+                        ft.DataColumn(S_Text("存储大小")), ft.DataColumn(S_Text("")),
+                    ], rows=[
+                        ft.DataRow(
+                            cells=[
+                                ft.DataCell(S_Text("存储大小")), ft.DataCell(S_Text(f"{human_size(stats_indices['store']['size_in_bytes'])}"))]),
+                    ])),
+                    ft.Card(ft.DataTable(columns=[
+                        ft.DataColumn(S_Text("缓存")), ft.DataColumn(S_Text("")),
+                    ], rows=[
+                        ft.DataRow(
+                            cells=[
+                                ft.DataCell(S_Text("字段缓存")),
+                                ft.DataCell(S_Text(f"{human_size(stats_indices['fielddata']['memory_size_in_bytes'])}")),
+
+
+                            ]),
+                        ft.DataRow(
+                            cells=[ft.DataCell(S_Text("查询缓存")),
+                                ft.DataCell(S_Text(f"{human_size(stats_indices['query_cache']['memory_size_in_bytes'])}")),])
+                    ])),
+                    ft.Card(ft.DataTable(columns=[
+                        ft.DataColumn(S_Text("段")), ft.DataColumn(S_Text("")),
+                    ], rows=[
+                        ft.DataRow(
+                            cells=[
+                                ft.DataCell(S_Text("段总数")),
+                                ft.DataCell(S_Text(f"{stats_indices['segments']['count']}")),
+
+                            ]),
+                        ft.DataRow([ft.DataCell(S_Text("段内存")),
+                                ft.DataCell(S_Text(f"{human_size(stats_indices['segments']['memory_in_bytes'])}"))])
+                    ])),
+                ])
+            ]
+        )
 
         self.node_tab.content = build_tab_container(
             col_controls=[

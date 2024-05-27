@@ -6,6 +6,7 @@
 @Project : ES-king
 @Desc    : 
 """
+import math
 import os
 
 import flet
@@ -119,13 +120,13 @@ Navigation = flet.NavigationRail(
         flet.NavigationRailDestination(
             icon_content=flet.Icon(flet.icons.LIBRARY_BOOKS_OUTLINED, tooltip="增删改topic及partition"),
             selected_icon_content=flet.Icon(flet.icons.LIBRARY_BOOKS),
-            label=i18n("主题"),
+            label=i18n("索引"),
         ),
         flet.NavigationRailDestination(
             icon_content=flet.Icon(flet.icons.SWITCH_ACCESS_SHORTCUT_ADD_OUTLINED,
                                    tooltip="模拟producer及consumer"),
             selected_icon_content=flet.Icon(flet.icons.SWITCH_ACCESS_SHORTCUT_ADD),
-            label=i18n("模拟"),
+            label=i18n("RestApi"),
         ),
 
         flet.NavigationRailDestination(
@@ -175,18 +176,27 @@ class page_info:
 common_page = page_info()
 
 
+def human_size(size_in_bytes):
+    if size_in_bytes == 0:
+        return "0 B"
+    units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
+    index = int(math.floor(math.log(size_in_bytes, 1024)))
+    size = round(size_in_bytes / math.pow(1024, index), 2)
+    return f"{size} {units[index]}"
+
+
 def build_tab_container(col_controls):
     """
     一个通用的、自适应的内容
     """
     return flet.Column(
-            scroll=flet.ScrollMode.ALWAYS,  # 设置滚动条始终显示
-            controls=[
-                flet.Container(
-                    alignment=flet.alignment.top_left, padding=10,
-                    content=flet.Column(
-                        scroll=flet.ScrollMode.ALWAYS,
-                        controls=col_controls
-                    )
+        scroll=flet.ScrollMode.ALWAYS,  # 设置滚动条始终显示
+        controls=[
+            flet.Container(
+                alignment=flet.alignment.top_left, padding=10,
+                content=flet.Column(
+                    scroll=flet.ScrollMode.ALWAYS,
+                    controls=col_controls
                 )
-            ])
+            )
+        ])
