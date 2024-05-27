@@ -3,7 +3,7 @@
 """
 @Time    : 2024/2/14 10:50
 @File    : simulate.py
-@Project : kafka-king
+@Project : ES-king
 @Desc    : 
 """
 import time

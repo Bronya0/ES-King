@@ -21,7 +21,7 @@ class Help(object):
                 S_Text(
                     "3、程序吃不吃内存？正常情况下差不多100M内存左右，比较少，如果topic数量很多，内存占用会增加（主要是渲染页面用，切换一下就回收了）"),
                 S_Text("4、遇到bug怎么办？点【建议】，到【BUG反馈】也就是github提issue，或者直接联系我。"),
-                S_Text("5、往期版本汇总：https://github.com/Bronya0/Kafka-King/releases"),
+                S_Text("5、往期版本汇总：https://github.com/Bronya0/ES-King/releases"),
                 S_Text("6、有没有打算开发类似的redis、es工具？懒癌晚期，看有没有时间吧，可以群里踢我"),
                 S_Text("7、qq技术群：964440643，交流中间件或软件开发知识"),
                 ft.Image(src="qq.jpg", width=220)

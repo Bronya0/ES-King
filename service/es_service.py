@@ -3,7 +3,7 @@
 """
 @Time    : 2024/1/31 16:16
 @File    : kafka_service.py
-@Project : kafka-king
+@Project : ES-king
 @Desc    : 
 """
 import base64

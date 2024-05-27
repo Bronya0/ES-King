@@ -48,7 +48,7 @@ class Main:
 
         # 编辑连接
         self.edit_conn_name_input = TextField(label="连接名", hint_text="例如：本地环境", height=40, content_padding=5)
-        self.es_input = TextField(label="地址", hint_text="例如：http://127.0.0.1:9200", height=40,
+        self.edit_es_input = TextField(label="地址", hint_text="例如：http://127.0.0.1:9200", height=40,
                                   content_padding=5)
         self.edit_username = TextField(label="Basic Auth用户名(可选)", hint_text="", height=40,
                                        content_padding=5)
@@ -205,9 +205,9 @@ class Main:
         def cancel(event):
             close_dlg(event)
             self.conn_name_input.value = None
-            self.es_input.value = None
-            self.sasl_plain_username.value = None
-            self.sasl_plain_password.value = None
+            self.edit_es_input.value = None
+            self.username.value = None
+            self.password.value = None
 
         dlg_modal = ft.AlertDialog(
             modal=True,
@@ -260,8 +260,8 @@ class Main:
             close_dlg(event)
             self.edit_conn_name_input.value = None
             self.edit_es_input.value = None
-            self.edit_sasl_plain_username.value = None
-            self.edit_sasl_plain_password.value = None
+            self.edit_username.value = None
+            self.edit_password.value = None
 
         key = self.connect_dd.value
         if not key:
@@ -269,7 +269,7 @@ class Main:
             return
         connects = self.page.client_storage.get(prefix).get(key, [None, None, None])
         self.edit_conn_name_input.value = key
-        self.edit_es_input.value, self.edit_sasl_plain_username.value, self.edit_sasl_plain_password.value = connects
+        self.edit_es_input.value, self.edit_username.value, self.edit_password.value = connects
 
         e.page.dialog = ft.AlertDialog(
             modal=True,
@@ -279,15 +279,15 @@ class Main:
                 ft.Column([
                     self.edit_conn_name_input,
                     self.edit_es_input,
-                    self.edit_sasl_plain_username,
-                    self.edit_sasl_plain_password,
+                    self.edit_username,
+                    self.edit_password,
                     ft.Row([
                         ft.TextButton("连接测试", on_click=self.test_connect, on_long_press=True,
                                       style=ft.ButtonStyle(color=ft.colors.RED),
                                       data=[self.edit_conn_name_input,
                                             self.edit_es_input,
-                                            self.edit_sasl_plain_username,
-                                            self.edit_sasl_plain_password, ]
+                                            self.edit_username,
+                                            self.edit_password, ]
                                       ),
                         ft.TextButton("删除", on_click=self.delete_connect,
                                       style=ft.ButtonStyle(color=ft.colors.RED),
@@ -296,8 +296,8 @@ class Main:
                         ft.TextButton("保存", on_click=self.add_connect,
                                       data=[self.edit_conn_name_input,
                                             self.edit_es_input,
-                                            self.edit_sasl_plain_username,
-                                            self.edit_sasl_plain_password, ]
+                                            self.edit_username,
+                                            self.edit_password, ]
                                       ),
                         ft.TextButton("取消", on_click=cancel),
                     ])
