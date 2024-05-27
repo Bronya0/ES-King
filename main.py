@@ -1,4 +1,5 @@
 import gc
+import os
 import traceback
 
 import flet as ft
@@ -171,16 +172,18 @@ class Main:
         """
         存储连接信息，会覆盖，唯一key是连接名。{prefix: {"name1": [bootstraps, sasl name, sasl pwd]}}
         """
-        new_connect, es_input, sasl_plain_username, sasl_plain_password = [i.value for i in e.control.data]
+        new_connect, es_input, username, password = [i.value for i in e.control.data]
         print("添加连接：", e.control.data)
         if not new_connect or not es_input:
             open_snack_bar(e.page, "请正确填写连接信息", False)
             return
 
+        # 按不同平台对link规整
+
         connects = self.page.client_storage.get(prefix)
         connects = {} if connects is None else connects
         connects.pop(new_connect, None)
-        connects[new_connect] = [es_input, sasl_plain_username, sasl_plain_password]
+        connects[new_connect] = [es_input, username, password]
         print("保存：", connects)
 
         self.page.client_storage.set(prefix, connects)
@@ -343,10 +346,8 @@ class Main:
         self.connect_dd.label = key
 
         conns: dict = self.page.client_storage.get(prefix)
-
-        info_lst = conns.get(key)
-        HOST, USER_NAME, PWD = info_lst
-        print(HOST)
+        HOST, USER_NAME, PWD = conns.get(key)
+        print("HOST: ", HOST)
         self.page.appbar.title = S_Text(f"{TITLE} | 当前连接: {key}")
         self.Navigation.selected_index = 0
         print("切换连接时，清空页面缓存")
@@ -507,4 +508,4 @@ def init(page: ft.Page):
 
 
 if __name__ == '__main__':
-    ft.app(target=init, assets_dir="assets")
+    ft.app(target=init, assets_dir="assets", name="ES-King")

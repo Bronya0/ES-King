@@ -13,13 +13,10 @@ class Broker(object):
     Cluster页的组件
     kafka版本、操作系统、集群信息等等
     """
-    throttle_time_ms = 'throttle_time_ms'
-    cluster_id = 'cluster_id'
-    controller_id = 'controller_id'
-    version = 'api_version'
-    detail_configs = 'detail_configs'
 
     def __init__(self):
+        self.nodes_table = None
+        self.nodes = None
         self.base_info = None
         self.api_version = None
         self.meta = None
@@ -45,8 +42,8 @@ class Broker(object):
         self.tab = ft.Tabs(
             tabs=[
                 self.node_tab,
-                self.base_info_tab,
-                self.config_tab,
+                # self.base_info_tab,
+                # self.config_tab,
             ],
         )
 
@@ -56,62 +53,60 @@ class Broker(object):
 
     def init(self, page=None):
         if not es_service.connect_obj:
-            return "请先选择一个可用的kafka连接！\nPlease select an available kafka connection first!"
+            return "请先选择一个可用的ES连接！\nPlease select an available kafka connection first!"
 
-        self.meta, self.api_version = kafka_service.get_brokers()
-        self.base_info = ft.DataTable(
-            columns=[
-                ft.DataColumn(S_Text(f"{self.throttle_time_ms}")),
-                ft.DataColumn(S_Text(f"{self.cluster_id}")),
-                ft.DataColumn(S_Text(f"{self.controller_id}")),
-                ft.DataColumn(S_Text(f"{self.version}")),
-            ],
-            rows=[
-                ft.DataRow(
-                    cells=[
-                        ft.DataCell(S_Text(f"{self.meta[self.throttle_time_ms]}")),
-                        ft.DataCell(S_Text(f"{self.meta[self.cluster_id]}")),
-                        ft.DataCell(S_Text(f"{self.meta[self.controller_id]}")),
-                        ft.DataCell(S_Text(f"{self.api_version}")),
-                    ],
-                )
-            ],
-            column_spacing=20,
-            expand=True
-        )
-
+        self.nodes = es_service.get_nodes()
         self.cluster_table = ft.DataTable(
             columns=[
-                ft.DataColumn(S_Text("broker.id")),
-                ft.DataColumn(S_Text("host")),
-                ft.DataColumn(S_Text("port")),
-                ft.DataColumn(S_Text("机架感知")),
-                ft.DataColumn(S_Text("查看配置")),
+                ft.DataColumn(S_Text("ip")),
+                ft.DataColumn(S_Text("name")),
+                ft.DataColumn(S_Text("堆总量")),
+                ft.DataColumn(S_Text("堆使用")),
+                ft.DataColumn(S_Text("堆使用率")),
+                ft.DataColumn(S_Text("内存总量")),
+                ft.DataColumn(S_Text("内存使用")),
+                ft.DataColumn(S_Text("内存使用率")),
+                ft.DataColumn(S_Text("磁盘总量")),
+                ft.DataColumn(S_Text("磁盘使用")),
+                ft.DataColumn(S_Text("磁盘使用率")),
+                ft.DataColumn(S_Text("角色")),
+                ft.DataColumn(S_Text("是否为master")),
+                ft.DataColumn(S_Text("cpu")),
+                ft.DataColumn(S_Text("5分钟负载")),
+
             ],
             rows=[
                 ft.DataRow(
                     cells=[
-                        ft.DataCell(S_Text(broker['node_id'])),
-                        ft.DataCell(S_Text(broker['host'])),
-                        ft.DataCell(S_Text(broker['port'])),
-                        ft.DataCell(S_Text(broker['rack'])),
-                        ft.DataCell(ft.IconButton(icon=ft.icons.CONSTRUCTION, data=broker['node_id'],
-                                                  on_click=self.show_config_tab)),
+                        ft.DataCell(S_Text(f"{_node['ip']}")),
+                        ft.DataCell(S_Text(f"{_node['name']}")),
+                        ft.DataCell(S_Text(f"{_node['heap.max']}")),
+                        ft.DataCell(S_Text(f"{_node['heap.current']}")),
+                        ft.DataCell(S_Text(f"{_node['heap.percent']}%")),
+                        ft.DataCell(S_Text(f"{_node['ram.max']}")),
+                        ft.DataCell(S_Text(f"{_node['ram.current']}")),
+                        ft.DataCell(S_Text(f"{_node['ram.percent']}%")),
+                        ft.DataCell(S_Text(f"{_node['disk.total']}")),
+                        ft.DataCell(S_Text(f"{_node['disk.used']}")),
+                        ft.DataCell(S_Text(f"{_node['disk.used_percent']}%")),
+                        ft.DataCell(S_Text(f"{_node['node.role']}")),
+                        ft.DataCell(S_Text(f"{_node['master']}")),
+                        ft.DataCell(S_Text(f"{_node['cpu']}")),
+                        ft.DataCell(S_Text(f"{_node['load_5m']}")),
                     ],
-                )
-                for broker in sorted(self.meta['brokers'], key=lambda x: x['node_id'], )
+                ) for _node in self.nodes
             ],
             column_spacing=20,
             expand=True
         )
 
-        self.base_info_tab.content = build_tab_container(
-            col_controls=[
-                ft.Row([
-                    self.base_info,
-                ])
-            ]
-        )
+        # self.base_info_tab.content = build_tab_container(
+        #     col_controls=[
+        #         ft.Row([
+        #             self.base_info,
+        #         ])
+        #     ]
+        # )
 
         self.node_tab.content = build_tab_container(
             col_controls=[
@@ -127,7 +122,7 @@ class Broker(object):
         """
         e.control.disabled = True
         broker_id = e.control.data
-        configs = kafka_service.get_configs(res_type='broker', name=broker_id)
+        configs = es_service.get_configs(res_type='broker', name=broker_id)
 
         _col = ft.ListView(expand=True, spacing=10, padding=10)
 

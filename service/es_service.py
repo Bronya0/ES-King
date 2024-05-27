@@ -13,14 +13,20 @@ import os
 import time
 import traceback
 from collections import defaultdict
+from datetime import date, datetime
 from typing import Optional
+from urllib.parse import quote
 
 import requests
+from urllib.parse import urlsplit, urlunparse,urljoin, urlencode
 
 # 配置日志输出
 logging.basicConfig(level=logging.INFO)
 
+# API
+FORMAT = "?format=json&pretty"
 HEALTHY_API = "_cat/health"
+NODES_API = "_cat/nodes?format=json&pretty&h=ip,name,heap.percent,heap.current,heap.max,ram.percent,ram.current,ram.max,node.role,master,cpu,load_1m,load_5m,load_15m,disk.used_percent,disk.used,disk.total"
 
 
 class Connect:
@@ -33,7 +39,9 @@ class Connect:
 class ESService:
     def __init__(self):
         self.connect_name = None
-        self.connect_obj = None
+        self.connect_obj: Optional[Connect] = None
+        self.headers = None
+        self.host = None
 
     def set_connect(self, key, host, username, pwd):
         self.connect_name = key
@@ -42,16 +50,52 @@ class ESService:
             username=username,
             pwd=pwd,
         )
+        self.headers = {'Authorization': base64.b64encode(f"{username}:{pwd}".encode()).decode()}
+        print("设置当前连接：", self.connect_obj.host)
 
     def test_client(self, host, username, pwd):
         # 测试连接
         try:
-            res = requests.get(url=os.path.join(host), headers={
-                'Authorization': base64.b64encode(f"{username}:{pwd}".encode()).decode()})
+            res = requests.get(url=host, headers=self.headers)
             res.raise_for_status()
             return True, None
         except Exception as e:
             return False, str(e)
+
+    def get_nodes(self):
+
+        """
+        获取集群节点信息
+        [
+            {
+                "ip": "",
+                "name": "xxx",
+                "heap.percent": "61",
+                "heap.current": "71.9gb",
+                "heap.max": "112gb",
+                "ram.percent": "71",
+                "ram.current": "417.2gb",
+                "ram.max": "612.5gb",
+                "node.role": "dim",
+                "master": "*",
+                "cpu": "20",
+                "load_1m": "6.30",
+                "load_5m": "51.32",
+                "load_15m": "5.24",
+                "disk.used_percent": "17.56",
+                "disk.used": "178.1gb",
+                "disk.total": "44.7gb"
+            }
+        ]
+        """
+        print(33, urljoin(self.connect_obj.host,NODES_API))
+        try:
+            res = requests.get(url=urljoin(self.connect_obj.host, NODES_API), headers=self.headers)
+            res.raise_for_status()
+            return res.json()
+        except Exception as e:
+            traceback.format_exc()
+            return None
 
 
 es_service = ESService()
