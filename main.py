@@ -1,5 +1,4 @@
 import gc
-import os
 import traceback
 
 import flet as ft
@@ -473,6 +472,7 @@ def init_config(page):
 
 
 def init(page: ft.Page):
+
     page.title = TITLE
 
     # 存储page引用
