@@ -33,13 +33,14 @@ CURRENT_ES_CONNECT_KEY = "current_es_connect"
 
 view_instance_map = {}
 # page index
-BROKER = 0
-TOPIC = 1
-SIMULATE = 2
-MONITOR = 3
-SETTINGS = 4
-SUGGEST = 5
-HELP = 6
+INFO = 0
+BROKER = 1
+TOPIC = 2
+SIMULATE = 3
+MONITOR = 4
+SETTINGS = 5
+SUGGEST = 6
+HELP = 7
 
 PAGE_WIDTH = 1620
 PAGE_HEIGHT = 880
@@ -113,29 +114,33 @@ Navigation = flet.NavigationRail(
     # 定义在导航栏中排列的按钮项的外观，该值必须是两个或更多NavigationRailDestination实例的列表。
     destinations=[
         flet.NavigationRailDestination(
-            icon_content=flet.Icon(flet.icons.HIVE_OUTLINED, tooltip="查看集群broker节点和配置"),
+            icon_content=flet.Icon(flet.icons.INSERT_CHART_OUTLINED,),
+            selected_icon_content=flet.Icon(flet.icons.INSERT_CHART),
+            label=i18n("指标"),
+        ),
+        flet.NavigationRailDestination(
+            icon_content=flet.Icon(flet.icons.HIVE_OUTLINED,),
             selected_icon_content=flet.Icon(flet.icons.HIVE),
             label=i18n("集群"),
         ),
         flet.NavigationRailDestination(
-            icon_content=flet.Icon(flet.icons.LIBRARY_BOOKS_OUTLINED, tooltip="增删改topic及partition"),
+            icon_content=flet.Icon(flet.icons.LIBRARY_BOOKS_OUTLINED,),
             selected_icon_content=flet.Icon(flet.icons.LIBRARY_BOOKS),
             label=i18n("索引"),
         ),
         flet.NavigationRailDestination(
-            icon_content=flet.Icon(flet.icons.SWITCH_ACCESS_SHORTCUT_ADD_OUTLINED,
-                                   tooltip="模拟producer及consumer"),
+            icon_content=flet.Icon(flet.icons.SWITCH_ACCESS_SHORTCUT_ADD_OUTLINED,),
             selected_icon_content=flet.Icon(flet.icons.SWITCH_ACCESS_SHORTCUT_ADD),
-            label=i18n("RestApi"),
+            label=i18n("Rest"),
         ),
 
         flet.NavigationRailDestination(
-            icon_content=flet.Icon(flet.icons.STACKED_BAR_CHART_ROUNDED, tooltip="监控（开发中）"),
+            icon_content=flet.Icon(flet.icons.STACKED_BAR_CHART_ROUNDED,),
             selected_icon_content=flet.Icon(flet.icons.STACKED_BAR_CHART),
             label=i18n("监控"),
         ),
         flet.NavigationRailDestination(
-            icon_content=flet.Icon(flet.icons.SETTINGS_OUTLINED, tooltip="配置（开发中）"),
+            icon_content=flet.Icon(flet.icons.SETTINGS_OUTLINED, ),
             selected_icon_content=flet.Icon(flet.icons.SETTINGS_SUGGEST_OUTLINED),
             label_content=S_Text(i18n("设置")),
         ),
