@@ -93,7 +93,7 @@ class Broker(object):
 
     def init_table(self):
         if not es_service.connect_obj:
-            return "请先选择一个可用的ES连接！\nPlease select an available kafka connection first!"
+            return "请先选择一个可用的ES连接！\nPlease select an available ES connection first!"
 
         # 节点列表表格
         self.cluster_table = ft.DataTable(

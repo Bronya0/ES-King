@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 @Time    : 2024/1/31 16:16
-@File    : kafka_service.py
+@File    : es_service.py
 @Project : ES-king
 @Desc    : 
 """

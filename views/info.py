@@ -41,7 +41,7 @@ class Info(object):
 
     def init_table(self):
         if not es_service.connect_obj:
-            return "请先选择一个可用的ES连接！\nPlease select an available kafka connection first!"
+            return "请先选择一个可用的ES连接！\nPlease select an available ES connection first!"
 
         stats_nodes = self.stats['nodes']
 
@@ -126,7 +126,7 @@ class Info(object):
                         ], rows=[
                             ft.DataRow(cells=[ft.DataCell(S_Text("可用CPU核心数")), ft.DataCell(S_Text(f"{stats_nodes['os']['available_processors']}")),]),
                             ft.DataRow(cells=[ft.DataCell(S_Text("分配给ES进程使用的CPU核心数")), ft.DataCell(S_Text(f"{stats_nodes['os']['allocated_processors']}")),]),
-                            ft.DataRow(cells=[ft.DataCell(S_Text("操作系统的名称及其出现次数")), ft.DataCell(ft.Text(value="见悬浮提示",tooltip=json.dumps(f"{stats_nodes['os']['pretty_names']}"))),]),
+                            ft.DataRow(cells=[ft.DataCell(S_Text("操作系统及总数")), ft.DataCell(ft.Text(value=json.dumps(f"{stats_nodes['os']['pretty_names']}")[:10]+"...",tooltip=json.dumps(f"{stats_nodes['os']['pretty_names']}"))),]),
                             ft.DataRow(cells=[ft.DataCell(S_Text("总内存")), ft.DataCell(S_Text(f"{human_size(stats_nodes['os']['mem']['total_in_bytes'])}")),]),
                             ft.DataRow(cells=[ft.DataCell(S_Text("已使用内存")), ft.DataCell(S_Text(f"{human_size(stats_nodes['os']['mem']['used_in_bytes'])}")),]),
                             ft.DataRow(cells=[ft.DataCell(S_Text("已使用内存百分比")), ft.DataCell(S_Text(f"{stats_nodes['os']['mem']['used_percent']}%")),]),

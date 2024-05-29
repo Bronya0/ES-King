@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 # -*-coding:utf-8 -*-
-from service.common import BROKER, TOPIC, MONITOR, SETTINGS, SIMULATE, SUGGEST, HELP, INFO
+from service.common import BROKER, INDEX, MONITOR, SETTINGS, REST, SUGGEST, HELP, INFO
 from views.broker import Broker
 from views.help import Help
+from views.index import Index
 from views.info import Info
-from views.monitor import Monitor
+from views.rest import Rest
 from views.settings import Settings
-from views.simulate import Simulate
 from views.suggest import Suggest
-from views.topic import Topic
 
 
 def get_view_instance(selected_index):
@@ -18,9 +17,8 @@ def get_view_instance(selected_index):
     return {
         INFO: Info,
         BROKER: Broker,
-        TOPIC: Topic,
-        SIMULATE: Simulate,
-        MONITOR: Monitor,
+        INDEX: Index,
+        REST: Rest,
         SETTINGS: Settings,
         SUGGEST: Suggest,
         HELP: Help,

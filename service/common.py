@@ -35,8 +35,8 @@ view_instance_map = {}
 # page index
 INFO = 0
 BROKER = 1
-TOPIC = 2
-SIMULATE = 3
+INDEX = 2
+REST = 3
 MONITOR = 4
 SETTINGS = 5
 SUGGEST = 6
@@ -128,17 +128,17 @@ Navigation = flet.NavigationRail(
             selected_icon_content=flet.Icon(flet.icons.LIBRARY_BOOKS),
             label=i18n("索引"),
         ),
-        flet.NavigationRailDestination(
-            icon_content=flet.Icon(flet.icons.SWITCH_ACCESS_SHORTCUT_ADD_OUTLINED,),
-            selected_icon_content=flet.Icon(flet.icons.SWITCH_ACCESS_SHORTCUT_ADD),
-            label=i18n("Rest"),
-        ),
+        # flet.NavigationRailDestination(
+        #     icon_content=flet.Icon(flet.icons.SWITCH_ACCESS_SHORTCUT_ADD_OUTLINED,),
+        #     selected_icon_content=flet.Icon(flet.icons.SWITCH_ACCESS_SHORTCUT_ADD),
+        #     label=i18n("Rest"),
+        # ),
 
-        flet.NavigationRailDestination(
-            icon_content=flet.Icon(flet.icons.STACKED_BAR_CHART_ROUNDED,),
-            selected_icon_content=flet.Icon(flet.icons.STACKED_BAR_CHART),
-            label=i18n("监控"),
-        ),
+        # flet.NavigationRailDestination(
+        #     icon_content=flet.Icon(flet.icons.STACKED_BAR_CHART_ROUNDED,),
+        #     selected_icon_content=flet.Icon(flet.icons.STACKED_BAR_CHART),
+        #     label=i18n("监控"),
+        # ),
         flet.NavigationRailDestination(
             icon_content=flet.Icon(flet.icons.SETTINGS_OUTLINED, ),
             selected_icon_content=flet.Icon(flet.icons.SETTINGS_SUGGEST_OUTLINED),

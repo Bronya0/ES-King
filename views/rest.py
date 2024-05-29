@@ -10,9 +10,8 @@ from service.common import S_Button, open_snack_bar
 from service.es_service import es_service
 
 
-class Monitor(object):
+class Rest(object):
     """
-    monitor页的组件
     """
 
     def __init__(self):
@@ -200,16 +199,16 @@ class Monitor(object):
 
     def init(self, page: ft.Page = None):
         if not es_service.connect_obj:
-            return "请先选择一个可用的kafka连接！\nPlease select an available kafka connection first!"
+            return "请先选择一个可用的ES连接！\nPlease select an available ES connection first!"
         self.page = page
-        groups = kafka_service.get_groups()
+        groups = es_service.get_groups()
         if groups:
             self.topic_groups_dd.options = [ft.dropdown.Option(text=i) for i in groups]
 
         else:
             self.topic_groups_dd.label = "无消费组"
 
-        current_kafka_connect = kafka_service.connect_name
+        current_kafka_connect = es_service.connect_name
         # 获取每个kafka连接对应的这块的存储的配置值
         self.topic_input.value = page.client_storage.get(self.topic_input_key + current_kafka_connect)
         self.topic_groups_dd.value = page.client_storage.get(self.topic_groups_key + current_kafka_connect)
@@ -229,7 +228,7 @@ class Monitor(object):
         topic_groups_dd = self.topic_groups_dd.value
 
         # 持久化，并和连接关联起来；修改配置则覆盖历史数据
-        current_kafka_connect = kafka_service.connect_name
+        current_kafka_connect = es_service.connect_name
         if topics is not None:
             topics = topics.rstrip().replace('，', ',')
             page.client_storage.set(self.topic_input_key + current_kafka_connect, topics)
@@ -271,7 +270,7 @@ class Monitor(object):
 
         lag_x, produce_x = [], []
         # lags: {topic: [[time1, lag], ]}
-        current_kafka_connect = kafka_service.connect_name
+        current_kafka_connect = es_service.connect_name
         connect_data_key = self.key + current_kafka_connect
         # lags: {topic: [[time1, end_offset, commit, lag], ]}
         lags = page.client_storage.get(connect_data_key)
