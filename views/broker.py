@@ -3,7 +3,7 @@
 import json
 
 import flet as ft
-from flet_core import ControlEvent
+from flet_core import ControlEvent, DataColumnSortEvent
 
 from service.common import S_Text, build_tab_container, human_size
 from service.es_service import es_service
@@ -16,15 +16,18 @@ class Broker(object):
     """
 
     def __init__(self):
+        # page
+        self.nodes_tmp = []
+        self.page_num = 1
+        self.page_size = 10
+        self.page_label = None
+        # order
+        self.reverse = None
         self.cluster_table_rows = None
-        self.stats_info = None
         self.stats = None
-        self.nodes_table = None
         self.nodes = None
-        self.base_info = None
-        self.api_version = None
-        self.meta = None
         self.cluster_table = None
+
 
         # 先加载框架
         self.stats_tab = ft.Tab(
@@ -54,55 +57,69 @@ class Broker(object):
         ]
 
     def init(self, page=None):
+        self.init_data()
+        self.init_rows()
+        self.init_table()
+
+    def init_data(self):
+        self.nodes = es_service.get_nodes()
+        self.stats = es_service.get_stats()
+        # page
+        self.nodes_tmp = self.nodes[:self.page_size]
+
+    def init_rows(self):
+        # page
+        offset = (self.page_num - 1) * self.page_size
+        self.cluster_table_rows = [
+            ft.DataRow(
+                cells=[
+                    ft.DataCell(S_Text(offset + i + 1)),
+                    ft.DataCell(S_Text(f"{_node['ip']}")),
+                    ft.DataCell(S_Text(f"{_node['name']}")),
+                    ft.DataCell(
+                        ft.Column([
+                            ft.Text(f"{_node['heap.current']}/{_node['heap.max']}={_node['heap.percent']}%",
+                                    size=12),
+                            ft.ProgressBar(value=float(_node['heap.percent']) / 100.0,
+                                           color="green" if float(_node['heap.percent']) < 70 else "amber" if float(
+                                               _node['heap.percent']) < 80 else "red")
+                        ], alignment=ft.MainAxisAlignment.CENTER), data=float(_node['heap.percent'])),
+                    ft.DataCell(
+                        ft.Column([
+                            ft.Text(f"{_node['ram.current']}/{_node['ram.max']}={_node['ram.percent']}%", size=12),
+                            ft.ProgressBar(value=float(_node['ram.percent']) / 100.0,
+                                           color="green" if float(_node['ram.percent']) < 70 else "amber" if float(
+                                               _node['ram.percent']) < 80 else "red", )
+                        ], alignment=ft.MainAxisAlignment.CENTER), data=float(_node['ram.percent'])),
+                    ft.DataCell(
+                        ft.Column([
+                            ft.Text(f"{_node['disk.used']}/{_node['disk.total']}={_node['disk.used_percent']}%",
+                                    size=12),
+                            ft.ProgressBar(value=float(_node['disk.used_percent']) / 100.0, color="green" if float(
+                                _node['disk.used_percent']) < 70 else "amber" if float(
+                                _node['disk.used_percent']) < 80 else "red", )
+                        ], alignment=ft.MainAxisAlignment.CENTER), data=float(_node['disk.used_percent'])),
+                    ft.DataCell(S_Text(f"{_node['node.role']}")),
+                    ft.DataCell(S_Text(f"{_node['master']}")),
+                    ft.DataCell(S_Text(f"{_node['cpu']}")),
+                    ft.DataCell(S_Text(f"{_node['load_5m']}")),
+                ]
+            ) for i, _node in enumerate(self.nodes_tmp)  # page
+        ]
+
+    def init_table(self):
         if not es_service.connect_obj:
             return "请先选择一个可用的ES连接！\nPlease select an available kafka connection first!"
 
-        self.nodes = es_service.get_nodes()
-        self.stats = es_service.get_stats()
-
         # 节点列表表格
-        self.cluster_table_rows = [
-                ft.DataRow(
-                    cells=[
-                        ft.DataCell(S_Text(f"{_node['ip']}")),
-                        ft.DataCell(S_Text(f"{_node['name']}")),
-                        ft.DataCell(
-                            ft.Column([
-                                ft.Text(f"{_node['heap.current']}/{_node['heap.max']}={_node['heap.percent']}%",
-                                        size=12),
-                                ft.ProgressBar(value=float(_node['heap.percent']) / 100.0,
-                                               color="green" if float(_node['heap.percent']) < 70 else "amber" if float(
-                                                   _node['heap.percent']) < 80 else "red")
-                            ], alignment=ft.MainAxisAlignment.CENTER), data=float(_node['heap.percent'])),
-                        ft.DataCell(
-                            ft.Column([
-                                ft.Text(f"{_node['ram.current']}/{_node['ram.max']}={_node['ram.percent']}%", size=12),
-                                ft.ProgressBar(value=float(_node['ram.percent']) / 100.0,
-                                               color="green" if float(_node['ram.percent']) < 70 else "amber" if float(
-                                                   _node['ram.percent']) < 80 else "red", )
-                            ], alignment=ft.MainAxisAlignment.CENTER)),
-                        ft.DataCell(
-                            ft.Column([
-                                ft.Text(f"{_node['disk.used']}/{_node['disk.total']}={_node['disk.used_percent']}%",
-                                        size=12),
-                                ft.ProgressBar(value=float(_node['disk.used_percent']) / 100.0, color="green" if float(
-                                    _node['disk.used_percent']) < 70 else "amber" if float(
-                                    _node['disk.used_percent']) < 80 else "red", )
-                            ], alignment=ft.MainAxisAlignment.CENTER)),
-                        ft.DataCell(S_Text(f"{_node['node.role']}")),
-                        ft.DataCell(S_Text(f"{_node['master']}")),
-                        ft.DataCell(S_Text(f"{_node['cpu']}")),
-                        ft.DataCell(S_Text(f"{_node['load_5m']}")),
-                    ]
-                ) for _node in self.nodes
-            ]
         self.cluster_table = ft.DataTable(
             columns=[
+                ft.DataColumn(S_Text("序号")),
                 ft.DataColumn(S_Text("ip")),
                 ft.DataColumn(S_Text("name")),
-                ft.DataColumn(S_Text("堆使用率"), on_sort=self.on_sort_heap),
-                ft.DataColumn(S_Text("内存使用率")),
-                ft.DataColumn(S_Text("磁盘使用率")),
+                ft.DataColumn(S_Text("堆使用率(点右侧排序)"), on_sort=self.on_sort),
+                ft.DataColumn(S_Text("内存使用率(点右侧排序)"), on_sort=self.on_sort),
+                ft.DataColumn(S_Text("磁盘使用率(点右侧排序)"), on_sort=self.on_sort),
                 ft.DataColumn(S_Text("角色")),
                 ft.DataColumn(S_Text("是否为master")),
                 ft.DataColumn(S_Text("cpu")),
@@ -124,7 +141,29 @@ class Broker(object):
                     , weight=ft.FontWeight.BOLD)]),
                 ft.Row([
                     self.cluster_table,
-                ])
+                ]),
+                # page
+                ft.Row(
+                    [
+                        # 翻页图标和当前页显示
+                        ft.IconButton(
+                            icon=ft.icons.ARROW_BACK,
+                            icon_size=20,
+                            on_click=self.page_prev,
+                            tooltip="上一页",
+                        ),
+                        ft.Text(f"{self.page_num}/{int(len(self.nodes) / self.page_size) + 1}"),
+                        ft.IconButton(
+                            icon=ft.icons.ARROW_FORWARD,
+                            icon_size=20,
+                            on_click=self.page_next,
+                            tooltip="下一页",
+                        ),
+                        ft.Text(f"每页{self.page_size}条"),
+                        ft.Slider(min=5, max=55, divisions=10, round=1,value=self.page_size, label="{value}", on_change_end=self.page_size_change),
+
+                    ]
+                )
             ]
         )
 
@@ -217,11 +256,50 @@ class Broker(object):
             ]
         )
 
-    def on_sort_heap(self, e):
+    def page_prev(self, e):
+        # page
+        if self.page_num == 1:
+            return
+        self.page_num -= 1
+
+        offset = (self.page_num - 1) * self.page_size
+        self.nodes_tmp = self.nodes[offset:offset + self.page_size]
+
+        self.init_rows()
+        self.init_table()
+        e.page.update()
+
+    def page_next(self, e):
+        # page
+        # 最后一页则return
+        if self.page_num * self.page_size >= len(self.nodes):
+            return
+        self.page_num += 1
+        offset = (self.page_num - 1) * self.page_size
+        self.nodes_tmp = self.nodes[offset:offset + self.page_size]
+
+        self.init_rows()
+        self.init_table()
+        e.page.update()
+
+    def page_size_change(self, e):
+        # page
+        self.page_size = int(e.control.value)
+        self.nodes_tmp = self.nodes[:self.page_size]
+
+        self.init_rows()
+        self.init_table()
+        e.page.update()
+
+    def on_sort(self, e: DataColumnSortEvent):
         """
         排序
         """
-        self.cluster_table_rows = sorted(self.cluster_table_rows, key=lambda x: x.cells[2].data, reverse=True)
+        # order
+        # 反转true false
+        self.reverse = not self.reverse
+        self.cluster_table_rows = sorted(self.cluster_table_rows, key=lambda x: x.cells[e.column_index].data, reverse=self.reverse)
+        self.init_table()
         e.page.update()
 
     def show_config_tab(self, e: ControlEvent):
