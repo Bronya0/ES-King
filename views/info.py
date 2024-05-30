@@ -71,7 +71,7 @@ class Info(object):
                                        ]),
                             ft.DataRow(cells=[ft.DataCell(S_Text("分片总数")), ft.DataCell(S_Text(f"{stats_indices['shards']['total']}")), ]),
                             ft.DataRow(cells=[ft.DataCell(S_Text("主分片总数")), ft.DataCell(S_Text(f"{stats_indices['shards']['primaries']}")), ]),
-                            ft.DataRow(cells=[ft.DataCell(S_Text("副本分片总数")), ft.DataCell(S_Text(f"{stats_indices['shards']['replication']}")), ]),
+                            ft.DataRow(cells=[ft.DataCell(S_Text("平均副本数")), ft.DataCell(S_Text(f"{round(stats_indices['shards']['replication'],1)}")), ]),
                             ft.DataRow(cells=[ft.DataCell(S_Text("最大索引分片数")), ft.DataCell(S_Text(f"{stats_indices['shards']['index']['shards']['max']}")), ]),
                             ft.DataRow(cells=[ft.DataCell(S_Text("最大索引主分片数")), ft.DataCell(S_Text(f"{stats_indices['shards']['index']['primaries']['max']}")), ]),
                         ], column_spacing=10,)),
