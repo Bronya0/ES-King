@@ -8,6 +8,7 @@
 """
 import base64
 import logging
+import traceback
 from typing import Optional
 from urllib.parse import urljoin
 
@@ -163,6 +164,24 @@ class ESService:
             return []
         res.raise_for_status()
         return res.json()
+
+    def create_index(self, name, number_of_shards=1, number_of_replicas=0):
+        """
+        创建索引
+        """
+        index_config = {
+            "settings": {
+                "number_of_shards": number_of_shards,  # 主分片数
+                "number_of_replicas": number_of_replicas  # 副本数
+            }
+        }
+        try:
+            res = requests.put(url=urljoin(self.connect_obj.host, f"{name}"), headers=self.headers, json=index_config)
+            res.raise_for_status()
+            return True, None
+        except Exception as e:
+            traceback.print_exc()
+            return False, str(e)
 
 
 es_service = ESService()

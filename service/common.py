@@ -73,7 +73,7 @@ def S_Button(**kwargs):
     )
 
 
-def open_snack_bar(page: flet.Page, msg, success=False):
+def open_snack_bar(page: flet.Page, msg, success=True):
     page.snack_bar.content = flet.Text(msg)
     page.snack_bar.open = True
     if success:

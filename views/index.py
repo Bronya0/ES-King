@@ -28,7 +28,8 @@ class Index(object):
 
         self.create_index_button = ft.TextButton("新建索引", on_click=self.create_index, icon=ft.icons.ADD,
                                                  style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)))
-        self.search_text = ft.TextField(label=' 检索索引名及别名，支持通配符*',label_style=ft.TextStyle(size=14), on_submit=self.search_table, width=300,
+        self.search_text = ft.TextField(label=' 检索索引名及别名，支持通配符*',label_style=ft.TextStyle(size=14),
+                                        on_submit=self.search_table, width=300,
                                         height=38, text_size=14, content_padding=5)
 
         self.index_tab = ft.Tab(
@@ -100,8 +101,8 @@ class Index(object):
         self.index_tab.content = build_tab_container(
             col_controls=[
                 ft.Row([
-                    self.create_index_button,
                     self.search_text,
+                    self.create_index_button,
                 ]),
                 ft.Row([
                     self.indexes_table,
@@ -173,8 +174,14 @@ class Index(object):
         :param e:
         :return:
         """
-        indexes = es_service.get_indexes(e.control.value)
-        self.search_table_handle(indexes)
+        progress_bar.visible = True
+        e.page.update()
+        try:
+            indexes = es_service.get_indexes(e.control.value)
+            self.search_table_handle(indexes)
+        except:
+            pass
+        progress_bar.visible = False
         e.page.update()
 
     def search_table_handle(self, indexes):
@@ -184,5 +191,44 @@ class Index(object):
         self.init_rows()
         self.init_table()
 
-    def create_index(self):
-        pass
+    def create_index(self, e):
+        input_name = ft.TextField(label="索引名", hint_text="例如：test_index", height=40, content_padding=5)
+        input_primary_shard = ft.TextField(label="主分片数", hint_text="例如：1", height=40, content_padding=5)
+        input_replica_shard = ft.TextField(label="副本数", hint_text="例如：1", height=40, content_padding=5)
+
+        def ensure(e):
+            if input_name.value is None:
+                open_snack_bar(e.page, "索引名填写错误！", success=False)
+                return
+            if input_primary_shard.value is None or int(input_primary_shard.value) < 0:
+                open_snack_bar(e.page, "主分片数填写错误！", success=False)
+                return
+            if input_replica_shard.value is None or int(input_replica_shard.value) < 0:
+                open_snack_bar(e.page, "副本数填写错误！", success=False)
+                return
+
+            res, err = es_service.create_index(input_name.value, int(input_primary_shard.value), int(input_replica_shard.value))
+            if err is not None:
+                open_snack_bar(e.page, err, success=False)
+                return
+            open_snack_bar(e.page, "创建成功！", success=True)
+            close_dlg(e)
+            e.page.update()
+
+        dlg_modal = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("创建索引"),
+            content=ft.Column([
+                input_name,
+                input_primary_shard,
+                input_replica_shard,
+            ], height=130),
+            actions=[
+                    ft.TextButton("确认", on_click=ensure),
+                    ft.TextButton("取消", on_click=close_dlg),
+            ],
+            # actions_alignment=ft.MainAxisAlignment.START,
+        )
+        e.page.dialog = dlg_modal
+        dlg_modal.open = True
+        e.page.update()
