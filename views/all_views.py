@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*-coding:utf-8 -*-
-from service.common import BROKER, INDEX, MONITOR, SETTINGS, REST, SUGGEST, HELP, INFO
+from service.common import BROKER, INDEX, SETTINGS, REST, SUGGEST, HELP, INFO, CORE
 from views.broker import Broker
+from views.core import Core
 from views.help import Help
 from views.index import Index
 from views.info import Info
@@ -16,6 +17,7 @@ def get_view_instance(selected_index):
     """
     return {
         INFO: Info,
+        CORE: Core,
         BROKER: Broker,
         INDEX: Index,
         REST: Rest,

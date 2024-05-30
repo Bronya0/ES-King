@@ -34,13 +34,14 @@ CURRENT_ES_CONNECT_KEY = "current_es_connect"
 view_instance_map = {}
 # page index
 INFO = 0
-BROKER = 1
-INDEX = 2
-REST = 3
-MONITOR = 4
-SETTINGS = 5
-SUGGEST = 6
-HELP = 7
+CORE = 1
+BROKER = 2
+INDEX = 3
+REST = 4
+MONITOR = 5
+SETTINGS = 6
+SUGGEST = 7
+HELP = 8
 
 PAGE_WIDTH = 1620
 PAGE_HEIGHT = 880
@@ -51,12 +52,11 @@ PAGE_MIN_HEIGHT = 720
 
 
 def S_Text(value, **kwargs):
-    if "color" not in kwargs:
-        kwargs["color"] = "white"
+    if "tooltip" not in kwargs:
+        kwargs["tooltip"] = value
     return flet.Text(
         selectable=True,
         value=value,
-        tooltip=value,
         **kwargs
     )
 
@@ -115,6 +115,11 @@ Navigation = flet.NavigationRail(
     group_alignment=-0.8,
     # 定义在导航栏中排列的按钮项的外观，该值必须是两个或更多NavigationRailDestination实例的列表。
     destinations=[
+        flet.NavigationRailDestination(
+            icon_content=flet.Icon(flet.icons.FAVORITE_OUTLINE, ),
+            selected_icon_content=flet.Icon(flet.icons.FAVORITE),
+            label=i18n("健康"),
+        ),
         flet.NavigationRailDestination(
             icon_content=flet.Icon(flet.icons.INSERT_CHART_OUTLINED,),
             selected_icon_content=flet.Icon(flet.icons.INSERT_CHART),

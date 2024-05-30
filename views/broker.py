@@ -49,11 +49,20 @@ class Broker(object):
     def init_data(self):
         self.nodes = es_service.get_nodes()
         # page
+        # 只在最开始、排序时执行一次
         self.nodes_tmp = self.nodes[:self.page_size]
 
     def init_rows(self):
         # page
         offset = (self.page_num - 1) * self.page_size
+        role_map = {
+            "di": "数据节点",
+            "im": "摄取节点",
+            "master": "主节点",
+            "coordinating": "协调节点",
+            "machine_learning": "机器学习节点",
+            "remote_client": "远程客户端节点"
+        }
         self.cluster_table_rows = [
             ft.DataRow(
                 cells=[
@@ -83,7 +92,7 @@ class Broker(object):
                                 _node['disk.used_percent']) < 70 else "amber" if float(
                                 _node['disk.used_percent']) < 80 else "red", )
                         ], alignment=ft.MainAxisAlignment.CENTER), data=float(_node['disk.used_percent'])),
-                    ft.DataCell(S_Text(f"{_node['node.role']}")),
+                    ft.DataCell(S_Text(f"{self.translate_node_roles(_node['node.role'])[:5]}...", tooltip=self.translate_node_roles(_node['node.role']))),
                     ft.DataCell(S_Text(f"{_node['master']}")),
                     ft.DataCell(S_Text(f"{_node['cpu']}")),
                     ft.DataCell(S_Text(f"{_node['load_5m']}")),
@@ -188,6 +197,37 @@ class Broker(object):
         # order
         # 反转true false
         self.reverse = not self.reverse
-        self.cluster_table_rows = sorted(self.cluster_table_rows, key=lambda x: x.cells[e.column_index].data, reverse=self.reverse)
+        key = {
+            3: lambda x: float(x['heap.percent']),  # 堆
+            4: lambda x: float(x['ram.percent']),  # 内存
+            5: lambda x: float(x['disk.used_percent']),  # 磁盘
+        }[e.column_index]
+
+        self.nodes = sorted(self.nodes, key=key, reverse=self.reverse)
+        self.nodes_tmp = self.nodes[:self.page_size]
+        self.init_rows()
         self.init_table()
         e.page.update()
+
+    def translate_node_roles(self, roles):
+        # 定义角色映射
+        role_mapping = {
+            'm': '主节点（master-eligible）',
+            'd': '数据节点（data）',
+            'i': '预处理节点（ingest）',
+            'c': '协调节点（coordinating）',
+            'l': '机器学习节点（ml）',
+            'v': '仅投票节点（voting-only）',
+            'r': '远程集群客户端（remote-cluster-client）',
+            's': '转换节点（transform）',
+            't': '数据流节点（data_streams）'
+        }
+
+        # 将角色字符串拆分为单个字符
+        role_list = list(roles)
+
+        # 将角色翻译为中文
+        translated_roles = [role_mapping.get(role,role) for role in role_list if role in role_mapping]
+
+        # 用逗号连接翻译后的角色
+        return '，'.join(translated_roles)

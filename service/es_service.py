@@ -26,6 +26,7 @@ logging.basicConfig(level=logging.INFO)
 # API
 FORMAT = "?format=json&pretty"
 STATS_API = "_cluster/stats" + FORMAT
+HEALTH_API = "_cluster/health"
 NODES_API = "_cat/nodes?format=json&pretty&h=ip,name,heap.percent,heap.current,heap.max,ram.percent,ram.current,ram.max,node.role,master,cpu,load_1m,load_5m,load_15m,disk.used_percent,disk.used,disk.total"
 
 
@@ -88,13 +89,35 @@ class ESService:
             }
         ]
         """
-        try:
-            res = requests.get(url=urljoin(self.connect_obj.host, NODES_API), headers=self.headers)
-            res.raise_for_status()
-            return res.json()
-        except Exception as e:
-            traceback.format_exc()
-            return None
+        res = requests.get(url=urljoin(self.connect_obj.host, NODES_API), headers=self.headers)
+        res.raise_for_status()
+        return res.json()
+
+    def get_health(self):
+        """
+        获取集群健康信息
+        [
+            {
+                "epoch": "1716819919",
+                "timestamp": "14:25:19",
+                "cluster": "cluster1",
+                "status": "yellow",
+                "node.total": "1",
+                "node.data": "1",
+                "shards": "3",
+                "pri": "3",
+                "relo": "0",
+                "init": "0",
+                "unassign": "2",
+                "pending_tasks": "0",
+                "max_task_wait_time": "-",
+                "active_shards_percent": "60.0%"
+            }
+        ]
+        """
+        res = requests.get(url=urljoin(self.connect_obj.host, HEALTH_API), headers=self.headers)
+        res.raise_for_status()
+        return res.json()
 
     def get_stats(self):
         """
@@ -118,14 +141,10 @@ class ESService:
             }
         ]
         """
-        try:
-            print(urljoin(self.connect_obj.host, STATS_API))
-            res = requests.get(url=urljoin(self.connect_obj.host, STATS_API), headers=self.headers)
-            res.raise_for_status()
-            return res.json()
-        except Exception as e:
-            traceback.format_exc()
-            return None
+        print(urljoin(self.connect_obj.host, STATS_API))
+        res = requests.get(url=urljoin(self.connect_obj.host, STATS_API), headers=self.headers)
+        res.raise_for_status()
+        return res.json()
 
 
 es_service = ESService()

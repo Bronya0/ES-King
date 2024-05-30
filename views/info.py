@@ -5,7 +5,7 @@ import json
 import flet as ft
 from flet_core import ControlEvent, DataColumnSortEvent
 
-from service.common import S_Text, build_tab_container, human_size
+from service.common import S_Text, build_tab_container, human_size, common_page, Navigation
 from service.es_service import es_service
 
 
@@ -15,15 +15,16 @@ class Info(object):
 
     def __init__(self):
         self.stats = None
+        self.health = None
 
         # 先加载框架
-        self.stats_tab = ft.Tab(
-            text="基础信息", content=ft.Column(), icon=ft.icons.INFO_OUTLINE
+        self.health_tab = ft.Tab(
+            text="集群健康", content=ft.Column(), icon=ft.icons.INFO_OUTLINE
         )
 
         self.tab = ft.Tabs(
             tabs=[
-                self.stats_tab,
+                self.health_tab,
             ],
             expand=True,
         )
@@ -37,103 +38,76 @@ class Info(object):
         self.init_table()
 
     def init_data(self):
-        self.stats = es_service.get_stats()
+        self.health = es_service.get_health()
 
     def init_table(self):
         if not es_service.connect_obj:
             return "请先选择一个可用的ES连接！\nPlease select an available ES connection first!"
 
-        stats_nodes = self.stats['nodes']
+        status = self.health['status']
+        color = {
+            "green": "green",
+            "yellow": "amber",
+            "red": "red",
+        }[status]
 
-        # card集群基本信息
-        stats_indices = self.stats['indices']
-        self.stats_tab.content = build_tab_container(
+        # 设置左侧图标的颜色，作为健康度
+        Navigation.destinations[0].icon_content.color = color
+        Navigation.destinations[0].selected_icon_content.color = color
+
+        self.health_tab.content = build_tab_container(
             col_controls=[
-
                 ft.Row(
                     [
                         ft.Card(ft.DataTable(columns=[
-                            ft.DataColumn(S_Text("节点", weight=ft.FontWeight.BOLD)), ft.DataColumn(S_Text("")),
+                            ft.DataColumn(S_Text("健康", weight=ft.FontWeight.BOLD)), ft.DataColumn(S_Text("")),
                         ], rows=[
-                            ft.DataRow(cells=[ft.DataCell(S_Text("节点总数")), ft.DataCell(S_Text(f"{stats_nodes['count']['total']}"))]),
-                            ft.DataRow(cells=[ft.DataCell(S_Text("协调节点数")), ft.DataCell(S_Text(f"{stats_nodes['count']['coordinating_only']}"))]),
-                            ft.DataRow(cells=[ft.DataCell(S_Text("存储节点数")), ft.DataCell(S_Text(f"{stats_nodes['count']['data']}"))]),
-                            ft.DataRow(cells=[ft.DataCell(S_Text("可写节点数")), ft.DataCell(S_Text(f"{stats_nodes['count']['ingest']}"))]),
-                            ft.DataRow(cells=[ft.DataCell(S_Text("允许主节点数")), ft.DataCell(S_Text(f"{stats_nodes['count']['master']}"))]),
-                            ft.DataRow(cells=[ft.DataCell(S_Text("仅投票节点数")), ft.DataCell(S_Text(f"{stats_nodes['count']['voting_only']}"))]),
-                        ], column_spacing=10,),),
+                            ft.DataRow(cells=[ft.DataCell(S_Text("集群名称")),
+                                              ft.DataCell(S_Text(f"{self.health['cluster_name']}"))]),
+                            ft.DataRow(cells=[ft.DataCell(S_Text("集群状态")),
+                                              ft.DataCell(S_Text(status, color=color))]),
+                            ft.DataRow(cells=[ft.DataCell(S_Text("集群超时")),
+                                              ft.DataCell(S_Text(f"{self.health['timed_out']}"))]),
+                            ft.DataRow(cells=[ft.DataCell(S_Text("节点总数")),
+                                              ft.DataCell(S_Text(f"{self.health['number_of_nodes']}"))]),
+                            ft.DataRow(cells=[ft.DataCell(S_Text("集群数据节点总数")),
+                                              ft.DataCell(S_Text(f"{self.health['number_of_data_nodes']}"))]),
+
+                        ], column_spacing=10, ), ),
+                ft.Card(ft.DataTable(columns=[
+                    ft.DataColumn(S_Text("分片信息", weight=ft.FontWeight.BOLD)), ft.DataColumn(S_Text("")),
+                ], rows=[
+                    ft.DataRow(cells=[ft.DataCell(S_Text("活跃的分片总数（主分片和副本分片）")),
+                                      ft.DataCell(S_Text(f"{self.health['active_shards']}"))]),
+                    ft.DataRow(cells=[ft.DataCell(S_Text("活跃的主分片数量")),
+                                      ft.DataCell(S_Text(f"{self.health['active_primary_shards']}"))]),
+                    ft.DataRow(cells=[ft.DataCell(S_Text("重新分配中的分片数量（分片移动到另一个节点）")),
+                                      ft.DataCell(S_Text(f"{self.health['relocating_shards']}"))]),
+                    ft.DataRow(cells=[ft.DataCell(S_Text("初始化中的分片数量（正在被创建但尚未开始服务请求）")),
+                                      ft.DataCell(S_Text(f"{self.health['initializing_shards']}"))]),
+                    ft.DataRow(cells=[ft.DataCell(S_Text("未分配的分片数量（节点故障或配置问题）")),
+                                      ft.DataCell(S_Text(f"{self.health['unassigned_shards']}"))]),
+                    ft.DataRow(cells=[ft.DataCell(S_Text("延迟未分配的分片数量（可能因为分配策略等待条件未满足）")),
+                                      ft.DataCell(S_Text(f"{self.health['delayed_unassigned_shards']}"))]),
+                    ft.DataRow(cells=[ft.DataCell(S_Text("活跃分片占比（可能冻结、关闭、故障等）")),
+                                      ft.DataCell(
+                                          S_Text(f"{round(self.health['active_shards_percent_as_number'], 2)}%"))]),
+
+                ], column_spacing=10, ), ),
                         ft.Card(ft.DataTable(columns=[
-                            ft.DataColumn(S_Text("索引、分片", weight=ft.FontWeight.BOLD)), ft.DataColumn(S_Text("")),
+                            ft.DataColumn(S_Text("Task", weight=ft.FontWeight.BOLD)), ft.DataColumn(S_Text("")),
                         ], rows=[
-                            ft.DataRow(
-                                cells=[ft.DataCell(S_Text("索引总数")),
-                                       ft.DataCell(S_Text(f"{stats_indices['count']}")),
-                                       ]),
-                            ft.DataRow(cells=[ft.DataCell(S_Text("分片总数")), ft.DataCell(S_Text(f"{stats_indices['shards']['total']}")), ]),
-                            ft.DataRow(cells=[ft.DataCell(S_Text("主分片总数")), ft.DataCell(S_Text(f"{stats_indices['shards']['primaries']}")), ]),
-                            ft.DataRow(cells=[ft.DataCell(S_Text("平均副本数")), ft.DataCell(S_Text(f"{round(stats_indices['shards']['replication'],1)}")), ]),
-                            ft.DataRow(cells=[ft.DataCell(S_Text("最大索引分片数")), ft.DataCell(S_Text(f"{stats_indices['shards']['index']['shards']['max']}")), ]),
-                            ft.DataRow(cells=[ft.DataCell(S_Text("最大索引主分片数")), ft.DataCell(S_Text(f"{stats_indices['shards']['index']['primaries']['max']}")), ]),
-                        ], column_spacing=10,)),
-                        ft.Card(ft.DataTable(columns=[
-                            ft.DataColumn(S_Text("文档、存储、缓存", weight=ft.FontWeight.BOLD)),
-                            ft.DataColumn(S_Text("")),
-                        ], rows=[
-                            ft.DataRow(
-                                cells=[
-                                    ft.DataCell(S_Text("文档总数")), ft.DataCell(ft.Text(f"{str(stats_indices['docs']['count'])[:6]}...", tooltip=f"{stats_indices['docs']['count']}",selectable=True)),
-                                ]),
-                            ft.DataRow(cells=[ft.DataCell(S_Text("已删除文档数")), ft.DataCell(ft.Text(f"{str(stats_indices['docs']['deleted'])[:6]}...", tooltip=f"{stats_indices['docs']['deleted']}",selectable=True))]),
-                            ft.DataRow(cells=[ft.DataCell(S_Text("存储大小")), ft.DataCell(S_Text(f"{human_size(stats_indices['store']['size_in_bytes'])}"))]),
-                            ft.DataRow(cells=[ft.DataCell(S_Text("字段结构内存")), ft.DataCell(
-                                S_Text(f"{human_size(stats_indices['fielddata']['memory_size_in_bytes'])}")), ]),
-                            ft.DataRow(cells=[ft.DataCell(S_Text("查询缓存")), ft.DataCell(
-                                S_Text(f"{human_size(stats_indices['query_cache']['memory_size_in_bytes'])}")), ])
-                        ], column_spacing=10,)),
 
-                        ft.Card(ft.DataTable(columns=[
-                            ft.DataColumn(S_Text("段", weight=ft.FontWeight.BOLD)), ft.DataColumn(S_Text("")),
-                        ], rows=[
-                            ft.DataRow(
-                                cells=[
-                                    ft.DataCell(S_Text("段总数")),
-                                    ft.DataCell(S_Text(f"{stats_indices['segments']['count']}")),
-
-                                ]),
-                            ft.DataRow([ft.DataCell(S_Text("段总占用内存")), ft.DataCell(
-                                S_Text(f"{human_size(stats_indices['segments']['memory_in_bytes'])}"))]),
-                            ft.DataRow([ft.DataCell(S_Text("terms词项内存")), ft.DataCell(S_Text(
-                                f"{human_size(stats_indices['segments']['terms_memory_in_bytes'])}"))]),
-                            ft.DataRow([ft.DataCell(S_Text("存储字段内存")), ft.DataCell(S_Text(
-                                f"{human_size(stats_indices['segments']['stored_fields_memory_in_bytes'])}"))]),
-                            ft.DataRow([ft.DataCell(S_Text("向量内存")), ft.DataCell(S_Text(
-                                f"{human_size(stats_indices['segments']['term_vectors_memory_in_bytes'])}"))]),
-                            ft.DataRow([ft.DataCell(S_Text("norms归一化因子内存")), ft.DataCell(S_Text(
-                                f"{human_size(stats_indices['segments']['term_vectors_memory_in_bytes'])}"))]),
-                            ft.DataRow([ft.DataCell(S_Text("数值型和地理坐标等点类型内存")), ft.DataCell(
-                                S_Text(
-                                    f"{human_size(stats_indices['segments']['points_memory_in_bytes'])}"))]),
-                            ft.DataRow([ft.DataCell(S_Text("Doc Values内存")), ft.DataCell(S_Text(
-                                f"{human_size(stats_indices['segments']['doc_values_memory_in_bytes'])}"))]),
-                            ft.DataRow([ft.DataCell(S_Text("索引写入占用内存")), ft.DataCell(S_Text(
-                                f"{human_size(stats_indices['segments']['index_writer_memory_in_bytes'])}"))]),
-                            ft.DataRow([ft.DataCell(S_Text("固定位集合内存")), ft.DataCell(S_Text(
-                                f"{human_size(stats_indices['segments']['fixed_bit_set_memory_in_bytes'])}"))]),
-                        ], column_spacing=10,)),
-
-                        ft.Card(ft.DataTable(columns=[
-                            ft.DataColumn(S_Text("集群系统", weight=ft.FontWeight.BOLD)), ft.DataColumn(S_Text("")),
-                        ], rows=[
-                            ft.DataRow(cells=[ft.DataCell(S_Text("可用CPU核心数")), ft.DataCell(S_Text(f"{stats_nodes['os']['available_processors']}")),]),
-                            ft.DataRow(cells=[ft.DataCell(S_Text("分配给ES进程使用的CPU核心数")), ft.DataCell(S_Text(f"{stats_nodes['os']['allocated_processors']}")),]),
-                            ft.DataRow(cells=[ft.DataCell(S_Text("操作系统及总数")), ft.DataCell(ft.Text(value=json.dumps(f"{stats_nodes['os']['pretty_names']}")[:10]+"...",tooltip=json.dumps(f"{stats_nodes['os']['pretty_names']}"))),]),
-                            ft.DataRow(cells=[ft.DataCell(S_Text("总内存")), ft.DataCell(S_Text(f"{human_size(stats_nodes['os']['mem']['total_in_bytes'])}")),]),
-                            ft.DataRow(cells=[ft.DataCell(S_Text("已使用内存")), ft.DataCell(S_Text(f"{human_size(stats_nodes['os']['mem']['used_in_bytes'])}")),]),
-                            ft.DataRow(cells=[ft.DataCell(S_Text("已使用内存百分比")), ft.DataCell(S_Text(f"{stats_nodes['os']['mem']['used_percent']}%")),]),
-
-                        ], column_spacing=10, )),
-
-                    ], vertical_alignment=ft.CrossAxisAlignment.START
-                ),
-            ]
+                            ft.DataRow(cells=[ft.DataCell(S_Text("待处理的任务积压数")),
+                                              ft.DataCell(S_Text(f"{self.health['number_of_pending_tasks']}"))]),
+                            ft.DataRow(cells=[ft.DataCell(S_Text("等待执行的任务数量，比如索引操作、设置改变等")),
+                                              ft.DataCell(S_Text(f"{self.health['number_of_pending_tasks']}"))]),
+                            ft.DataRow(cells=[ft.DataCell(S_Text("正在进行的fetch操作数量，通常指查询操作")),
+                                              ft.DataCell(S_Text(f"{self.health['number_of_in_flight_fetch']}"))]),
+                            ft.DataRow(cells=[ft.DataCell(S_Text("任务队列中最长等待时间（毫秒）")),
+                                              ft.DataCell(S_Text(f"{self.health['task_max_waiting_in_queue_millis']}"))]),
+                        ], column_spacing=10, ), ),
+            ],  vertical_alignment=ft.CrossAxisAlignment.START
+        ),
+                ]
         )
