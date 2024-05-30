@@ -55,14 +55,7 @@ class Broker(object):
     def init_rows(self):
         # page
         offset = (self.page_num - 1) * self.page_size
-        role_map = {
-            "di": "数据节点",
-            "im": "摄取节点",
-            "master": "主节点",
-            "coordinating": "协调节点",
-            "machine_learning": "机器学习节点",
-            "remote_client": "远程客户端节点"
-        }
+
         self.cluster_table_rows = [
             ft.DataRow(
                 cells=[

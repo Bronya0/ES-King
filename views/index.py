@@ -15,59 +15,174 @@ class Index(object):
     """
 
     def __init__(self):
-        # _lag_label: when select consumer groups, use it, that is 'loading...'
-        self.page = None
-        self.pr = progress_bar
-        self.table_topics = []
-        self._lag_label = None
-        self.topic_offset = None
-        self.topic_lag = None
-        self.topic_op_content = None
-        self.describe_topics_map: Optional[Dict] = None
-        self.partition_table = None
-        self.describe_topics = None
-        self.describe_topics_tmp = []
-        self.topic_table = None
+        # page
+        self.indexes_tmp = []
         self.page_num = 1
-        self.page_size = 8
+        self.page_size = 10
+        self.page_label = None
+        # order
+        self.reverse = None
+        self.cluster_table_rows = None
+        self.indexes = []
+        self.indexes_table = None
 
-        # search datatable
-        self.search_text = ft.TextField(label='检索', on_submit=self.search_table, width=200,
+        self.create_index_button = ft.TextButton("新建索引", on_click=self.create_index, icon=ft.icons.ADD,
+                                                 style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)))
+        self.search_text = ft.TextField(label=' 检索索引名及别名，支持通配符*',label_style=ft.TextStyle(size=14), on_submit=self.search_table, width=300,
                                         height=38, text_size=14, content_padding=5)
 
-        # topic list tap
-        self.topic_tab = ft.Tab(
-            icon=ft.icons.LIST_ALT_OUTLINED, text="列表", content=ft.Row()
+        self.index_tab = ft.Tab(
+            text='集群索引列表', content=ft.Column(), icon=ft.icons.HIVE_OUTLINED,
         )
 
-        # partition list tap
-        self.partition_tab = ft.Tab(
-            icon=ft.icons.WAVES_OUTLINED, text="分区",
-            content=ft.Container(content=ft.Text("请从主题列表的分区列点击进入", size=20))
-        )
-
-        # config tap
-        self.config_tab = ft.Tab(
-            text='主题配置', content=ft.Container(content=ft.Text("请从主题的配置按钮进入", size=20)),
-            icon=ft.icons.CONSTRUCTION_OUTLINED
-        )
-
-        # all in one
         self.tab = ft.Tabs(
-            animation_duration=300,
             tabs=[
-                self.topic_tab,
-                self.partition_tab,
-                self.config_tab,
+                self.index_tab,
             ],
             expand=True,
         )
 
         self.controls = [
-            self.tab,
+            self.tab
         ]
 
     def init(self, page=None):
+        # self.init_data()
+        # self.init_rows()
+        self.init_table()
+
+    def init_data(self):
+        self.indexes = es_service.get_indexes()
+        # page
+        # 只在最开始、排序时执行一次
+        self.indexes_tmp = self.indexes[:self.page_size]
+
+    def init_rows(self):
+        # page
+        offset = (self.page_num - 1) * self.page_size
+
+        self.cluster_table_rows = [
+            ft.DataRow(
+                cells=[
+                    ft.DataCell(S_Text(offset + i + 1)),
+                    ft.DataCell(S_Text(f"{_index['index'] if _index['index'] is not None else ''}", color='primary')),
+                    ft.DataCell(S_Text(f"{_index['health'] if _index['health'] is not None else ''}", color=_index['health'] if _index['health'] !="yellow" else "amber")),
+                    ft.DataCell(S_Text(f"{_index['status'] if _index['status'] is not None else ''}")),
+                    ft.DataCell(S_Text(f"{_index['pri']}主{_index['rep']}副本")),
+                    ft.DataCell(S_Text(f"{_index['docs.count'] if _index['docs.count'] is not None else ''}")),
+                    ft.DataCell(S_Text(f"{_index['docs.deleted'] if _index['docs.deleted'] is not None else ''}")),
+                    ft.DataCell(S_Text(f"{_index['store.size'] if _index['store.size'] is not None else ''}")),
+                ]
+            ) for i, _index in enumerate(self.indexes_tmp)  # page
+        ]
+
+    def init_table(self):
         if not es_service.connect_obj:
             return "请先选择一个可用的ES连接！\nPlease select an available ES connection first!"
 
+        self.indexes_table = ft.DataTable(
+            columns=[
+                ft.DataColumn(S_Text("序号")),
+                ft.DataColumn(S_Text("索引名")),
+                ft.DataColumn(S_Text("健康状态")),
+                ft.DataColumn(S_Text("状态")),
+                ft.DataColumn(S_Text("主分片及副本")),
+                ft.DataColumn(S_Text("文档总数")),
+                ft.DataColumn(S_Text("未清除的删除文档")),
+                ft.DataColumn(S_Text("占用存储（主+副）")),
+
+            ],
+            rows=self.cluster_table_rows,
+            column_spacing=20,
+            expand=True
+        )
+
+        self.index_tab.content = build_tab_container(
+            col_controls=[
+                ft.Row([
+                    self.create_index_button,
+                    self.search_text,
+                ]),
+                ft.Row([
+                    self.indexes_table,
+                ]),
+                # page
+                ft.Row(
+                    [
+                        # 翻页图标和当前页显示
+                        ft.IconButton(
+                            icon=ft.icons.ARROW_BACK,
+                            icon_size=20,
+                            on_click=self.page_prev,
+                            tooltip="上一页",
+                        ),
+                        ft.Text(f"{self.page_num}/{int(len(self.indexes) / self.page_size) + 1}"),
+                        ft.IconButton(
+                            icon=ft.icons.ARROW_FORWARD,
+                            icon_size=20,
+                            on_click=self.page_next,
+                            tooltip="下一页",
+                        ),
+                        ft.Text(f"每页{self.page_size}条"),
+                        ft.Slider(min=5, max=55, divisions=10, round=1, value=self.page_size, label="{value}",
+                                  on_change_end=self.page_size_change),
+
+                    ]
+                )
+            ]
+        )
+
+    def page_prev(self, e):
+        # page
+        if self.page_num == 1:
+            return
+        self.page_num -= 1
+
+        offset = (self.page_num - 1) * self.page_size
+        self.indexes_tmp = self.indexes[offset:offset + self.page_size]
+
+        self.init_rows()
+        self.init_table()
+        e.page.update()
+
+    def page_next(self, e):
+        # page
+        # 最后一页则return
+        if self.page_num * self.page_size >= len(self.indexes):
+            return
+        self.page_num += 1
+        offset = (self.page_num - 1) * self.page_size
+        self.indexes_tmp = self.indexes[offset:offset + self.page_size]
+
+        self.init_rows()
+        self.init_table()
+        e.page.update()
+
+    def page_size_change(self, e):
+        # page
+        self.page_size = int(e.control.value)
+        self.indexes_tmp = self.indexes[:self.page_size]
+
+        self.init_rows()
+        self.init_table()
+        e.page.update()
+
+    def search_table(self, e: ControlEvent):
+        """
+        搜索，配合分页
+        :param e:
+        :return:
+        """
+        indexes = es_service.get_indexes(e.control.value)
+        self.search_table_handle(indexes)
+        e.page.update()
+
+    def search_table_handle(self, indexes):
+        self.page_num = 1
+        self.indexes = indexes
+        self.indexes_tmp = indexes[:self.page_size]
+        self.init_rows()
+        self.init_table()
+
+    def create_index(self):
+        pass

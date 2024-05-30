@@ -7,18 +7,11 @@
 @Desc    : 
 """
 import base64
-import copy
 import logging
-import os
-import time
-import traceback
-from collections import defaultdict
-from datetime import date, datetime
 from typing import Optional
-from urllib.parse import quote
+from urllib.parse import urljoin
 
 import requests
-from urllib.parse import urlsplit, urlunparse,urljoin, urlencode
 
 # 配置日志输出
 logging.basicConfig(level=logging.INFO)
@@ -28,6 +21,7 @@ FORMAT = "?format=json&pretty"
 STATS_API = "_cluster/stats" + FORMAT
 HEALTH_API = "_cluster/health"
 NODES_API = "_cat/nodes?format=json&pretty&h=ip,name,heap.percent,heap.current,heap.max,ram.percent,ram.current,ram.max,node.role,master,cpu,load_1m,load_5m,load_15m,disk.used_percent,disk.used,disk.total"
+ALL_INDEX_API = "_cat/indices?format=json&pretty"
 
 
 class Connect:
@@ -143,6 +137,30 @@ class ESService:
         """
         print(urljoin(self.connect_obj.host, STATS_API))
         res = requests.get(url=urljoin(self.connect_obj.host, STATS_API), headers=self.headers)
+        res.raise_for_status()
+        return res.json()
+
+    def get_indexes(self, name=None):
+        """
+        获取index
+        [
+            {
+                "health": "green",
+                "status": "close",
+                "index": "bsa_normal-20240103-0",
+                "uuid": "Cb-kefT0Q62qP6fWgt_JGw",
+                "pri": "1",
+                "rep": "0",
+                "docs.count": null,
+                "docs.deleted": null,
+                "store.size": null,
+                "pri.store.size": null
+            },
+        """
+        print(urljoin(self.connect_obj.host, ALL_INDEX_API))
+        res = requests.get(url=urljoin(self.connect_obj.host, ALL_INDEX_API+f"&index={name}" if name else ALL_INDEX_API), headers=self.headers)
+        if res.status_code == 404:
+            return []
         res.raise_for_status()
         return res.json()
 
