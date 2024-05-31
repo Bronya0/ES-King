@@ -97,7 +97,7 @@ class Main:
         # 如果 AppBar.adaptive=True 且应用程序在 iOS 或 macOS 设备上打开，则仅使用此列表的第一个元素!!!!!!
         self.page.appbar = ft.AppBar(
             leading=ft.Image(src="icon.png", expand=True),
-            title=S_Text(TITLE),
+            title=ft.Text(TITLE),
             bgcolor=ft.colors.SURFACE_VARIANT,
             actions=[
                 self.connect_dd,
@@ -347,7 +347,8 @@ class Main:
         conns: dict = self.page.client_storage.get(prefix)
         HOST, USER_NAME, PWD = conns.get(key)
         print("HOST: ", HOST)
-        self.page.appbar.title = S_Text(f"{TITLE} | 当前连接: {key}")
+        self.page.appbar.title = ft.Text(f"{TITLE} | 当前连接: {key}")
+
         self.Navigation.selected_index = 0
         print("切换连接时，清空页面缓存")
         view_instance_map.clear()

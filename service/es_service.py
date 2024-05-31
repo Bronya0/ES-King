@@ -183,5 +183,66 @@ class ESService:
             traceback.print_exc()
             return False, str(e)
 
+    def get_index_info(self, index_name):
+        """
+        获取索引信息
+        """
+        try:
+            print(urljoin(self.connect_obj.host, f"{index_name}"))
+            res = requests.get(url=urljoin(self.connect_obj.host, f"{index_name}"), headers=self.headers)
+            res.raise_for_status()
+            return res.json()
+        except Exception as e:
+            traceback.print_exc()
+            return None
+
+    def delete_index(self, index_name):
+        """
+        删除索引
+        """
+        res = requests.delete(url=urljoin(self.connect_obj.host, f"{index_name}"), headers=self.headers)
+        res.raise_for_status()
+        return res.json()
+
+    def get_index_mappings(self, index_name):
+        """
+        获取索引mappings
+        """
+        res = requests.get(url=urljoin(self.connect_obj.host, f"{index_name}"), headers=self.headers)
+        res.raise_for_status()
+        return res.json()
+
+    def get_index_settings(self, index_name):
+        """
+        获取索引settings
+        """
+        res = requests.get(url=urljoin(self.connect_obj.host, f"{index_name}"), headers=self.headers)
+        res.raise_for_status()
+        return res.json()
+
+    def get_index_aliases(self, index_name):
+        """
+        获取索引aliases
+        """
+        res = requests.get(url=urljoin(self.connect_obj.host, f"{index_name}"), headers=self.headers)
+        res.raise_for_status()
+        return res.json()
+
+    def get_index_stats(self, index_name):
+        """
+        获取索引stats
+        """
+        res = requests.get(url=urljoin(self.connect_obj.host, f"{index_name}"), headers=self.headers)
+        res.raise_for_status()
+        return res.json()
+
+    def get_index_segments(self, index_name):
+        """
+        获取索引segments
+        """
+        res = requests.get(url=urljoin(self.connect_obj.host, f"{index_name}"), headers=self.headers)
+        res.raise_for_status()
+        return res.json()
+
 
 es_service = ESService()

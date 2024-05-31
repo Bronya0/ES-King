@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*-coding:utf-8 -*-
+import json
 from typing import Optional, Dict
 
 import flet as ft
@@ -8,6 +9,9 @@ from flet_core import ControlEvent
 from service.common import S_Text, open_snack_bar, S_Button, dd_common_configs, close_dlg, view_instance_map, \
     Navigation, body, progress_bar, common_page, build_tab_container
 from service.es_service import es_service
+from pygments import highlight
+from pygments.formatters.html import HtmlFormatter
+from pygments.lexers import JsonLexer
 
 
 class Index(object):
@@ -66,10 +70,10 @@ class Index(object):
             ft.DataRow(
                 cells=[
                     ft.DataCell(S_Text(offset + i + 1)),
-                    ft.DataCell(S_Text(f"{_index['index'] if _index['index'] is not None else ''}", color='primary')),
+                    ft.DataCell(S_Button(text=f"{_index['index']}", data=_index['index'], on_click=self.view_index_detail)),
                     ft.DataCell(S_Text(f"{_index['health'] if _index['health'] is not None else ''}", color=_index['health'] if _index['health'] !="yellow" else "amber")),
                     ft.DataCell(S_Text(f"{_index['status'] if _index['status'] is not None else ''}")),
-                    ft.DataCell(S_Text(f"{_index['pri']}主{_index['rep']}副本")),
+                    ft.DataCell(S_Text(f"{_index['pri']}/{_index['rep']}")),
                     ft.DataCell(S_Text(f"{_index['docs.count'] if _index['docs.count'] is not None else ''}")),
                     ft.DataCell(S_Text(f"{_index['docs.deleted'] if _index['docs.deleted'] is not None else ''}")),
                     ft.DataCell(S_Text(f"{_index['store.size'] if _index['store.size'] is not None else ''}")),
@@ -87,7 +91,7 @@ class Index(object):
                 ft.DataColumn(S_Text("索引名")),
                 ft.DataColumn(S_Text("健康状态")),
                 ft.DataColumn(S_Text("状态")),
-                ft.DataColumn(S_Text("主分片及副本")),
+                ft.DataColumn(S_Text("主分片/副本")),
                 ft.DataColumn(S_Text("文档总数")),
                 ft.DataColumn(S_Text("未清除的删除文档")),
                 ft.DataColumn(S_Text("占用存储（主+副）")),
@@ -232,3 +236,66 @@ class Index(object):
         e.page.dialog = dlg_modal
         dlg_modal.open = True
         e.page.update()
+
+    def view_index_detail(self, e):
+        """
+        索引详情
+        """
+        res = es_service.get_index_info(e.control.data)
+        if not res:
+            return
+
+        rich_text_content = []
+        for key, value in res.items():
+            # 为键添加深色（例如蓝色）
+            rich_text_content.append(ft.TextSpan(text=f"{key}: ", style=ft.TextStyle(color=ft.colors.BLUE)))
+            # 为值添加另一种颜色（例如灰色）
+            rich_text_content.append(ft.TextSpan(text=f"{value}", style=ft.TextStyle(color=ft.colors.GREY_700)))
+            # 在每个键值对之间添加一个换行
+            rich_text_content.append(ft.TextSpan(text="\n"))
+        dlg_modal = ft.AlertDialog(
+            modal=True,
+            title=ft.Text(e.control.data),
+            actions=[
+                ft.Row(
+                    controls=[
+                        ft.Column(
+                            [
+                                ft.Column(
+                                    [
+                                        ft.Text(
+                                            value=json.dumps(res, ensure_ascii=False, indent=2), selectable=True
+                                        ),
+                                    ],
+                                    scroll=ft.ScrollMode.ALWAYS,
+                                    height=600,
+                                    width=600
+                                ),
+                                ft.Row(
+                                    [
+                                        ft.TextButton("取消", on_click=close_dlg)
+                                    ]
+                                )
+                            ],
+                            scroll=ft.ScrollMode.ALWAYS,
+                        )],
+                    scroll=ft.ScrollMode.ALWAYS,
+
+                )
+
+            ],
+            actions_alignment=ft.MainAxisAlignment.CENTER,
+            shape=ft.RoundedRectangleBorder(radius=8),
+            open=True,
+        )
+        e.page.dialog = dlg_modal
+        dlg_modal.open = True
+        e.page.update()
+
+    def json_to_highlighted_html(self, json_data):
+        # 使用Pygments将JSON转换为高亮的HTML
+        lexer = JsonLexer()
+        formatter = HtmlFormatter(style='colorful')
+        highlighted_html = highlight(json.dumps(json_data, indent=2), lexer, formatter)
+        # 去除不必要的HTML标签，仅保留pre和span
+        return highlighted_html.replace('<div class="highlight">', '').replace('</div>', '')
