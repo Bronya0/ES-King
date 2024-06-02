@@ -38,10 +38,9 @@ CORE = 1
 BROKER = 2
 INDEX = 3
 REST = 4
-MONITOR = 5
-SETTINGS = 6
-SUGGEST = 7
-HELP = 8
+SETTINGS = 5
+SUGGEST = 6
+HELP = 7
 
 PAGE_WIDTH = 1620
 PAGE_HEIGHT = 880
@@ -74,13 +73,13 @@ def S_Button(**kwargs):
 
 
 def open_snack_bar(page: flet.Page, msg, success=True):
-    page.snack_bar.content = flet.Text(msg)
+    page.snack_bar.content = flet.Text(msg, selectable=True)
     page.snack_bar.open = True
-    if success:
-        color = "#1677ff"
-    else:
-        color = "#000000"
-    page.snack_bar.bgcolor = color
+    # if success:
+    #     color = "#1677ff"
+    # else:
+    #     color = "#000000"
+    # page.snack_bar.bgcolor = color
     page.update()
 
 
@@ -135,11 +134,11 @@ Navigation = flet.NavigationRail(
             selected_icon_content=flet.Icon(flet.icons.LIBRARY_BOOKS),
             label=i18n("索引"),
         ),
-        # flet.NavigationRailDestination(
-        #     icon_content=flet.Icon(flet.icons.SWITCH_ACCESS_SHORTCUT_ADD_OUTLINED,),
-        #     selected_icon_content=flet.Icon(flet.icons.SWITCH_ACCESS_SHORTCUT_ADD),
-        #     label=i18n("Rest"),
-        # ),
+        flet.NavigationRailDestination(
+            icon_content=flet.Icon(flet.icons.SWITCH_ACCESS_SHORTCUT_ADD_OUTLINED,),
+            selected_icon_content=flet.Icon(flet.icons.SWITCH_ACCESS_SHORTCUT_ADD),
+            label=i18n("Rest"),
+        ),
 
         # flet.NavigationRailDestination(
         #     icon_content=flet.Icon(flet.icons.STACKED_BAR_CHART_ROUNDED,),

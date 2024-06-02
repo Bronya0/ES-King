@@ -22,7 +22,12 @@ FORMAT = "?format=json&pretty"
 STATS_API = "_cluster/stats" + FORMAT
 HEALTH_API = "_cluster/health"
 NODES_API = "_cat/nodes?format=json&pretty&h=ip,name,heap.percent,heap.current,heap.max,ram.percent,ram.current,ram.max,node.role,master,cpu,load_1m,load_5m,load_15m,disk.used_percent,disk.used,disk.total"
-ALL_INDEX_API = "_cat/indices?format=json&pretty"
+ALL_INDEX_API = "_cat/indices?format=json&pretty&bytes=b"
+CLUSTER_SETTINGS = "_cluster/settings"
+FORCE_MERGE = "_forcemerge?wait_for_completion=false"  # 异步
+REFRESH = "_refresh"
+FLUSH = "_flush"
+CACHE_CLEAR = "_cache/clear"
 
 
 class Connect:
@@ -84,6 +89,7 @@ class ESService:
             }
         ]
         """
+        print(urljoin(self.connect_obj.host, NODES_API))
         res = requests.get(url=urljoin(self.connect_obj.host, NODES_API), headers=self.headers)
         res.raise_for_status()
         return res.json()
@@ -158,8 +164,10 @@ class ESService:
                 "pri.store.size": null
             },
         """
-        print(urljoin(self.connect_obj.host, ALL_INDEX_API))
-        res = requests.get(url=urljoin(self.connect_obj.host, ALL_INDEX_API+f"&index={name}" if name else ALL_INDEX_API), headers=self.headers)
+        print(urljoin(self.connect_obj.host, ALL_INDEX_API + f"&index={name}" if name else ALL_INDEX_API))
+        res = requests.get(
+            url=urljoin(self.connect_obj.host, ALL_INDEX_API + f"&index={name}" if name else ALL_INDEX_API),
+            headers=self.headers)
         if res.status_code == 404:
             return []
         res.raise_for_status()
@@ -191,18 +199,40 @@ class ESService:
             print(urljoin(self.connect_obj.host, f"{index_name}"))
             res = requests.get(url=urljoin(self.connect_obj.host, f"{index_name}"), headers=self.headers)
             res.raise_for_status()
-            return res.json()
+            return True, res.json()
         except Exception as e:
             traceback.print_exc()
-            return None
+            return False, e
 
     def delete_index(self, index_name):
         """
         删除索引
         """
-        res = requests.delete(url=urljoin(self.connect_obj.host, f"{index_name}"), headers=self.headers)
-        res.raise_for_status()
-        return res.json()
+        try:
+            res = requests.delete(url=urljoin(self.connect_obj.host, f"{index_name}"), headers=self.headers)
+            res.raise_for_status()
+            return True, res.json()
+        except Exception as e:
+            traceback.print_exc()
+            return False, e
+
+    def open_close_index(self, index_name, now):
+        """
+        开启/关闭索引
+        """
+        try:
+            action = {
+                "open": "_close",
+                "close": "_open"
+            }[now]
+            print(urljoin(self.connect_obj.host, f"{index_name}/{action}"))
+
+            res = requests.post(url=urljoin(self.connect_obj.host, f"{index_name}/{action}"), headers=self.headers)
+            res.raise_for_status()
+            return True, res.json()
+        except Exception as e:
+            traceback.print_exc()
+            return False, e
 
     def get_index_mappings(self, index_name):
         """
@@ -211,6 +241,104 @@ class ESService:
         res = requests.get(url=urljoin(self.connect_obj.host, f"{index_name}"), headers=self.headers)
         res.raise_for_status()
         return res.json()
+
+    def merge_segments(self, index_name):
+        """
+        获取索引mappings
+        """
+        print(urljoin(self.connect_obj.host, f"{index_name}/{FORCE_MERGE}"))
+        try:
+            res = requests.post(url=urljoin(self.connect_obj.host, f"{index_name}/{FORCE_MERGE}"), headers=self.headers)
+            res.raise_for_status()
+            return True, res.json()
+        except Exception as e:
+            traceback.print_exc()
+            return False, str(e)
+
+    def refresh(self, index_name):
+        """
+        """
+        print(urljoin(self.connect_obj.host, f"{index_name}/{REFRESH}"))
+        try:
+            res = requests.post(url=urljoin(self.connect_obj.host, f"{index_name}/{REFRESH}"), headers=self.headers)
+            res.raise_for_status()
+            return True, res.json()
+        except Exception as e:
+            traceback.print_exc()
+            return False, str(e)
+
+    def flush(self, index_name):
+        """
+        """
+        print(urljoin(self.connect_obj.host, f"{index_name}/{FLUSH}"))
+        try:
+            res = requests.post(url=urljoin(self.connect_obj.host, f"{index_name}/{FLUSH}"), headers=self.headers)
+            res.raise_for_status()
+            return True, res.json()
+        except Exception as e:
+            traceback.print_exc()
+            return False, str(e)
+
+    def cache_clear(self, index_name):
+        """
+        """
+        print(urljoin(self.connect_obj.host, f"{index_name}/{CACHE_CLEAR}"))
+        try:
+            res = requests.post(url=urljoin(self.connect_obj.host, f"{index_name}/{CACHE_CLEAR}"), headers=self.headers)
+            res.raise_for_status()
+            return True, res.json()
+        except Exception as e:
+            traceback.print_exc()
+            return False, str(e)
+
+    def get_doc_10(self, index_name):
+        """
+        """
+        print(urljoin(self.connect_obj.host, f"{index_name}/_search"))
+        try:
+            res = requests.post(url=urljoin(self.connect_obj.host, f"{index_name}/_search"), headers=self.headers,
+                                json={
+                                    "query": {
+                                        "query_string": {
+                                            "query": "*"
+                                        }
+                                    },
+                                    "size": 10,
+                                    "from": 0,
+                                    "sort": []
+                                })
+            res.raise_for_status()
+            return True, res.json()
+        except Exception as e:
+            traceback.print_exc()
+            return False, str(e)
+
+    def search(self, method, path, body):
+        """
+        """
+        print(method, urljoin(self.connect_obj.host, f"{path}"))
+        try:
+            res = requests.request(method=method, url=urljoin(self.connect_obj.host, f"{path}"), headers=self.headers,
+                                json=body)
+            res.raise_for_status()
+            return True, res.json()
+        except Exception as e:
+            traceback.print_exc()
+            return False, str(e)
+
+
+    def get_cluster_settings(self):
+        """
+        获取索引settings
+        """
+        try:
+            print(urljoin(self.connect_obj.host, f"{CLUSTER_SETTINGS}"))
+            res = requests.get(url=urljoin(self.connect_obj.host, f"{CLUSTER_SETTINGS}"), headers=self.headers)
+            res.raise_for_status()
+            return res.json()
+        except Exception as e:
+            traceback.print_exc()
+            return None
 
     def get_index_settings(self, index_name):
         """

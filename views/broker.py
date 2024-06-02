@@ -87,8 +87,8 @@ class Broker(object):
                         ], alignment=ft.MainAxisAlignment.CENTER), data=float(_node['disk.used_percent'])),
                     ft.DataCell(S_Text(f"{self.translate_node_roles(_node['node.role'])[:5]}...", tooltip=self.translate_node_roles(_node['node.role']))),
                     ft.DataCell(S_Text(f"{_node['master']}")),
-                    ft.DataCell(S_Text(f"{_node['cpu']}")),
-                    ft.DataCell(S_Text(f"{_node['load_5m']}")),
+                    ft.DataCell(S_Text(f"{_node['cpu']}%")),
+                    ft.DataCell(S_Text(f"{_node['load_1m']}/{_node['load_5m']}/{_node['load_15m']}")),
                 ]
             ) for i, _node in enumerate(self.nodes_tmp)  # page
         ]
@@ -107,9 +107,9 @@ class Broker(object):
                 ft.DataColumn(S_Text("内存使用率(点右侧排序)"), on_sort=self.on_sort),
                 ft.DataColumn(S_Text("磁盘使用率(点右侧排序)"), on_sort=self.on_sort),
                 ft.DataColumn(S_Text("角色")),
-                ft.DataColumn(S_Text("是否为master")),
+                ft.DataColumn(S_Text("主节点")),
                 ft.DataColumn(S_Text("cpu")),
-                ft.DataColumn(S_Text("5分钟负载")),
+                ft.DataColumn(S_Text("负载")),
 
             ],
             rows=self.cluster_table_rows,

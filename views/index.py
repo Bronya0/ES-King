@@ -1,17 +1,12 @@
 #!/usr/bin/env python
 # -*-coding:utf-8 -*-
 import json
-from typing import Optional, Dict
 
 import flet as ft
-from flet_core import ControlEvent
+from flet_core import ControlEvent, DataColumnSortEvent
 
-from service.common import S_Text, open_snack_bar, S_Button, dd_common_configs, close_dlg, view_instance_map, \
-    Navigation, body, progress_bar, common_page, build_tab_container
+from service.common import S_Text, open_snack_bar, S_Button, close_dlg, progress_bar, build_tab_container, human_size
 from service.es_service import es_service
-from pygments import highlight
-from pygments.formatters.html import HtmlFormatter
-from pygments.lexers import JsonLexer
 
 
 class Index(object):
@@ -32,7 +27,7 @@ class Index(object):
 
         self.create_index_button = ft.TextButton("新建索引", on_click=self.create_index, icon=ft.icons.ADD,
                                                  style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)))
-        self.search_text = ft.TextField(label=' 检索索引名及别名，支持通配符*',label_style=ft.TextStyle(size=14),
+        self.search_text = ft.TextField(value='*', label=' 检索索引名及别名，支持通配符*', label_style=ft.TextStyle(size=14),
                                         on_submit=self.search_table, width=300,
                                         height=38, text_size=14, content_padding=5)
 
@@ -70,13 +65,81 @@ class Index(object):
             ft.DataRow(
                 cells=[
                     ft.DataCell(S_Text(offset + i + 1)),
-                    ft.DataCell(S_Button(text=f"{_index['index']}", data=_index['index'], on_click=self.view_index_detail)),
-                    ft.DataCell(S_Text(f"{_index['health'] if _index['health'] is not None else ''}", color=_index['health'] if _index['health'] !="yellow" else "amber")),
-                    ft.DataCell(S_Text(f"{_index['status'] if _index['status'] is not None else ''}")),
+                    ft.DataCell(
+                        S_Button(text=f"{_index['index']}", data=_index['index'])),
+                    ft.DataCell(S_Text(f"{_index['health'] if _index['health'] is not None else ''}",
+                                       color=_index['health'] if _index['health'] != "yellow" else "amber")),
+                    ft.DataCell(S_Text(f"{_index['status'] if _index['status'] is not None else ''}",
+                                       color="green" if _index['status'] == "open" else "red")),
                     ft.DataCell(S_Text(f"{_index['pri']}/{_index['rep']}")),
                     ft.DataCell(S_Text(f"{_index['docs.count'] if _index['docs.count'] is not None else ''}")),
                     ft.DataCell(S_Text(f"{_index['docs.deleted'] if _index['docs.deleted'] is not None else ''}")),
-                    ft.DataCell(S_Text(f"{_index['store.size'] if _index['store.size'] is not None else ''}")),
+                    ft.DataCell(S_Text(f"{human_size(int(_index['store.size'])) if _index['store.size'] is not None else ''}")),
+                    ft.DataCell(
+                        ft.MenuBar(
+                            style=ft.MenuStyle(
+                                alignment=ft.alignment.top_left,
+                            ),
+                            controls=[
+                                ft.SubmenuButton(
+                                    content=ft.Text("操作"),
+                                    height=40,
+                                    leading=ft.Icon(ft.icons.MORE_VERT),
+                                    controls=[
+                                        ft.MenuItemButton(
+                                            data=_index['index'],
+                                            content=ft.Text("详情"),
+                                            leading=ft.Icon(ft.icons.DETAILS),
+                                            on_click=self.view_index_detail,
+                                        ),
+                                        ft.MenuItemButton(
+                                            data=_index['index'],
+                                            content=ft.Text("文档"),
+                                            leading=ft.Icon(ft.icons.BOOK),
+                                            on_click=self.get_doc_10
+                                        ),
+                                        ft.MenuItemButton(
+                                            data=_index['index'],
+                                            content=ft.Text("段合并"),
+                                            leading=ft.Icon(ft.icons.MERGE_TYPE),
+                                            on_click=self.merge_segments,
+                                        ),
+                                        ft.MenuItemButton(
+                                            data=_index['index'],
+                                            content=ft.Text("删除"),
+                                            leading=ft.Icon(ft.icons.DELETE),
+                                            on_click=self.delete_index,
+                                        ),
+                                        ft.MenuItemButton(
+                                            data=_index['index'],
+                                            content=ft.Text("关闭" if _index['status'] == "open" else "打开"),
+                                            leading=ft.Icon(
+                                                ft.icons.CLOSE if _index['status'] == "open" else ft.icons.OPEN_WITH),
+                                            on_click=self.close_index if _index['status'] == "open" else self.open_index
+                                        ),
+                                        ft.MenuItemButton(
+                                            data=_index['index'],
+                                            content=ft.Text("refresh"),
+                                            leading=ft.Icon(ft.icons.REFRESH),
+                                            on_click=self.refresh
+                                        ),
+                                        ft.MenuItemButton(
+                                            data=_index['index'],
+                                            content=ft.Text("flush"),
+                                            leading=ft.Icon(ft.icons.DOWNLOAD),
+                                            on_click=self.flush
+                                        ),
+                                        ft.MenuItemButton(
+                                            data=_index['index'],
+                                            content=ft.Text("清理缓存"),
+                                            leading=ft.Icon(ft.icons.DELETE_SWEEP_OUTLINED),
+                                            on_click=self.cache_clear
+                                        ),
+                                    ]
+                                ),
+                            ]
+                        )
+                    ),
                 ]
             ) for i, _index in enumerate(self.indexes_tmp)  # page
         ]
@@ -88,13 +151,14 @@ class Index(object):
         self.indexes_table = ft.DataTable(
             columns=[
                 ft.DataColumn(S_Text("序号")),
-                ft.DataColumn(S_Text("索引名")),
-                ft.DataColumn(S_Text("健康状态")),
-                ft.DataColumn(S_Text("状态")),
-                ft.DataColumn(S_Text("主分片/副本")),
-                ft.DataColumn(S_Text("文档总数")),
-                ft.DataColumn(S_Text("未清除的删除文档")),
-                ft.DataColumn(S_Text("占用存储（主+副）")),
+                ft.DataColumn(S_Text("索引名"), on_sort=self.on_sort),
+                ft.DataColumn(S_Text("健康状态"), on_sort=self.on_sort),
+                ft.DataColumn(S_Text("状态"), on_sort=self.on_sort),
+                ft.DataColumn(S_Text("主分片/副本"), on_sort=self.on_sort),
+                ft.DataColumn(S_Text("文档总数"), on_sort=self.on_sort),
+                ft.DataColumn(S_Text("未清除的删除文档"), on_sort=self.on_sort),
+                ft.DataColumn(S_Text("占用存储（主+副）"), on_sort=self.on_sort),
+                ft.DataColumn(S_Text("")),
 
             ],
             rows=self.cluster_table_rows,
@@ -195,6 +259,29 @@ class Index(object):
         self.init_rows()
         self.init_table()
 
+    def on_sort(self, e: DataColumnSortEvent):
+        """
+        排序
+        """
+        # order
+        # 反转true false
+        self.reverse = not self.reverse
+        key = {
+            1: lambda x: str(x['index']),  # 索引名
+            2: lambda x: str(x['health']),  # 健康
+            3: lambda x: str(x['status']),  # status
+            4: lambda x: int(x['pri']),  # status
+            5: lambda x: int(x['docs.count']),  # status
+            6: lambda x: int(x['docs.deleted']),  # status
+            7: lambda x: float(x['store.size']),  # status
+        }[e.column_index]
+
+        self.indexes = sorted(self.indexes, key=key, reverse=self.reverse)
+        self.indexes_tmp = self.indexes[:self.page_size]
+        self.init_rows()
+        self.init_table()
+        e.page.update()
+
     def create_index(self, e):
         input_name = ft.TextField(label="索引名", hint_text="例如：test_index", height=40, content_padding=5)
         input_primary_shard = ft.TextField(label="主分片数", hint_text="例如：1", height=40, content_padding=5)
@@ -211,7 +298,8 @@ class Index(object):
                 open_snack_bar(e.page, "副本数填写错误！", success=False)
                 return
 
-            res, err = es_service.create_index(input_name.value, int(input_primary_shard.value), int(input_replica_shard.value))
+            res, err = es_service.create_index(input_name.value, int(input_primary_shard.value),
+                                               int(input_replica_shard.value))
             if err is not None:
                 open_snack_bar(e.page, err, success=False)
                 return
@@ -228,8 +316,8 @@ class Index(object):
                 input_replica_shard,
             ], height=130),
             actions=[
-                    ft.TextButton("确认", on_click=ensure),
-                    ft.TextButton("取消", on_click=close_dlg),
+                ft.TextButton("确认", on_click=ensure),
+                ft.TextButton("取消", on_click=close_dlg),
             ],
             # actions_alignment=ft.MainAxisAlignment.START,
         )
@@ -241,18 +329,11 @@ class Index(object):
         """
         索引详情
         """
-        res = es_service.get_index_info(e.control.data)
-        if not res:
+        success, res = es_service.get_index_info(e.control.data)
+        if not success:
+            open_snack_bar(e.page, res, success=False)
             return
 
-        rich_text_content = []
-        for key, value in res.items():
-            # 为键添加深色（例如蓝色）
-            rich_text_content.append(ft.TextSpan(text=f"{key}: ", style=ft.TextStyle(color=ft.colors.BLUE)))
-            # 为值添加另一种颜色（例如灰色）
-            rich_text_content.append(ft.TextSpan(text=f"{value}", style=ft.TextStyle(color=ft.colors.GREY_700)))
-            # 在每个键值对之间添加一个换行
-            rich_text_content.append(ft.TextSpan(text="\n"))
         dlg_modal = ft.AlertDialog(
             modal=True,
             title=ft.Text(e.control.data),
@@ -264,12 +345,13 @@ class Index(object):
                                 ft.Column(
                                     [
                                         ft.Text(
-                                            value=json.dumps(res, ensure_ascii=False, indent=2), selectable=True
+                                            json.dumps(res, ensure_ascii=False, indent=4), selectable=True
+                                            # spans=self.dict_to_richtext_spans(res), selectable=True
                                         ),
                                     ],
                                     scroll=ft.ScrollMode.ALWAYS,
                                     height=600,
-                                    width=600
+                                    width=600,
                                 ),
                                 ft.Row(
                                     [
@@ -292,10 +374,177 @@ class Index(object):
         dlg_modal.open = True
         e.page.update()
 
-    def json_to_highlighted_html(self, json_data):
-        # 使用Pygments将JSON转换为高亮的HTML
-        lexer = JsonLexer()
-        formatter = HtmlFormatter(style='colorful')
-        highlighted_html = highlight(json.dumps(json_data, indent=2), lexer, formatter)
-        # 去除不必要的HTML标签，仅保留pre和span
-        return highlighted_html.replace('<div class="highlight">', '').replace('</div>', '')
+    def dict_to_richtext_spans(self, d, level=0, key_color="#c06ccf", colon_color=ft.colors.PRIMARY,
+                               value_color="#55ce5b", brace_color=ft.colors.PRIMARY):
+        """Recursively convert nested dictionary to RichText spans."""
+        spans = []
+        if isinstance(d, dict):
+            if d:
+                # Opening brace with increased indentation and color
+                spans.append(ft.TextSpan(text="{", style=ft.TextStyle(color=brace_color)))
+                spans.append(ft.TextSpan(text="\n"))  # Newline for readability
+
+                for i, (k, v) in enumerate(d.items()):
+                    # Indentation for nested keys
+                    spans.extend([ft.TextSpan(text="  " * (level + 1), style=ft.TextStyle(color=brace_color))])
+
+                    # Key color
+                    spans.append(
+                        ft.TextSpan(text=f'"{k}:"', style=ft.TextStyle(color=key_color)))
+
+                    # Colon and space
+                    spans.append(ft.TextSpan(text=" ", style=ft.TextStyle(color=colon_color)))
+
+                    # Value processing, recursive for nested dictionaries
+                    if isinstance(v, dict):
+                        spans.extend(self.dict_to_richtext_spans(v, level=level + 1))
+                    else:
+                        # Value color
+                        spans.append(
+                            ft.TextSpan(text=str(v), style=ft.TextStyle(color=value_color)))
+
+                    # Add a comma and newline unless it's the last item in the dictionary
+                    if i < len(d) - 1:
+                        spans.append(ft.TextSpan(text=",\n"))
+                    else:
+                        spans.append(ft.TextSpan(text="\n"))  # Only newline after the last item
+
+                # Closing brace with adjusted indentation
+                spans.append(ft.TextSpan(text="  " * level + "}", style=ft.TextStyle(color=brace_color)))
+            else:
+                spans.append(ft.TextSpan(text="{}", style=ft.TextStyle(color=brace_color)))
+        else:
+            spans.append(ft.TextSpan(text=str(d), style=ft.TextStyle(color=value_color)))
+        return spans
+
+    def delete_index(self, e):
+        progress_bar.visible = True
+        e.page.update()
+
+        success, res = es_service.delete_index(e.control.data)
+        progress_bar.visible = False
+        e.page.update()
+        if not success:
+            open_snack_bar(e.page, res, success=False)
+        else:
+            open_snack_bar(e.page, "删除成功", success=True)
+
+    def open_index(self, e):
+        progress_bar.visible = True
+        e.page.update()
+
+        success, res = es_service.open_close_index(e.control.data, now="close")
+        progress_bar.visible = False
+        e.page.update()
+        if not success:
+            open_snack_bar(e.page, res, success=False)
+        else:
+            open_snack_bar(e.page, "打开成功", success=True)
+
+    def close_index(self, e):
+        progress_bar.visible = True
+        e.page.update()
+        success, res = es_service.open_close_index(e.control.data, now="open")
+        progress_bar.visible = False
+        e.page.update()
+        if not success:
+            open_snack_bar(e.page, res, success=False)
+        else:
+            open_snack_bar(e.page, "关闭成功", success=True)
+
+    def merge_segments(self, e):
+        progress_bar.visible = True
+        e.page.update()
+        success, res = es_service.merge_segments(e.control.data)
+        print(res)
+        progress_bar.visible = False
+        e.page.update()
+        if not success:
+            open_snack_bar(e.page, res, success=False)
+        else:
+            open_snack_bar(e.page, f"已提交后台合并请求：{res}", success=True)
+
+    def refresh(self, e):
+        progress_bar.visible = True
+        e.page.update()
+        success, res = es_service.refresh(e.control.data)
+        print(res)
+        progress_bar.visible = False
+        e.page.update()
+        if not success:
+            open_snack_bar(e.page, res, success=False)
+        else:
+            open_snack_bar(e.page, f"refresh成功：{res}", success=True)
+
+    def flush(self, e):
+        progress_bar.visible = True
+        e.page.update()
+        success, res = es_service.flush(e.control.data)
+        print(res)
+        progress_bar.visible = False
+        e.page.update()
+        if not success:
+            open_snack_bar(e.page, res, success=False)
+        else:
+            open_snack_bar(e.page, f"flush成功：{res}", success=True)
+
+    def cache_clear(self, e):
+        progress_bar.visible = True
+        e.page.update()
+        success, res = es_service.cache_clear(e.control.data)
+        progress_bar.visible = False
+        e.page.update()
+        if not success:
+            open_snack_bar(e.page, res, success=False)
+        else:
+            open_snack_bar(e.page, f"缓存清理成功：{res}", success=True)
+
+    def get_doc_10(self, e):
+        progress_bar.visible = True
+        e.page.update()
+        success, res = es_service.get_doc_10(e.control.data)
+        progress_bar.visible = False
+        e.page.update()
+        if not success:
+            open_snack_bar(e.page, res, success=False)
+            return
+
+        dlg_modal = ft.AlertDialog(
+            modal=True,
+            title=ft.Text(e.control.data),
+            actions=[
+                ft.Row(
+                    controls=[
+                        ft.Column(
+                            [
+                                ft.Column(
+                                    [
+                                        ft.Text(
+                                            # json.dumps(res, ensure_ascii=False, indent=4), selectable=True
+                                            spans=self.dict_to_richtext_spans(res), selectable=True
+                                        ),
+                                    ],
+                                    scroll=ft.ScrollMode.ALWAYS,
+                                    height=600,
+                                    width=600,
+                                ),
+                                ft.Row(
+                                    [
+                                        ft.TextButton("取消", on_click=close_dlg)
+                                    ]
+                                )
+                            ],
+                            scroll=ft.ScrollMode.ALWAYS,
+                        )],
+                    scroll=ft.ScrollMode.ALWAYS,
+
+                )
+
+            ],
+            actions_alignment=ft.MainAxisAlignment.CENTER,
+            shape=ft.RoundedRectangleBorder(radius=8),
+            open=True,
+        )
+        e.page.dialog = dlg_modal
+        dlg_modal.open = True
+        e.page.update()

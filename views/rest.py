@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 # -*-coding:utf-8 -*-
+import json
 import random
 import traceback
 
 import flet as ft
 from flet_core import Column, Row, TextStyle
 
-from service.common import S_Button, open_snack_bar
+from service.common import S_Button, open_snack_bar, build_tab_container, close_dlg, progress_bar
 from service.es_service import es_service
 
 
@@ -15,180 +16,263 @@ class Rest(object):
     """
 
     def __init__(self):
-        self.page = None
-        self.key = "__monitor_topic_lag__"
-        self.topic_input_key = "__monitor_topic_input_"
-        self.topic_groups_key = "__monitor_topic_groups_"
-        self.colors = [ft.colors.RED, ft.colors.ORANGE, ft.colors.YELLOW_900, ft.colors.BLUE, ft.colors.PURPLE,
-                       ft.colors.GREEN, ft.colors.PINK]
-        self.topic_input = ft.TextField(
-            label="输入多个，英文逗号分隔",
-            label_style=TextStyle(size=14),
-            hint_text="topic1,topic2",
-            width=400,
-            height=30,
-            text_size=14,
-            content_padding=1
-        )
-        self.topic_groups_dd = ft.Dropdown(
-            label="请选择消费组",
-            label_style=TextStyle(size=14),
-            width=200,
-            height=30,
+        # page
+        self.indexes_tmp = []
+        self.page_num = 1
+        self.page_size = 10
+        self.page_label = None
+        # order
+        self.reverse = None
+        self.cluster_table_rows = None
+        self.indexes = []
+        self.indexes_table = None
+
+        self.method_groups_dd = ft.Dropdown(
+            label="请选择HTTP方法",
+            options=[
+                ft.dropdown.Option("GET"),
+                ft.dropdown.Option("POST"),
+                ft.dropdown.Option("PUT"),
+                ft.dropdown.Option("DELETE"),
+                ft.dropdown.Option("HEAD"),
+                ft.dropdown.Option("PATCH"),
+                ft.dropdown.Option("OPTIONS"),
+            ],
+            width=180,
             dense=True,
-            text_size=14,
-            content_padding=1
+            content_padding=5,
+            value="POST",
         )
+
+        self.path_input = ft.TextField(
+            label="请求path",
+            label_style=TextStyle(size=14),
+            height=33,
+            expand=True,
+            content_padding=5,
+            value="*/_search"
+        )
+
+        self.dsl_input = ft.TextField(
+            multiline=True,
+            keyboard_type=ft.KeyboardType.MULTILINE,
+            text_size=14,
+            min_lines=20,
+            max_lines=20,
+            label="dsl",
+            label_style=TextStyle(size=14),
+            expand=True,
+        )
+        self.result_input = ft.TextField(
+            label="结果",
+            label_style=TextStyle(size=14),
+            max_lines=20,
+            expand=True,
+            min_lines=20,
+            text_size=14,
+        )
+
+        self.send_button = S_Button(
+            text="发送请求",
+            height=38,
+            on_click=self.send_search,
+        )
+        self.format_button = S_Button(
+            text="格式化",
+            height=38,
+            on_click=self.format_button,
+        )
+
+        self.demos = ft.MenuBar(
+                            style=ft.MenuStyle(
+                                alignment=ft.alignment.top_left,
+                            ),
+                            controls=[
+                                ft.SubmenuButton(
+                                    content=ft.Text("填充示例查询"),
+                                    height=40,
+                                    leading=ft.Icon(ft.icons.MORE_VERT),
+                                    controls=[
+                                        ft.MenuItemButton(
+                                            data="""{
+  "query": {
+    "term": {
+      "title": 0
+    }
+  },
+  "size": 0,
+  "track_total_hits": true
+}""",
+                                            content=ft.Text("term"),
+                                            on_click=self.insert_demo,
+                                        ),
+                                        ft.MenuItemButton(
+                                            data="""{
+  "query": {
+    "wildcard": {
+      "time.keyword": "*2022-12-30*"
+    }
+  },
+  "size": 0,
+  "track_total_hits": true
+}""",
+                                            content=ft.Text("wildcard"),
+                                            on_click=self.insert_demo,
+                                        ),
+                                        ft.MenuItemButton(
+                                            data="""{
+  "aggs": {
+    "demo": {
+      "terms": {
+        "field": "age",
+        "missing": "空值",
+        "size": 5
+      }
+    }
+  },
+  "size": 0,
+  "track_total_hits": true
+}""",
+                                            content=ft.Text("aggs"),
+                                            on_click=self.insert_demo,
+                                        ),
+                                        ft.MenuItemButton(
+                                            data="""{
+  "query": {
+    "wildcard": {
+      "time.keyword": "*2022-12-30*"
+    }
+  },
+  "size": 0,
+  "track_total_hits": true
+}""",
+                                            content=ft.Text("wildcard"),
+                                            on_click=self.insert_demo,
+                                        ),
+                                        ft.MenuItemButton(
+                                            data="""{
+  "size": 0,
+  "aggs": {
+    "dem": {
+      "composite": {
+		 // 每次请求返回的最大buckets数量，用于分页
+		"size": 1000,
+        "sources": [  
+          { "category": { "terms": { "field": "category.keyword" } } },
+          { "brand": { "terms": { "field": "brand.keyword" } } }
+        ],
+        "after": {}  // 可选：分页追加
+      },
+      // 可选agg, 写每个桶下要进一步聚合的操作，与 composite 同级，例如：每个结果里显示一条原始数据，
+      "aggs": {  
+        "top_docs": {
+          "top_hits": {
+            "size": 1
+          }
+        }
+      },
+      // 可选agg, 写每个桶下要进一步聚合的操作，与 composite 同级，例如：聚合每个桶下文档的指定字段求和，
+      "aggs": {
+        "total_sum": {
+          "sum": {
+            "field": "file_size"
+          }
+        }
+      }
+    }
+  }
+}""",
+                                            content=ft.Text("composite"),
+                                            on_click=self.insert_demo,
+                                        ),
+                                        ft.MenuItemButton(
+                                            data="""{
+  "query":{},
+  "aggs": {
+    "": {
+      "date_range": {
+        "field": "指定字段",
+        "ranges": [
+          {
+            "from": "2023-06-28 13:43:33",
+            "to": "2023-06-28 14:13:33"
+          },
+          {
+            "from": "2023-06-28 14:13:33",
+            "to": "2023-06-28 14:43:33"
+          },
+          {
+            "from": "2023-06-28 14:43:33",
+            "to": "2023-06-28 15:13:33"
+          },
+          {
+            "from": "2023-06-28 15:13:33",
+            "to": "2023-06-28 15:43:33"
+          }
+        ]
+      }
+    }
+  },
+}""",
+                                            content=ft.Text("date_range"),
+                                            on_click=self.insert_demo,
+                                        ),
+                                        ft.MenuItemButton(
+                                            data="""{
+  "aggs": {
+    "demo": {
+      "cardinality": {
+        "field": "age",
+        "missing": 0
+      }
+    }
+  },
+  "size": 0,
+  "track_total_hits": true
+}""",
+                                            content=ft.Text("date_range"),
+                                            on_click=self.insert_demo,
+                                        ),
+                                        ft.MenuItemButton(
+                                            data="""{
+  "query": {
+      ...
+  },
+  "sort":[
+    {
+      "title":{
+          "order": "desc"
+      }
+    },
+    {
+      "age":{
+          "order": "asc"
+      }     
+    }
+  ],
+  "size": 10,
+  "track_total_hits": true
+}""",
+                                            content=ft.Text("sort"),
+                                            on_click=self.insert_demo,
+                                        ),
+                                    ]
+                                ),
+                            ]
+                        )
+
         self.save_button = S_Button(
             text="保存",
             height=38,
-            on_click=self.click_save_config,
+            # on_click=self.click_save_config,
         )
-        self.refresh_button = S_Button(
-            text="更新",
-            tooltip="刷新",
-            height=38,
-            on_click=self.refresh,
-        )
-        self.alert_button = S_Button(
-            text="告警外发",
-            tooltip="设置阈值，达到阈值后将告警信息外发到指定接口，例如企微、钉钉",
-            height=38,
-            on_click=self.refresh,
-        )
-
-        # 积压
-        self.lag_chart = ft.LineChart(
-            data_series=[],
-            border=ft.border.all(1, ft.colors.with_opacity(0.2, ft.colors.ON_SURFACE)),
-            horizontal_grid_lines=ft.ChartGridLines(
-                interval=1000, color=ft.colors.with_opacity(0.2, ft.colors.ON_SURFACE), width=1
-            ),
-            vertical_grid_lines=ft.ChartGridLines(
-                interval=1, color=ft.colors.with_opacity(0.2, ft.colors.ON_SURFACE), width=1
-            ),
-            left_axis=ft.ChartAxis(
-                labels=[],
-                labels_size=100,
-            ),
-            bottom_axis=ft.ChartAxis(
-                title=ft.Text("积压指标"),
-                title_size=20,
-                labels=[],
-                labels_size=25,
-            ),
-            tooltip_bgcolor=ft.colors.WHITE,
-            min_y=0,
-            max_y=0,
-            min_x=0,
-            max_x=20,
-            height=250,
-            width=500,
-        )
-
-        # 生产
-        self.produce_chart = ft.LineChart(
-            data_series=[],
-            border=ft.border.all(1, ft.colors.with_opacity(0.2, ft.colors.ON_SURFACE)),
-            horizontal_grid_lines=ft.ChartGridLines(
-                interval=1000, color=ft.colors.with_opacity(0.2, ft.colors.ON_SURFACE), width=1
-            ),
-            vertical_grid_lines=ft.ChartGridLines(
-                interval=1, color=ft.colors.with_opacity(0.2, ft.colors.ON_SURFACE), width=1
-            ),
-            left_axis=ft.ChartAxis(
-                labels=[],
-                labels_size=100,
-            ),
-            bottom_axis=ft.ChartAxis(
-                title=ft.Text("消息生成速度"),
-                title_size=20,
-                labels=[],
-                labels_size=25,
-            ),
-            tooltip_bgcolor=ft.colors.WHITE,
-            min_y=0,
-            max_y=0,
-            min_x=0,
-            max_x=20,
-            height=250,
-            width=500,
-        )
-
-        # 消费
-        self.consumer_chart = ft.LineChart(
-            data_series=[],
-            border=ft.border.all(1, ft.colors.with_opacity(0.2, ft.colors.ON_SURFACE)),
-            horizontal_grid_lines=ft.ChartGridLines(
-                interval=1000, color=ft.colors.with_opacity(0.2, ft.colors.ON_SURFACE), width=1
-            ),
-            vertical_grid_lines=ft.ChartGridLines(
-                interval=1, color=ft.colors.with_opacity(0.2, ft.colors.ON_SURFACE), width=1
-            ),
-            left_axis=ft.ChartAxis(
-                labels=[],
-                labels_size=100,
-            ),
-            bottom_axis=ft.ChartAxis(
-                title=ft.Text("消息消费速度"),
-                title_size=20,
-                labels=[],
-                labels_size=25,
-            ),
-            tooltip_bgcolor=ft.colors.WHITE,
-            min_y=0,
-            max_y=0,
-            min_x=0,
-            max_x=20,
-            height=250,
-            width=500,
-        )
-        self.view = Column(
-            [
-                Row(
-                    [
-                        ft.Text("输入要监测的topic: "),
-                        self.topic_input,
-                        self.topic_groups_dd,
-                        self.save_button,
-                        self.refresh_button,
-                        # self.alert_button
-
-                    ]
-                ),
-                Row([
-                    self.produce_chart,
-                    self.consumer_chart,
-                ], spacing=0),
-                Row([
-                    self.lag_chart,
-                ]),
-                # ft.Text(
-                #     "横坐标：抓取时刻，纵坐标：消息积压指标；\n注意：每5分钟抓取一次，可以点刷新按钮手动抓取；离开当前tab页面不影响后台抓取；"
-                #     "只保留20次数据；修改配置将清空历史数据"),
-
-            ],
-            scroll=ft.ScrollMode.ALWAYS,
-            width=1100
-        )
-        self.lag_tab = ft.Tab(
-            text='消息积压指标', content=ft.Row(
-                wrap=False,  # 禁止换行，以确保内容在一行内展示并出现滚动条
-                scroll=ft.ScrollMode.ALWAYS,  # 设置滚动条始终显示
-                expand=True,  # 让Row填充页面宽度
-                controls=[
-                    ft.Container(
-                        content=self.view,
-                        alignment=ft.alignment.top_left, padding=10, adaptive=True
-                    )
-                ]),
-            icon=ft.icons.LINE_STYLE
+        self.rest_tab = ft.Tab(
+            text='Rest HTTP客户端', content=ft.Column(), icon=ft.icons.HIVE_OUTLINED,
         )
 
         self.tab = ft.Tabs(
-            animation_duration=300,
             tabs=[
-                self.lag_tab,
+                self.rest_tab,
             ],
             expand=1,
         )
@@ -200,181 +284,79 @@ class Rest(object):
     def init(self, page: ft.Page = None):
         if not es_service.connect_obj:
             return "请先选择一个可用的ES连接！\nPlease select an available ES connection first!"
-        self.page = page
-        groups = es_service.get_groups()
-        if groups:
-            self.topic_groups_dd.options = [ft.dropdown.Option(text=i) for i in groups]
 
-        else:
-            self.topic_groups_dd.label = "无消费组"
+        self.rest_tab.content = build_tab_container(
+            col_controls=[
+                ft.Row([
+                    self.method_groups_dd,
+                    self.path_input,
+                ]),
+                ft.Row([
+                    self.dsl_input,
+                    self.result_input,
+                ], vertical_alignment=ft.CrossAxisAlignment.START),
+                ft.Row(
+                    [
+                        self.send_button,
+                        self.save_button,
+                        self.format_button,
+                        self.demos,
+                    ]
+                )
+            ]
+        )
 
-        current_kafka_connect = es_service.connect_name
-        # 获取每个kafka连接对应的这块的存储的配置值
-        self.topic_input.value = page.client_storage.get(self.topic_input_key + current_kafka_connect)
-        self.topic_groups_dd.value = page.client_storage.get(self.topic_groups_key + current_kafka_connect)
+    def init_data(self):
+        pass
 
-        self.page.update()
-
-        self.update(page, First=True)
-
-        self.page.update()
-
-    def click_save_config(self, e):
-        """
-        保存配置，同时必须清除历史数据，不然不好兼容
-        """
-        page: ft.Page = e.page
-        topics = self.topic_input.value
-        topic_groups_dd = self.topic_groups_dd.value
-
-        # 持久化，并和连接关联起来；修改配置则覆盖历史数据
-        current_kafka_connect = es_service.connect_name
-        if topics is not None:
-            topics = topics.rstrip().replace('，', ',')
-            page.client_storage.set(self.topic_input_key + current_kafka_connect, topics)
-        if topic_groups_dd is not None:
-            page.client_storage.set(self.topic_groups_key + current_kafka_connect, topic_groups_dd)
-
-        page.client_storage.set(self.key + current_kafka_connect, {})
-        open_snack_bar(page, "保存成功", success=True)
-
-    def refresh(self, e):
-        print("开始刷新offset……", self.topic_input.value, self.topic_groups_dd.value)
-        if self.topic_input.value is None or self.topic_groups_dd.value is None:
-            open_snack_bar(self.page, "请先选择topic和消费组")
-            return
-
-        self.refresh_button.disabled = True
-        self.refresh_button.text = "更新中……"
-        self.page.update()
+    def is_json(self, s):
         try:
-            fetch_lag(page=self.page, only_one=True)
-            self.update(self.page, First=False)
-        except:
-            traceback.print_exc()
-        self.refresh_button.disabled = False
-        self.refresh_button.text = "更新"
-        self.page.update()
+            res = json.loads(s)
+            return True, res
+        except ValueError as e:
+            return False, None
 
-    def update(self, page: ft.Page, First=False):
-        """
-        只刷新组件
-        First指首次切到该页面
-        """
-        print("更新积压页面")
+    def on_change_input(self, e):
+        e.control.value = self.format_json(e.control.value)
+        e.control.update()
 
-        # 清理页面
-        for chart in [self.produce_chart, self.consumer_chart, self.lag_chart]:
-            chart.data_series.clear()
-            chart.bottom_axis.labels.clear()
+    def format_button(self, e):
+        self.dsl_input.value = self.format_json(self.dsl_input.value)
+        self.dsl_input.update()
 
-        lag_x, produce_x = [], []
-        # lags: {topic: [[time1, lag], ]}
-        current_kafka_connect = es_service.connect_name
-        connect_data_key = self.key + current_kafka_connect
-        # lags: {topic: [[time1, end_offset, commit, lag], ]}
-        lags = page.client_storage.get(connect_data_key)
-        if not lags:
-            return
-        # 为每个topic绘制一条曲线
-        # topic: [topic_end_offsets, topic_last_committed]
-        for topic, lag_obj in lags.items():
+    def format_json(self, data):
+        flag, res = self.is_json(data)
+        if flag:
+            return json.dumps(res, ensure_ascii=False, indent=2)
+        else:
+            return data
 
-            data_points = []
-            produce_data_points = []
-            consumer_data_points = []
-            _max_lag, _max_produce_and_consume_offset = [], []
-            for index, time_lag_list in enumerate(lag_obj):
-                time_lag_list: list
-                timestamp = time_lag_list[0]
-                topic_end_offsets = time_lag_list[1]
-                topic_last_committed = time_lag_list[2]
-                topic_lag = topic_end_offsets - topic_last_committed
-                # 一个曲线上的一个点的坐标
-                data_points.append(ft.LineChartDataPoint(x=index, y=topic_lag,
-                                                         tooltip=f"{topic}：{topic_lag}",
-                                                         tooltip_align=ft.TextAlign.LEFT,
-                                                         tooltip_style=ft.TextStyle(size=12),
-                                                         ))
+    def insert_demo(self, e):
+        dlg_modal = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("创建索引"),
+            content=ft.Column([
+                ft.Text(e.control.data, selectable=True)
+            ], scroll=ft.ScrollMode.ALWAYS),
+            actions=[
+                ft.TextButton("取消", on_click=close_dlg),
+            ],
+            # actions_alignment=ft.MainAxisAlignment.START,
+        )
+        e.page.dialog = dlg_modal
+        dlg_modal.open = True
+        e.page.update()
 
-                # 生产速度曲线，减去差值得到速率
-                produce_speed = 0
-                consume_speed = 0
-                if index > 0:
-                    produce_speed = topic_end_offsets - lag_obj[index - 1][1]
-                    consume_speed = topic_last_committed - lag_obj[index - 1][2]
+    def send_search(self, e):
+        if self.path_input.value and self.method_groups_dd.value:
+            progress_bar.visible = True
+            e.page.update()
 
-                produce_data_points.append(ft.LineChartDataPoint(x=index, y=produce_speed,
-                                                                 tooltip=f"{topic}：{produce_speed}",
-                                                                 tooltip_align=ft.TextAlign.LEFT,
-                                                                 tooltip_style=ft.TextStyle(size=12),
-                                                                 ))
+            success, res = es_service.search(self.method_groups_dd.value, self.path_input.value, json.loads(self.dsl_input.value))
 
-                # 消费速度曲线
-                consumer_data_points.append(ft.LineChartDataPoint(x=index, y=consume_speed,
-                                                                  tooltip=f"{topic}：{consume_speed}",
-                                                                  tooltip_align=ft.TextAlign.LEFT,
-                                                                  tooltip_style=ft.TextStyle(size=12),
-                                                                  ))
-
-                # 为每个点添加横坐标
-                self.lag_chart.bottom_axis.labels.append(
-                    ft.ChartAxisLabel(value=index, label=ft.Text(timestamp, size=12, )))
-                self.produce_chart.bottom_axis.labels.append(
-                    ft.ChartAxisLabel(value=index, label=ft.Text(timestamp, size=12, )))
-                self.consumer_chart.bottom_axis.labels.append(
-                    ft.ChartAxisLabel(value=index, label=ft.Text(timestamp, size=12, )))
-
-                _max_lag.append(topic_lag)
-                _max_produce_and_consume_offset.extend([produce_speed, consume_speed])
-
-            # 取每个topic最大的积压，作为纵坐标label
-            lag_x.append(max(_max_lag))
-            produce_x.append(max(_max_produce_and_consume_offset))
-
-            # 把一条曲线加进曲线列表里
-            self.lag_chart.data_series.append(
-                ft.LineChartData(
-                    data_points=data_points,
-                    stroke_width=2,  # 线条宽度
-                    color=random.choice(self.colors),
-                    curved=False,  # 直线
-                    stroke_cap_round=True,  # 绘制圆角线帽
-                    prevent_curve_over_shooting=True,  # 避免曲线超出边界
-                ))
-            self.produce_chart.data_series.append(
-                ft.LineChartData(
-                    data_points=produce_data_points,
-                    stroke_width=2,  # 线条宽度
-                    color=random.choice(self.colors),
-                    curved=False,  # 直线
-                    stroke_cap_round=True,  # 绘制圆角线帽
-                    prevent_curve_over_shooting=True,  # 避免曲线超出边界
-                ))
-            self.consumer_chart.data_series.append(
-                ft.LineChartData(
-                    data_points=consumer_data_points,
-                    stroke_width=2,  # 线条宽度
-                    color=random.choice(self.colors),
-                    curved=False,  # 直线
-                    stroke_cap_round=True,  # 绘制圆角线帽
-                    prevent_curve_over_shooting=True,  # 避免曲线超出边界
-                ))
-
-        # 取每个topic最大的积压，作为纵坐标label
-        if not lag_x:
-            return
-        lag_x = list(set(lag_x))
-        produce_x = list(set(produce_x))
-        lag_x.sort()
-        produce_x.sort()
-
-        self.lag_chart.max_y = max(lag_x[-1] * 1.2, 100)
-        self.produce_chart.max_y = max(produce_x[-1] * 1.2, 100)
-        self.consumer_chart.max_y = max(produce_x[-1] * 1.2, 100)
-
-        self.lag_chart.horizontal_grid_lines.interval = max(lag_x[-1] * 1.2 / 15, 10)
-        self.produce_chart.horizontal_grid_lines.interval = max(produce_x[-1] * 1.2 / 15, 10)
-        self.consumer_chart.horizontal_grid_lines.interval = max(produce_x[-1] * 1.2 / 15, 10)
-
-        page.update()
+            progress_bar.visible = False
+            if not success:
+                open_snack_bar(e.page, res, success=False)
+            else:
+                self.result_input.value = json.dumps(res, ensure_ascii=False, indent=2)
+            e.page.update()
