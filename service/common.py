@@ -10,7 +10,6 @@ import math
 import os
 
 import flet
-import flet_core
 from flet_core import TextStyle
 
 from service.translate import i18n
@@ -165,7 +164,7 @@ Navigation = flet.NavigationRail(
 
 body = flet.Column(
     controls=[],
-    expand=True
+    expand=True,
 )
 
 # 全局进度条
