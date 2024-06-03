@@ -20,7 +20,7 @@ class Index(object):
         self.page_size = 10
         self.page_label = None
         # order
-        self.reverse = None
+        self.reverse = {}
         self.cluster_table_rows = None
         self.indexes = []
         self.indexes_table = None
@@ -29,7 +29,7 @@ class Index(object):
                                                  style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)))
         self.search_text = ft.TextField(value='*', label=' 检索索引名及别名，支持通配符*', label_style=ft.TextStyle(size=14),
                                         on_submit=self.search_table, width=300,
-                                        height=38, text_size=14, content_padding=5)
+                                        height=38, text_size=14, content_padding=5, autofocus=True, autocorrect=True)
 
         self.index_tab = ft.Tab(
             text='集群索引列表', content=ft.Column(), icon=ft.icons.HIVE_OUTLINED,
@@ -65,8 +65,7 @@ class Index(object):
             ft.DataRow(
                 cells=[
                     ft.DataCell(S_Text(offset + i + 1)),
-                    ft.DataCell(
-                        S_Button(text=f"{_index['index']}", data=_index['index'])),
+                    ft.DataCell(S_Text(f"{_index['index']}", data=_index['index'])),
                     ft.DataCell(S_Text(f"{_index['health'] if _index['health'] is not None else ''}",
                                        color=_index['health'] if _index['health'] != "yellow" else "amber")),
                     ft.DataCell(S_Text(f"{_index['status'] if _index['status'] is not None else ''}",
@@ -151,13 +150,13 @@ class Index(object):
         self.indexes_table = ft.DataTable(
             columns=[
                 ft.DataColumn(S_Text("序号")),
-                ft.DataColumn(S_Text("索引名"), on_sort=self.on_sort),
-                ft.DataColumn(S_Text("健康状态"), on_sort=self.on_sort),
-                ft.DataColumn(S_Text("状态"), on_sort=self.on_sort),
-                ft.DataColumn(S_Text("主分片/副本"), on_sort=self.on_sort),
-                ft.DataColumn(S_Text("文档总数"), on_sort=self.on_sort),
-                ft.DataColumn(S_Text("未清除的删除文档"), on_sort=self.on_sort),
-                ft.DataColumn(S_Text("占用存储（主+副）"), on_sort=self.on_sort),
+                ft.DataColumn(ft.Row([S_Text("索引名"),ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(1) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
+                ft.DataColumn(ft.Row([S_Text("健康状态"),ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(2) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
+                ft.DataColumn(ft.Row([S_Text("状态"),ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(3) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
+                ft.DataColumn(ft.Row([S_Text("主分片/副本"),ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(4) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
+                ft.DataColumn(ft.Row([S_Text("文档总数"),ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(5) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
+                ft.DataColumn(ft.Row([S_Text("未清除的删除文档"),ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(6) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
+                ft.DataColumn(ft.Row([S_Text("占用存储（主+副）"),ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(7) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
                 ft.DataColumn(S_Text("")),
 
             ],
@@ -265,18 +264,23 @@ class Index(object):
         """
         # order
         # 反转true false
-        self.reverse = not self.reverse
+        if e.column_index in self.reverse:
+            reverse = not self.reverse[e.column_index]
+            self.reverse[e.column_index] = reverse
+        else:
+            self.reverse[e.column_index] = True
+            reverse = True
         key = {
             1: lambda x: str(x['index']),  # 索引名
             2: lambda x: str(x['health']),  # 健康
             3: lambda x: str(x['status']),  # status
-            4: lambda x: int(x['pri']),  # status
-            5: lambda x: int(x['docs.count']),  # status
-            6: lambda x: int(x['docs.deleted']),  # status
-            7: lambda x: float(x['store.size']),  # status
+            4: lambda x: int(x['pri'] if x['pri'] is not None else 0),  # status
+            5: lambda x: int(x['docs.count'] if x['docs.count'] is not None else 0),  # status
+            6: lambda x: int(x['docs.deleted'] if x['docs.deleted'] is not None else 0),  # status
+            7: lambda x: float(x['store.size'] if x['store.size'] is not None else 0),  # status
         }[e.column_index]
 
-        self.indexes = sorted(self.indexes, key=key, reverse=self.reverse)
+        self.indexes = sorted(self.indexes, key=key, reverse=reverse)
         self.indexes_tmp = self.indexes[:self.page_size]
         self.init_rows()
         self.init_table()

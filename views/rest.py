@@ -50,7 +50,8 @@ class Rest(object):
             height=33,
             expand=True,
             content_padding=5,
-            value="*/_search"
+            value="*/_search", autofocus=True
+
         )
 
         self.dsl_input = ft.TextField(
@@ -62,6 +63,10 @@ class Rest(object):
             label="dsl",
             label_style=TextStyle(size=14),
             expand=True,
+            on_change=self.on_change_input,
+            # autocorrect=True,
+            # enable_suggestions=True,
+            # fill_color="#1A1C1E"
         )
         self.result_input = ft.TextField(
             label="结果",
@@ -83,31 +88,45 @@ class Rest(object):
             on_click=self.format_button,
         )
 
-        self.demos = ft.MenuBar(
-                            style=ft.MenuStyle(
-                                alignment=ft.alignment.top_left,
-                            ),
-                            controls=[
-                                ft.SubmenuButton(
-                                    content=ft.Text("填充示例查询"),
-                                    height=40,
-                                    leading=ft.Icon(ft.icons.MORE_VERT),
-                                    controls=[
-                                        ft.MenuItemButton(
-                                            data="""{
-  "query": {
-    "term": {
-      "title": 0
-    }
+        self._convert = {
+            "{": """{
+  "": {
   },
   "size": 0,
   "track_total_hits": true
 }""",
-                                            content=ft.Text("term"),
-                                            on_click=self.insert_demo,
-                                        ),
-                                        ft.MenuItemButton(
-                                            data="""{
+            "[": "[\n]",
+            "term": """{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "range": {
+            "report_time_datetime": {
+              "gte": "2024-05-31 00:00:00"
+            }
+          }
+        },
+        {
+          "term": {
+            "data.area.keyword": "110000"
+          }
+        }
+      ]
+    }
+  },
+  "size": 0,
+  "track_total_hits": true,
+  "aggs": {
+    "ds": {
+      "terms": {
+        "field": "topic.keyword",
+        "size": 100
+      }
+    }
+  }
+}""",
+            "wildcard": """{
   "query": {
     "wildcard": {
       "time.keyword": "*2022-12-30*"
@@ -116,11 +135,7 @@ class Rest(object):
   "size": 0,
   "track_total_hits": true
 }""",
-                                            content=ft.Text("wildcard"),
-                                            on_click=self.insert_demo,
-                                        ),
-                                        ft.MenuItemButton(
-                                            data="""{
+            "aggs": """{
   "aggs": {
     "demo": {
       "terms": {
@@ -133,45 +148,30 @@ class Rest(object):
   "size": 0,
   "track_total_hits": true
 }""",
-                                            content=ft.Text("aggs"),
-                                            on_click=self.insert_demo,
-                                        ),
-                                        ft.MenuItemButton(
-                                            data="""{
-  "query": {
-    "wildcard": {
-      "time.keyword": "*2022-12-30*"
-    }
-  },
-  "size": 0,
-  "track_total_hits": true
-}""",
-                                            content=ft.Text("wildcard"),
-                                            on_click=self.insert_demo,
-                                        ),
-                                        ft.MenuItemButton(
-                                            data="""{
+            "composite": """{
   "size": 0,
   "aggs": {
     "dem": {
       "composite": {
-		 // 每次请求返回的最大buckets数量，用于分页
-		"size": 1000,
-        "sources": [  
-          { "category": { "terms": { "field": "category.keyword" } } },
-          { "brand": { "terms": { "field": "brand.keyword" } } }
-        ],
-        "after": {}  // 可选：分页追加
-      },
-      // 可选agg, 写每个桶下要进一步聚合的操作，与 composite 同级，例如：每个结果里显示一条原始数据，
-      "aggs": {  
-        "top_docs": {
-          "top_hits": {
-            "size": 1
+        "size": 1000,
+        "sources": [
+          {
+            "category": {
+              "terms": {
+                "field": "category.keyword"
+              }
+            }
+          },
+          {
+            "brand": {
+              "terms": {
+                "field": "brand.keyword"
+              }
+            }
           }
-        }
+        ],
+        "after": {}
       },
-      // 可选agg, 写每个桶下要进一步聚合的操作，与 composite 同级，例如：聚合每个桶下文档的指定字段求和，
       "aggs": {
         "total_sum": {
           "sum": {
@@ -182,12 +182,8 @@ class Rest(object):
     }
   }
 }""",
-                                            content=ft.Text("composite"),
-                                            on_click=self.insert_demo,
-                                        ),
-                                        ft.MenuItemButton(
-                                            data="""{
-  "query":{},
+            "date_range": """{
+  "query": {},
   "aggs": {
     "": {
       "date_range": {
@@ -212,13 +208,9 @@ class Rest(object):
         ]
       }
     }
-  },
+  }
 }""",
-                                            content=ft.Text("date_range"),
-                                            on_click=self.insert_demo,
-                                        ),
-                                        ft.MenuItemButton(
-                                            data="""{
+            "cardinality": """{
   "aggs": {
     "demo": {
       "cardinality": {
@@ -230,11 +222,7 @@ class Rest(object):
   "size": 0,
   "track_total_hits": true
 }""",
-                                            content=ft.Text("date_range"),
-                                            on_click=self.insert_demo,
-                                        ),
-                                        ft.MenuItemButton(
-                                            data="""{
+            "sort": """{
   "query": {
       ...
   },
@@ -253,6 +241,56 @@ class Rest(object):
   "size": 10,
   "track_total_hits": true
 }""",
+
+                                }
+        self.demos = ft.MenuBar(
+                            style=ft.MenuStyle(
+                                alignment=ft.alignment.top_left,
+                            ),
+                            controls=[
+                                ft.SubmenuButton(
+                                    content=ft.Text("关键字自动补全"),
+                                    tooltip="在清空的输入框中输入关键字，自动补全",
+                                    height=40,
+                                    leading=ft.Icon(ft.icons.MORE_VERT),
+                                    controls=[
+                                        ft.MenuItemButton(
+                                            data=self._convert['term'],
+                                            content=ft.Text("term"),
+                                            on_click=self.insert_demo,
+                                        ),
+                                        ft.MenuItemButton(
+                                            data=self._convert["wildcard"],
+                                            content=ft.Text("wildcard"),
+                                            on_click=self.insert_demo,
+                                        ),
+                                        ft.MenuItemButton(
+                                            data=self._convert["aggs"],
+                                            content=ft.Text("aggs"),
+                                            on_click=self.insert_demo,
+                                        ),
+                                        ft.MenuItemButton(
+                                            data=self._convert['wildcard'],
+                                            content=ft.Text("wildcard"),
+                                            on_click=self.insert_demo,
+                                        ),
+                                        ft.MenuItemButton(
+                                            data=self._convert['composite'],
+                                            content=ft.Text("composite"),
+                                            on_click=self.insert_demo,
+                                        ),
+                                        ft.MenuItemButton(
+                                            data=self._convert['date_range'],
+                                            content=ft.Text("date_range"),
+                                            on_click=self.insert_demo,
+                                        ),
+                                        ft.MenuItemButton(
+                                            data=self._convert['cardinality'],
+                                            content=ft.Text("cardinality"),
+                                            on_click=self.insert_demo,
+                                        ),
+                                        ft.MenuItemButton(
+                                            data=self._convert['sort'],
                                             content=ft.Text("sort"),
                                             on_click=self.insert_demo,
                                         ),
@@ -317,8 +355,12 @@ class Rest(object):
             return False, None
 
     def on_change_input(self, e):
-        e.control.value = self.format_json(e.control.value)
-        e.control.update()
+        # e.control.value = self.format_json(e.control.value)
+        # e.control.update()
+        _v = e.control.value
+        if _v in self._convert:
+            self.dsl_input.value = self._convert[_v]
+            e.control.update()
 
     def format_button(self, e):
         self.dsl_input.value = self.format_json(self.dsl_input.value)

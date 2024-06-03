@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 # -*-coding:utf-8 -*-
-import json
 
 import flet as ft
-from flet_core import ControlEvent, DataColumnSortEvent
+from flet_core import DataColumnSortEvent
 
-from service.common import S_Text, build_tab_container, human_size
+from service.common import S_Text, build_tab_container
 from service.es_service import es_service
 
 
@@ -21,7 +20,8 @@ class Broker(object):
         self.page_size = 10
         self.page_label = None
         # order
-        self.reverse = None
+        # 每列对应的排序状态
+        self.reverse = {}
         self.cluster_table_rows = None
         self.nodes = None
         self.cluster_table = None
@@ -87,8 +87,8 @@ class Broker(object):
                         ], alignment=ft.MainAxisAlignment.CENTER), data=float(_node['disk.used_percent'])),
                     ft.DataCell(S_Text(f"{self.translate_node_roles(_node['node.role'])[:5]}...", tooltip=self.translate_node_roles(_node['node.role']))),
                     ft.DataCell(S_Text(f"{_node['master']}")),
-                    ft.DataCell(S_Text(f"{_node['cpu']}%")),
-                    ft.DataCell(S_Text(f"{_node['load_1m']}/{_node['load_5m']}/{_node['load_15m']}")),
+                    ft.DataCell(S_Text(f"{_node['cpu']}%"), data=float(_node['cpu'])),
+                    ft.DataCell(S_Text(f"{_node['load_1m']}/{_node['load_5m']}/{_node['load_15m']}"), data=float(_node['load_5m'])),
                 ]
             ) for i, _node in enumerate(self.nodes_tmp)  # page
         ]
@@ -103,13 +103,13 @@ class Broker(object):
                 ft.DataColumn(S_Text("序号")),
                 ft.DataColumn(S_Text("ip")),
                 ft.DataColumn(S_Text("name")),
-                ft.DataColumn(S_Text("堆使用率(点右侧排序)"), on_sort=self.on_sort),
-                ft.DataColumn(S_Text("内存使用率(点右侧排序)"), on_sort=self.on_sort),
-                ft.DataColumn(S_Text("磁盘使用率(点右侧排序)"), on_sort=self.on_sort),
+                ft.DataColumn(ft.Row([S_Text("堆使用率"), ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(3) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
+                ft.DataColumn(ft.Row([S_Text("内存使用率"), ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(4) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
+                ft.DataColumn(ft.Row([S_Text("磁盘使用率"), ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(5) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
                 ft.DataColumn(S_Text("角色")),
                 ft.DataColumn(S_Text("主节点")),
-                ft.DataColumn(S_Text("cpu")),
-                ft.DataColumn(S_Text("负载")),
+                ft.DataColumn(ft.Row([S_Text("cpu"), ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(8) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
+                ft.DataColumn(ft.Row([S_Text("负载"), ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(9) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
 
             ],
             rows=self.cluster_table_rows,
@@ -189,14 +189,22 @@ class Broker(object):
         """
         # order
         # 反转true false
-        self.reverse = not self.reverse
+        if e.column_index in self.reverse:
+            reverse = not self.reverse[e.column_index]
+            self.reverse[e.column_index] = reverse
+        else:
+            self.reverse[e.column_index] = True
+            reverse = True
+
         key = {
-            3: lambda x: float(x['heap.percent']),  # 堆
-            4: lambda x: float(x['ram.percent']),  # 内存
-            5: lambda x: float(x['disk.used_percent']),  # 磁盘
+            3: lambda x: float(x['heap.percent'] if x['heap.percent'] is not None else 0),  # 堆
+            4: lambda x: float(x['ram.percent'] if x['ram.percent'] is not None else 0),  # 内存
+            5: lambda x: float(x['disk.used_percent'] if x['disk.used_percent'] is not None else 0),  # 磁盘
+            8: lambda x: float(x['cpu'] if x['cpu'] is not None else 0),  # 磁盘
+            9: lambda x: float(x['load_5m'] if x['load_5m'] is not None else 0),  # 磁盘
         }[e.column_index]
 
-        self.nodes = sorted(self.nodes, key=key, reverse=self.reverse)
+        self.nodes = sorted(self.nodes, key=key, reverse=reverse)
         self.nodes_tmp = self.nodes[:self.page_size]
         self.init_rows()
         self.init_table()
