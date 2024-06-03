@@ -425,7 +425,7 @@ class Rest(object):
         path = f"/es-king-export-{int(time.time())}.json"
         data = self.result_input.value
         with open(path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+            json.dump(json.loads(data), f, ensure_ascii=False, indent=2)
 
         open_snack_bar(e.page, f"成功导出到根目录：{path}", success=True)
 

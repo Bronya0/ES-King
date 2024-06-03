@@ -139,7 +139,6 @@ class Main:
         """
         连接测试
         """
-        ori = e.control.text
         e.control.text = "连接中……"
         e.page.update()
         conn_name_input, es_input, username, password = [i.value for i in e.control.data]
