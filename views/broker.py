@@ -42,11 +42,15 @@ class Broker(object):
         ]
 
     def init(self, page=None):
+        if not es_service.connect_obj:
+            return "请先选择一个可用的ES连接！\nPlease select an available ES connection first!"
+
         self.init_data()
         self.init_rows()
         self.init_table()
 
     def init_data(self):
+
         self.nodes = es_service.get_nodes()
         # page
         # 只在最开始、排序时执行一次
@@ -94,8 +98,6 @@ class Broker(object):
         ]
 
     def init_table(self):
-        if not es_service.connect_obj:
-            return "请先选择一个可用的ES连接！\nPlease select an available ES connection first!"
 
         # 节点列表表格
         self.cluster_table = ft.DataTable(

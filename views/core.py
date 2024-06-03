@@ -40,16 +40,18 @@ class Core(object):
         ]
 
     def init(self, page=None):
+        if not es_service.connect_obj:
+            return "请先选择一个可用的ES连接！\nPlease select an available ES connection first!"
+
         self.init_data()
         self.init_table()
 
     def init_data(self):
+
         self.stats = es_service.get_stats()
         self.settings = es_service.get_cluster_settings()
 
     def init_table(self):
-        if not es_service.connect_obj:
-            return "请先选择一个可用的ES连接！\nPlease select an available ES connection first!"
 
         stats_nodes = self.stats['nodes']
 

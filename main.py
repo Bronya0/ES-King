@@ -159,12 +159,8 @@ class Main:
             else:
                 msg = f"连接失败: {err}"
                 color = "#000000"
-
-        self.page.snack_bar.content = ft.Text(msg)
-        self.page.snack_bar.bgcolor = color
-        self.page.snack_bar.open = True
-        self.page.update()
-        e.control.text = ori
+        e.control.text = msg
+        e.control.style = ft.ButtonStyle(color=color)
         self.page.update()
 
     def add_connect(self, e):
@@ -230,7 +226,7 @@ class Main:
                                       data=[self.conn_name_input, self.es_input,
                                             self.username, self.password]),
                         ft.TextButton("取消", on_click=cancel),
-                    ])
+                    ]),
                 ],
                     width=360
                 )

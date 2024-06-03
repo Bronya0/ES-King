@@ -47,6 +47,9 @@ class Index(object):
         ]
 
     def init(self, page=None):
+        if not es_service.connect_obj:
+            return "请先选择一个可用的ES连接！\nPlease select an available ES connection first!"
+
         # self.init_data()
         # self.init_rows()
         self.init_table()

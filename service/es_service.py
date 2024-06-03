@@ -57,7 +57,7 @@ class ESService:
     def test_client(self, host, username, pwd):
         # 测试连接
         try:
-            res = requests.get(url=host, headers=self.headers)
+            res = requests.get(url=urljoin(host, HEALTH_API), headers={'Authorization': base64.b64encode(f"{username}:{pwd}".encode()).decode()})
             res.raise_for_status()
             return True, None
         except Exception as e:

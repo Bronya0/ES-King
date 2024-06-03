@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 # -*-coding:utf-8 -*-
 import json
-import random
-import traceback
+import time
 
 import flet as ft
-from flet_core import Column, Row, TextStyle
+from flet_core import TextStyle
 
 from service.common import S_Button, open_snack_bar, build_tab_container, close_dlg, progress_bar
 from service.es_service import es_service
@@ -29,6 +28,7 @@ class Rest(object):
 
         self.method_groups_dd = ft.Dropdown(
             label="请选择HTTP方法",
+            label_style=TextStyle(size=14),
             options=[
                 ft.dropdown.Option("GET"),
                 ft.dropdown.Option("POST"),
@@ -38,7 +38,7 @@ class Rest(object):
                 ft.dropdown.Option("PATCH"),
                 ft.dropdown.Option("OPTIONS"),
             ],
-            width=180,
+            width=120,
             dense=True,
             content_padding=5,
             value="POST",
@@ -50,14 +50,15 @@ class Rest(object):
             height=33,
             expand=True,
             content_padding=5,
-            value="*/_search", autofocus=True
+            value="*/_search", autofocus=True,
+            prefix=ft.Text(es_service.host),
 
         )
 
         self.dsl_input = ft.TextField(
             multiline=True,
             keyboard_type=ft.KeyboardType.MULTILINE,
-            text_size=14,
+            text_size=12,
             min_lines=20,
             max_lines=20,
             label="dsl",
@@ -74,7 +75,7 @@ class Rest(object):
             max_lines=20,
             expand=True,
             min_lines=20,
-            text_size=14,
+            text_size=12,
         )
 
         self.send_button = S_Button(
@@ -83,14 +84,41 @@ class Rest(object):
             on_click=self.send_search,
         )
         self.format_button = S_Button(
-            text="格式化",
+            text="格式化JSON",
             height=38,
-            on_click=self.format_button,
+            on_click=self.format_button_func,
+        )
+
+        self.export_json_button = S_Button(
+            text="导出为JSON",
+            height=38,
+            on_click=self.export_json_button_func,
+        )
+        self.history_button = S_Button(
+            text="查询历史",
+            height=38,
+            # on_click=self.send_search,
         )
 
         self._convert = {
             "{": """{
-  "": {
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "term": {
+            "": ""
+          }
+        }
+      ]
+    }
+  },
+  "aggs": {
+    "a": {
+      "terms": {
+        "": ""
+      }
+    }
   },
   "size": 0,
   "track_total_hits": true
@@ -330,17 +358,39 @@ class Rest(object):
                     self.path_input,
                 ]),
                 ft.Row([
-                    self.dsl_input,
-                    self.result_input,
-                ], vertical_alignment=ft.CrossAxisAlignment.START),
-                ft.Row(
-                    [
-                        self.send_button,
-                        self.save_button,
-                        self.format_button,
-                        self.demos,
-                    ]
-                )
+                    ft.Column([
+                        ft.Row(
+                            [
+                                self.dsl_input,
+                            ]
+                        ),
+                        ft.Row(
+                            [
+                                self.send_button,
+                                self.history_button,
+                                # self.save_button,
+                                self.format_button,
+                                self.demos,
+                            ]
+                        )
+                    ], expand=True),
+                    ft.Column(
+                        [
+                            ft.Row(
+                                [
+                                    self.result_input,
+                                ]
+                            ),
+
+                            ft.Row(
+                                [
+                                    self.export_json_button
+                                ], vertical_alignment=ft.CrossAxisAlignment.START
+                            ),
+                        ], expand=True),
+                ], vertical_alignment=ft.CrossAxisAlignment.START)
+
+
             ]
         )
 
@@ -362,9 +412,22 @@ class Rest(object):
             self.dsl_input.value = self._convert[_v]
             e.control.update()
 
-    def format_button(self, e):
-        self.dsl_input.value = self.format_json(self.dsl_input.value)
-        self.dsl_input.update()
+    def format_button_func(self, e):
+        flag, res = self.is_json(self.dsl_input.value)
+        if not flag:
+            open_snack_bar(e.page, "不是正确json文本格式，无法格式化", success=True)
+        else:
+            self.dsl_input.value = self.format_json(self.dsl_input.value)
+            self.dsl_input.update()
+            open_snack_bar(e.page, "格式化完成", success=True)
+
+    def export_json_button_func(self, e):
+        path = f"/es-king-export-{int(time.time())}.json"
+        data = self.result_input.value
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+        open_snack_bar(e.page, f"成功导出到根目录：{path}", success=True)
 
     def format_json(self, data):
         flag, res = self.is_json(data)
