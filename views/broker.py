@@ -80,7 +80,7 @@ class Broker(object):
                             ft.ProgressBar(value=float(_node['ram.percent']) / 100.0,
                                            color="green" if float(_node['ram.percent']) < 70 else "amber" if float(
                                                _node['ram.percent']) < 80 else "red", )
-                        ], alignment=ft.MainAxisAlignment.CENTER), data=float(_node['ram.percent'])),
+                        ], alignment=ft.MainAxisAlignment.CENTER)),
                     ft.DataCell(
                         ft.Column([
                             ft.Text(f"{_node['disk.used']}/{_node['disk.total']}={_node['disk.used_percent']}%",
@@ -88,11 +88,11 @@ class Broker(object):
                             ft.ProgressBar(value=float(_node['disk.used_percent']) / 100.0, color="green" if float(
                                 _node['disk.used_percent']) < 70 else "amber" if float(
                                 _node['disk.used_percent']) < 80 else "red", )
-                        ], alignment=ft.MainAxisAlignment.CENTER), data=float(_node['disk.used_percent'])),
+                        ], alignment=ft.MainAxisAlignment.CENTER)),
                     ft.DataCell(S_Text(f"{self.translate_node_roles(_node['node.role'])[:5]}...", tooltip=self.translate_node_roles(_node['node.role']))),
                     ft.DataCell(S_Text(f"{_node['master']}")),
-                    ft.DataCell(S_Text(f"{_node['cpu']}%"), data=float(_node['cpu'])),
-                    ft.DataCell(S_Text(f"{_node['load_1m']}/{_node['load_5m']}/{_node['load_15m']}"), data=float(_node['load_5m'])),
+                    ft.DataCell(S_Text(f"{_node['cpu']}%")),
+                    ft.DataCell(S_Text(f"{_node['load_1m']}/{_node['load_5m']}/{_node['load_15m']}")),
                 ]
             ) for i, _node in enumerate(self.nodes_tmp)  # page
         ]
