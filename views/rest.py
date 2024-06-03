@@ -59,8 +59,8 @@ class Rest(object):
             multiline=True,
             keyboard_type=ft.KeyboardType.MULTILINE,
             text_size=12,
-            min_lines=20,
-            max_lines=20,
+            min_lines=25,
+            max_lines=25,
             label="dsl",
             label_style=TextStyle(size=14),
             expand=True,
@@ -72,9 +72,9 @@ class Rest(object):
         self.result_input = ft.TextField(
             label="结果",
             label_style=TextStyle(size=14),
-            max_lines=20,
+            max_lines=25,
             expand=True,
-            min_lines=20,
+            min_lines=25,
             text_size=12,
         )
 
