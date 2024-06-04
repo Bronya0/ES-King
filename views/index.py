@@ -7,6 +7,7 @@ from flet_core import ControlEvent, DataColumnSortEvent
 
 from service.common import S_Text, open_snack_bar, S_Button, close_dlg, progress_bar, build_tab_container, human_size
 from service.es_service import es_service
+from service.markdown_custom import Markdown
 
 
 class Index(object):
@@ -340,7 +341,6 @@ class Index(object):
         if not success:
             open_snack_bar(e.page, res, success=False)
             return
-
         dlg_modal = ft.AlertDialog(
             modal=True,
             title=ft.Text(e.control.data),
@@ -351,10 +351,14 @@ class Index(object):
                             [
                                 ft.Column(
                                     [
-                                        ft.Text(
-                                            json.dumps(res, ensure_ascii=False, indent=4), selectable=True
-                                            # spans=self.dict_to_richtext_spans(res), selectable=True
-                                        ),
+                                        Markdown(
+                                            f"""
+```json
+{json.dumps(res, ensure_ascii=False, indent=4)}
+```
+                                            """,
+                                        )
+
                                     ],
                                     scroll=ft.ScrollMode.ALWAYS,
                                     height=600,
@@ -380,49 +384,6 @@ class Index(object):
         e.page.dialog = dlg_modal
         dlg_modal.open = True
         e.page.update()
-
-    def dict_to_richtext_spans(self, d, level=0, key_color="#c06ccf", colon_color=ft.colors.PRIMARY,
-                               value_color="#55ce5b", brace_color=ft.colors.PRIMARY):
-        """Recursively convert nested dictionary to RichText spans."""
-        spans = []
-        if isinstance(d, dict):
-            if d:
-                # Opening brace with increased indentation and color
-                spans.append(ft.TextSpan(text="{", style=ft.TextStyle(color=brace_color)))
-                spans.append(ft.TextSpan(text="\n"))  # Newline for readability
-
-                for i, (k, v) in enumerate(d.items()):
-                    # Indentation for nested keys
-                    spans.extend([ft.TextSpan(text="  " * (level + 1), style=ft.TextStyle(color=brace_color))])
-
-                    # Key color
-                    spans.append(
-                        ft.TextSpan(text=f'"{k}:"', style=ft.TextStyle(color=key_color)))
-
-                    # Colon and space
-                    spans.append(ft.TextSpan(text=" ", style=ft.TextStyle(color=colon_color)))
-
-                    # Value processing, recursive for nested dictionaries
-                    if isinstance(v, dict):
-                        spans.extend(self.dict_to_richtext_spans(v, level=level + 1))
-                    else:
-                        # Value color
-                        spans.append(
-                            ft.TextSpan(text=str(v), style=ft.TextStyle(color=value_color)))
-
-                    # Add a comma and newline unless it's the last item in the dictionary
-                    if i < len(d) - 1:
-                        spans.append(ft.TextSpan(text=",\n"))
-                    else:
-                        spans.append(ft.TextSpan(text="\n"))  # Only newline after the last item
-
-                # Closing brace with adjusted indentation
-                spans.append(ft.TextSpan(text="  " * level + "}", style=ft.TextStyle(color=brace_color)))
-            else:
-                spans.append(ft.TextSpan(text="{}", style=ft.TextStyle(color=brace_color)))
-        else:
-            spans.append(ft.TextSpan(text=str(d), style=ft.TextStyle(color=value_color)))
-        return spans
 
     def delete_index(self, e):
         progress_bar.visible = True
@@ -526,10 +487,13 @@ class Index(object):
                             [
                                 ft.Column(
                                     [
-                                        ft.Text(
-                                            # json.dumps(res, ensure_ascii=False, indent=4), selectable=True
-                                            spans=self.dict_to_richtext_spans(res), selectable=True
-                                        ),
+                                        Markdown(
+                                            f"""
+```json
+{json.dumps(res, ensure_ascii=False, indent=4)}
+```
+""",
+                                        )
                                     ],
                                     scroll=ft.ScrollMode.ALWAYS,
                                     height=600,

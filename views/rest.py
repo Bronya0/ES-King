@@ -6,8 +6,9 @@ import time
 import flet as ft
 from flet_core import TextStyle
 
-from service.common import S_Button, open_snack_bar, build_tab_container, close_dlg, progress_bar
+from service.common import S_Button, open_snack_bar, build_tab_container, close_dlg, progress_bar, common_page
 from service.es_service import es_service
+from service.markdown_custom import Markdown
 
 
 class Rest(object):
@@ -25,6 +26,7 @@ class Rest(object):
         self.cluster_table_rows = None
         self.indexes = []
         self.indexes_table = None
+        self.history_key = "history_key"
 
         self.method_groups_dd = ft.Dropdown(
             label="请选择HTTP方法",
@@ -62,21 +64,12 @@ class Rest(object):
             min_lines=25,
             max_lines=25,
             label="dsl",
+            # bgcolor="#282c34",
             label_style=TextStyle(size=14),
             expand=True,
             on_change=self.on_change_input,
-            # autocorrect=True,
-            # enable_suggestions=True,
-            # fill_color="#1A1C1E"
         )
-        self.result_input = ft.TextField(
-            label="结果",
-            label_style=TextStyle(size=14),
-            max_lines=25,
-            expand=True,
-            min_lines=25,
-            text_size=12,
-        )
+        self.result_input = Markdown()
 
         self.send_button = S_Button(
             text="发送请求",
@@ -94,34 +87,22 @@ class Rest(object):
             height=38,
             on_click=self.export_json_button_func,
         )
-        self.history_button = S_Button(
-            text="查询历史",
-            height=38,
-            # on_click=self.send_search,
+        self.history_menu = ft.MenuBar(
+            controls=[
+                ft.SubmenuButton(
+                    content=ft.Text("查询历史"),
+                    tooltip="保留过去成功查询的100条",
+                    height=40,
+                    leading=ft.Icon(ft.icons.MORE_VERT),
+                    controls=[
+                    ]
+                )
+            ]
         )
 
         self._convert = {
             "{": """{
-  "query": {
-    "bool": {
-      "must": [
-        {
-          "term": {
-            "": ""
-          }
-        }
-      ]
-    }
-  },
-  "aggs": {
-    "a": {
-      "terms": {
-        "": ""
-      }
-    }
-  },
-  "size": 0,
-  "track_total_hits": true
+            
 }""",
             "[": "[\n]",
             "term": """{
@@ -362,12 +343,12 @@ class Rest(object):
                         ft.Row(
                             [
                                 self.dsl_input,
-                            ]
+                            ], width=400
                         ),
                         ft.Row(
                             [
                                 self.send_button,
-                                self.history_button,
+                                self.history_menu,
                                 # self.save_button,
                                 self.format_button,
                                 self.demos,
@@ -378,8 +359,21 @@ class Rest(object):
                         [
                             ft.Row(
                                 [
-                                    self.result_input,
-                                ]
+
+                                    ft.Container(
+                                        content=ft.Column(
+                                            [
+                                                self.result_input
+                                            ], scroll=ft.ScrollMode.ALWAYS,
+                                        ),
+                                        border=ft.border.all(1),
+                                        height=490,
+                                        width=710,
+                                        # bgcolor="#282c34"
+                                        # expand=True
+                                    )
+
+                                ], vertical_alignment=ft.CrossAxisAlignment.START, scroll=ft.ScrollMode.ALWAYS
                             ),
 
                             ft.Row(
@@ -387,12 +381,26 @@ class Rest(object):
                                     self.export_json_button
                                 ], vertical_alignment=ft.CrossAxisAlignment.START
                             ),
-                        ], expand=True),
+                        ], expand=True, scroll=ft.ScrollMode.ALWAYS,),
                 ], vertical_alignment=ft.CrossAxisAlignment.START)
 
 
             ]
         )
+
+        # 填充查询历史
+        history = common_page.page.client_storage.get(self.history_key)
+        if history is not None:
+            # [(path, dsl)]
+            for path, dsl in history:
+                self.history_menu.controls[0].controls.append(
+                    ft.MenuItemButton(
+                        content=ft.Text(path),
+                        tooltip=dsl,
+                        on_click=self.insert_history,
+                        data=(path, dsl),
+                    )
+                )
 
     def init_data(self):
         pass
@@ -463,5 +471,38 @@ class Rest(object):
             if not success:
                 open_snack_bar(e.page, res, success=False)
             else:
-                self.result_input.value = json.dumps(res, ensure_ascii=False, indent=2)
+                self.result_input.value = f"""
+```json
+{json.dumps(res, ensure_ascii=False, indent=4)}
+```
+"""
             e.page.update()
+
+            # 存储历史
+            history = e.page.client_storage.get(self.history_key)
+            if history is None:
+                history = []
+            if len(history) > 100:
+                history.pop(-1)
+            record = (self.path_input.value, self.dsl_input.value)
+            history.insert(0, record)  # 倒序插入
+            e.page.client_storage.set(self.history_key, history)
+
+            self.history_menu.controls[0].controls.insert(0,
+                ft.MenuItemButton(
+                    data=record,
+                    content=ft.Text(self.path_input.value),
+                    tooltip=self.dsl_input.value,
+                    on_click=self.insert_history,
+                ),
+            )
+            e.page.update()
+
+    def insert_history(self, e):
+        """插入到当前输入框里"""
+        self.path_input.value = e.control.data[0]
+        self.dsl_input.value = e.control.data[1]
+        e.page.update()
+
+
+

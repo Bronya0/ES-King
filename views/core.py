@@ -7,6 +7,7 @@ from flet_core import ControlEvent, DataColumnSortEvent
 
 from service.common import S_Text, build_tab_container, human_size
 from service.es_service import es_service
+from service.markdown_custom import Markdown
 
 
 class Core(object):
@@ -180,14 +181,15 @@ class Core(object):
 
                     ft.Row(
                         [
-                            ft.Card(ft.DataTable(columns=[
-                                ft.DataColumn(S_Text("cluster settings", weight=ft.FontWeight.BOLD)),
-                                ft.DataColumn(S_Text("")),
-                            ], rows=[
-
-                                ft.DataRow(cells=[ft.DataCell(S_Text(k)), ft.DataCell(S_Text(v))])
-                                for k, v in _data.items()
-                            ], column_spacing=10, ), ),
+                            ft.Card(
+                                Markdown(
+                                    f"""
+```json
+{json.dumps(_data, ensure_ascii=False, indent=4)}
+```
+""",
+                                )
+                            )
 
                         ], vertical_alignment=ft.CrossAxisAlignment.START
                     ),
