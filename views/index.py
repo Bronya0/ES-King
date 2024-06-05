@@ -41,6 +41,7 @@ class Index(object):
                 self.index_tab,
             ],
             expand=True,
+            animation_duration=300,
         )
 
         self.controls = [

@@ -35,6 +35,7 @@ class Broker(object):
                 self.node_tab,
             ],
             expand=True,
+            animation_duration=300,
         )
 
         self.controls = [

@@ -34,6 +34,7 @@ class Core(object):
                 self.settings_tab,
             ],
             expand=True,
+            animation_duration=300,
         )
 
         self.controls = [

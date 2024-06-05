@@ -134,9 +134,9 @@ Navigation = flet.NavigationRail(
             label=i18n("索引"),
         ),
         flet.NavigationRailDestination(
-            icon_content=flet.Icon(flet.icons.SWITCH_ACCESS_SHORTCUT_ADD_OUTLINED,),
-            selected_icon_content=flet.Icon(flet.icons.SWITCH_ACCESS_SHORTCUT_ADD),
-            label=i18n("Rest"),
+            icon_content=flet.Icon(flet.icons.API_OUTLINED,),
+            selected_icon_content=flet.Icon(flet.icons.API),
+            label=i18n("REST"),
         ),
 
         # flet.NavigationRailDestination(
