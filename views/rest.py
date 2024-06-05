@@ -241,8 +241,9 @@ class Rest(object):
             **export_json_button_param)
 
         self.history_menu_controls = []
-        self.history_menu = ft.MenuBar(
-            controls=[
+
+        history_menu = {
+            "controls": [
                 ft.SubmenuButton(
                     content=ft.Text(f"查询历史"),
                     tooltip="保留过去成功查询的100条",
@@ -251,7 +252,9 @@ class Rest(object):
                     controls=self.history_menu_controls
                 )
             ]
-        )
+        }
+        self.history_menu = ft.MenuBar(**history_menu)
+
         self.init_history()
 
         self.demos = ft.MenuBar(
@@ -586,7 +589,7 @@ class Rest(object):
                                               on_click=self.insert_history,
                                           ),
                                           )
-
+        self.init()
         common_page.page.update()
 
     def insert_history(self, e):

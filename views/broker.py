@@ -90,10 +90,12 @@ class Broker(object):
                                 _node['disk.used_percent']) < 70 else "amber" if float(
                                 _node['disk.used_percent']) < 80 else "red", )
                         ], alignment=ft.MainAxisAlignment.CENTER)),
-                    ft.DataCell(S_Text(f"{self.translate_node_roles(_node['node.role'])[:5]}...", tooltip=self.translate_node_roles(_node['node.role']))),
+                    ft.DataCell(S_Text(f"{_node['node.role']}", tooltip=self.translate_node_roles(_node['node.role']))),
                     ft.DataCell(S_Text(f"{_node['master']}")),
                     ft.DataCell(S_Text(f"{_node['cpu']}%")),
-                    ft.DataCell(S_Text(f"{_node['load_1m']}/{_node['load_5m']}/{_node['load_15m']}")),
+                    ft.DataCell(S_Text(f"{_node['load_5m']}")),
+                    ft.DataCell(S_Text(f"{_node['fielddataMemory']}/{_node['queryCacheMemory']}/{_node['requestCacheMemory']}/{_node['segmentsMemory']}")),
+                    ft.DataCell(S_Text(f"{_node['segments.count']}")),
                 ]
             ) for i, _node in enumerate(self.nodes_tmp)  # page
         ]
@@ -112,7 +114,10 @@ class Broker(object):
                 ft.DataColumn(S_Text("角色")),
                 ft.DataColumn(S_Text("主节点")),
                 ft.DataColumn(ft.Row([S_Text("cpu"), ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(8) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
-                ft.DataColumn(ft.Row([S_Text("负载"), ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(9) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
+                ft.DataColumn(ft.Row([S_Text("5m负载"), ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(9) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
+                ft.DataColumn(ft.Row([S_Text("字段/查询/请求/段内存")])),
+                ft.DataColumn(ft.Row([S_Text("段总数"), ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(11) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
+
 
             ],
             rows=self.cluster_table_rows,
@@ -203,8 +208,9 @@ class Broker(object):
             3: lambda x: float(x['heap.percent'] if x['heap.percent'] is not None else 0),  # 堆
             4: lambda x: float(x['ram.percent'] if x['ram.percent'] is not None else 0),  # 内存
             5: lambda x: float(x['disk.used_percent'] if x['disk.used_percent'] is not None else 0),  # 磁盘
-            8: lambda x: float(x['cpu'] if x['cpu'] is not None else 0),  # 磁盘
-            9: lambda x: float(x['load_5m'] if x['load_5m'] is not None else 0),  # 磁盘
+            8: lambda x: float(x['cpu'] if x['cpu'] is not None else 0),  # cpu
+            9: lambda x: float(x['load_5m'] if x['load_5m'] is not None else 0),  # 负载
+            11: lambda x: float(x['segments.count'] if x['segments.count'] is not None else 0),  # 段总数
         }[e.column_index]
 
         self.nodes = sorted(self.nodes, key=key, reverse=reverse)

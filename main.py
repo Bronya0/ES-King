@@ -1,5 +1,4 @@
 import gc
-import time
 import traceback
 
 import flet as ft

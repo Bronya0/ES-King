@@ -25,7 +25,7 @@ class Core(object):
         )
 
         self.settings_tab = ft.Tab(
-            text="settings", content=ft.Column(), icon=ft.icons.SETTINGS_OUTLINED
+            text="cluster settings", content=ft.Column(), icon=ft.icons.SETTINGS_OUTLINED
         )
 
         self.tab = ft.Tabs(
@@ -174,23 +174,27 @@ class Core(object):
         )
 
         if self.settings:
-            _data = self.flatten_dict(self.settings)
-            print(_data)
+            # _data = self.flatten_dict(self.settings)
+            # print(_data)
             # card集群基本信息
             self.settings_tab.content = build_tab_container(
                 col_controls=[
-
+                    ft.Text("集群cluster settings信息"),
                     ft.Row(
                         [
-                            ft.Card(
-                                Markdown(
-                                    f"""
+                            ft.Column(
+                                [
+                                    Markdown(
+                                        f"""
 ```json
-{json.dumps(_data, ensure_ascii=False, indent=4)}
+{json.dumps(self.settings, ensure_ascii=False, indent=4)}
 ```
 """,
-                                )
-                            )
+                                    ),
+
+                                ],
+                                scroll=ft.ScrollMode.ALWAYS,
+                            ),
 
                         ], vertical_alignment=ft.CrossAxisAlignment.START
                     ),

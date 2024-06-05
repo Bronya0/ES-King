@@ -21,7 +21,7 @@ logging.basicConfig(level=logging.INFO)
 FORMAT = "?format=json&pretty"
 STATS_API = "_cluster/stats" + FORMAT
 HEALTH_API = "_cluster/health"
-NODES_API = "_cat/nodes?format=json&pretty&h=ip,name,heap.percent,heap.current,heap.max,ram.percent,ram.current,ram.max,node.role,master,cpu,load_1m,load_5m,load_15m,disk.used_percent,disk.used,disk.total"
+NODES_API = "_cat/nodes?format=json&pretty&h=ip,name,heap.percent,heap.current,heap.max,ram.percent,ram.current,ram.max,node.role,master,cpu,load_5m,disk.used_percent,disk.used,disk.total,fielddataMemory,queryCacheMemory,requestCacheMemory,segmentsMemory,segments.count"
 ALL_INDEX_API = "_cat/indices?format=json&pretty&bytes=b"
 CLUSTER_SETTINGS = "_cluster/settings"
 FORCE_MERGE = "_forcemerge?wait_for_completion=false"  # 异步

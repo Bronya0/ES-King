@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 # -*-coding:utf-8 -*-
-import json
 
 import flet as ft
-from flet_core import ControlEvent, DataColumnSortEvent
 
-from service.common import S_Text, build_tab_container, human_size, common_page, Navigation
+from service.common import S_Text, build_tab_container, Navigation
 from service.es_service import es_service
 
 
