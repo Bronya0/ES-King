@@ -49,6 +49,12 @@ class Suggest(object):
                                  url=ISSUES_URL,
                                  )
                     ]),
+                    ft.Markdown(
+                        "Kafka GUI客户端推荐: [https://github.com/Bronya0/Kafka-King](https://github.com/Bronya0/Kafka-King)",
+                        selectable=True, auto_follow_links=True, ),
+                    ft.Markdown(
+                        "ES GUI客户端推荐: [https://github.com/Bronya0/ES-King](https://github.com/Bronya0/ES-King)",
+                        selectable=True, auto_follow_links=True, ),
                 ],
             )
 
