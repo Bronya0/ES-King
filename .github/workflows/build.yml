@@ -43,11 +43,11 @@ jobs:
         
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        flet pack main.py -i assets/icon.ico -n kafka-king_v${{ steps.normalise_version.outputs.version }} --distpath dist/Kafka-King --add-data=assets/*:assets --product-name kafka-king
+        flet pack main.py -i assets/icon.ico -n ES-king_v${{ steps.normalise_version.outputs.version }} --distpath dist/ES-King --add-data=assets/*:assets --product-name ES-king
         
-        copy README.md dist/Kafka-King/
-        copy LICENSE dist/Kafka-King/
-        Compress-Archive -Path ./dist/kafka-king -DestinationPath dist.zip -CompressionLevel Optimal
+        copy README.md dist/ES-King/
+        copy LICENSE dist/ES-King/
+        Compress-Archive -Path ./dist/ES-king -DestinationPath dist.zip -CompressionLevel Optimal
 
     - name: Upload Release Asset
       id: upload-release-asset
@@ -57,7 +57,7 @@ jobs:
       with:
         upload_url: ${{ github.event.release.upload_url }}
         asset_path: ./dist.zip
-        asset_name: kafka-king_v${{ steps.normalise_version.outputs.version }}_${{ steps.normalise_platform.outputs.tag }}.zip # 替换成适当的版本和平台标记
+        asset_name: ES-king_v${{ steps.normalise_version.outputs.version }}_${{ steps.normalise_platform.outputs.tag }}.zip # 替换成适当的版本和平台标记
         asset_content_type: application/octet-stream # 对于.exe文件，可以是application/octet-stream
 
   build-macos:
@@ -97,14 +97,14 @@ jobs:
         
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        flet pack main.py -i assets/icon.icns  -n kafka-king_v${{ steps.normalise_version.outputs.version }} --add-data=assets/*:assets --product-name kafka-king
+        flet pack main.py -i assets/icon.icns  -n ES-king_v${{ steps.normalise_version.outputs.version }} --add-data=assets/*:assets --product-name ES-king
         ls -al dist/
 
     # 打包.app文件夹为zip或tar.gz以方便传输
     - name: Package .app folder
       run: |
          cd dist
-         tar -czf kafka-king_v${{ steps.normalise_version.outputs.version }}.tar.gz kafka-king_v${{ steps.normalise_version.outputs.version }}.app
+         tar -czf ES-king_v${{ steps.normalise_version.outputs.version }}.tar.gz ES-king_v${{ steps.normalise_version.outputs.version }}.app
 
     - name: Upload Release Asset
       id: upload-release-asset
@@ -113,8 +113,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./dist/kafka-king_v${{ steps.normalise_version.outputs.version }}.tar.gz
-        asset_name: kafka-king_v${{ steps.normalise_version.outputs.version }}_${{ steps.normalise_platform.outputs.tag }}.tar.gz
+        asset_path: ./dist/ES-king_v${{ steps.normalise_version.outputs.version }}.tar.gz
+        asset_name: ES-king_v${{ steps.normalise_version.outputs.version }}_${{ steps.normalise_platform.outputs.tag }}.tar.gz
         asset_content_type: application/octet-stream
 
   build-ubuntu:
@@ -153,7 +153,7 @@ jobs:
         
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        flet pack main.py -i assets/icon.ico  -n kafka-king_v${{ steps.normalise_version.outputs.version }} --add-data=assets/*:assets --product-name kafka-king
+        flet pack main.py -i assets/icon.ico  -n ES-king_v${{ steps.normalise_version.outputs.version }} --add-data=assets/*:assets --product-name ES-king
         ls -al dist/
 
     # 打包.app文件夹为zip或tar.gz以方便传输
@@ -162,7 +162,7 @@ jobs:
       run: |
         cp -r dist temp_dist
         cd temp_dist
-        tar -czf kafka-king_v${{ steps.normalise_version.outputs.version }}.tar.gz kafka-king_v${{ steps.normalise_version.outputs.version }}
+        tar -czf ES-king_v${{ steps.normalise_version.outputs.version }}.tar.gz ES-king_v${{ steps.normalise_version.outputs.version }}
 
     - name: Upload Release Asset
       id: upload-release-asset
@@ -171,6 +171,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./temp_dist/kafka-king_v${{ steps.normalise_version.outputs.version }}.tar.gz
-        asset_name: kafka-king_v${{ steps.normalise_version.outputs.version }}_${{ steps.normalise_platform.outputs.tag }}.tar.gz
+        asset_path: ./temp_dist/ES-king_v${{ steps.normalise_version.outputs.version }}.tar.gz
+        asset_name: ES-king_v${{ steps.normalise_version.outputs.version }}_${{ steps.normalise_platform.outputs.tag }}.tar.gz
         asset_content_type: application/octet-stream
