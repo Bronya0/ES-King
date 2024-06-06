@@ -80,8 +80,8 @@ class Settings(object):
         else:
             self.lang_dd.value = "简体中文"
 
-        self.width.value = config['default_width'] if 'default_width' in config else PAGE_WIDTH
-        self.height.value = config['default_height'] if 'default_height' in config else PAGE_HEIGHT
+        self.width.value = config['es_default_width'] if 'es_default_width' in config else PAGE_WIDTH
+        self.height.value = config['es_default_height'] if 'es_default_height' in config else PAGE_HEIGHT
 
     def click_save_msg(self, e: ControlEvent):
         language = self.lang_dd.value
@@ -95,8 +95,8 @@ class Settings(object):
 
         config = {
             "language": language,
-            "default_width": width,
-            "default_height": height,
+            "es_default_width": width,
+            "es_default_height": height,
         }
         e.page.client_storage.set(CONFIG_KEY, config)
 

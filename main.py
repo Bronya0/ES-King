@@ -548,8 +548,8 @@ def init_config(page):
     if not config:
         config = {
             "language": "简体中文",
-            "default_width": PAGE_WIDTH,
-            "default_height": PAGE_HEIGHT,
+            "es_default_width": PAGE_WIDTH,
+            "es_default_height": PAGE_HEIGHT,
         }
         page.client_storage.set(CONFIG_KEY, config)
     return config
@@ -581,8 +581,8 @@ def init(page: ft.Page):
     page.theme = ft.Theme(font_family=font_family, color_scheme_seed=color)
 
     # 窗口大小
-    page.window_width = config['default_width'] if 'default_width' in config else PAGE_WIDTH
-    page.window_height = config['default_height'] if 'default_height' in config else PAGE_HEIGHT
+    page.window_width = config['es_default_width'] if 'es_default_width' in config else PAGE_WIDTH
+    page.window_height = config['es_default_height'] if 'es_default_height' in config else PAGE_HEIGHT
     page.window_min_width = PAGE_MIN_WIDTH
     page.window_min_height = PAGE_MIN_HEIGHT
 
