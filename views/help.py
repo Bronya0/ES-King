@@ -25,9 +25,9 @@ class Help(object):
                 S_Text("6、有没有打算开发类似的redis、es工具？懒癌晚期，看有没有时间吧，可以群里踢我"),
                 S_Text("7、qq技术群：964440643，交流中间件或软件开发知识"),
                 ft.Image(src="qq.jpg", width=220),
-                ft.Markdown("Kafka GUI客户端推荐: [https://github.com/Bronya0/Kafka-King](https://github.com/Bronya0/Kafka-King)",
+                ft.Markdown("- 同款Kafka GUI客户端推荐: [https://github.com/Bronya0/Kafka-King](https://github.com/Bronya0/Kafka-King)",
                             selectable=True, auto_follow_links=True,),
-                ft.Markdown("ES GUI客户端推荐: [https://github.com/Bronya0/ES-King](https://github.com/Bronya0/ES-King)",
+                ft.Markdown("- 同款ES GUI客户端推荐: [https://github.com/Bronya0/ES-King](https://github.com/Bronya0/ES-King)",
                             selectable=True, auto_follow_links=True,),
             ])
         ]

@@ -29,6 +29,7 @@ REFRESH = "_refresh"
 FLUSH = "_flush"
 CACHE_CLEAR = "_cache/clear"
 TASKS_API = "_tasks" + FORMAT
+CANCEL_TASKS_API = "_tasks/{task_id}/_cancel"
 
 
 class Connect:
@@ -351,9 +352,18 @@ class ESService:
         """
         获取索引aliases
         """
-        res = requests.get(url=urljoin(self.connect_obj.host, f"{index_name}"), headers=self.headers)
-        res.raise_for_status()
-        return res.json()
+        print(urljoin(self.connect_obj.host, f"{index_name}/_alias"))
+        try:
+            res = requests.get(url=urljoin(self.connect_obj.host, f"{index_name}/_alias"), headers=self.headers)
+            res.raise_for_status()
+            data = res.json()
+            alias = data[index_name]['aliases'].keys()
+            if alias:
+                return ",".join(alias)
+            else:
+                return ""
+        except Exception as e:
+            return ""
 
     def get_index_segments(self, index_name):
         """
@@ -386,6 +396,19 @@ class ESService:
                         "parent_task_id": task_info['parent_task_id'] if "parent_task_id" in task_info else "",
                     })
             return True, data
+        except Exception as e:
+            traceback.print_exc()
+            return False, str(e)
+
+    def cancel_tasks(self, task_id):
+        """
+        取消tasks
+        """
+        print(urljoin(self.connect_obj.host,  CANCEL_TASKS_API.format(task_id=task_id)))
+        try:
+            res = requests.post(url=urljoin(self.connect_obj.host, CANCEL_TASKS_API.format(task_id=task_id)), headers=self.headers,)
+            res.raise_for_status()
+            return True, res.json()
         except Exception as e:
             traceback.print_exc()
             return False, str(e)

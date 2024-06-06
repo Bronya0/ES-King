@@ -5,7 +5,7 @@ import datetime
 import flet as ft
 from flet_core import DataColumnSortEvent
 
-from service.common import S_Text, build_tab_container, open_snack_bar
+from service.common import S_Text, build_tab_container, open_snack_bar, S_Button, progress_bar
 from service.es_service import es_service
 
 
@@ -179,6 +179,7 @@ class Broker(object):
                 ft.DataColumn(S_Text("运行时间(s)")),
                 ft.DataColumn(S_Text("是否可取消")),
                 ft.DataColumn(S_Text("父任务")),
+                ft.DataColumn(S_Text("")),
 
             ],
             rows=self.task_table_rows,
@@ -302,6 +303,7 @@ class Broker(object):
                     ft.DataCell(S_Text(f"{task['running_time_in_nanos'] / 1000000000}", size=12)),
                     ft.DataCell(S_Text(f"{task['cancellable']}")),
                     ft.DataCell(S_Text(f"{task['parent_task_id']}", size=12)),
+                    ft.DataCell(S_Button(text="取消任务", on_click=self.cancel_task, data=task['task_id'])),
                 ]
             ) for i, task in enumerate(task_data_lst)  # page
         ]
@@ -309,3 +311,14 @@ class Broker(object):
         self.init_table()
 
         e.page.update()
+
+    def cancel_task(self, e):
+        progress_bar.visible = True
+        progress_bar.update()
+
+        task_id = e.control.data
+        success, task_data_lst = es_service.cancel_tasks(task_id)
+        open_snack_bar(e.page, "任务已取消", success=False)
+
+        progress_bar.visible = False
+        progress_bar.update()

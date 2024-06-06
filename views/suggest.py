@@ -50,10 +50,10 @@ class Suggest(object):
                                  )
                     ]),
                     ft.Markdown(
-                        "Kafka GUI客户端推荐: [https://github.com/Bronya0/Kafka-King](https://github.com/Bronya0/Kafka-King)",
+                        "- 同款Kafka GUI客户端推荐: [https://github.com/Bronya0/Kafka-King](https://github.com/Bronya0/Kafka-King)",
                         selectable=True, auto_follow_links=True, ),
                     ft.Markdown(
-                        "ES GUI客户端推荐: [https://github.com/Bronya0/ES-King](https://github.com/Bronya0/ES-King)",
+                        "- 同款ES GUI客户端推荐: [https://github.com/Bronya0/ES-King](https://github.com/Bronya0/ES-King)",
                         selectable=True, auto_follow_links=True, ),
                 ],
             )

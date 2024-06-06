@@ -5,7 +5,8 @@ import json
 import flet as ft
 from flet_core import ControlEvent, DataColumnSortEvent
 
-from service.common import S_Text, open_snack_bar, S_Button, close_dlg, progress_bar, build_tab_container, human_size
+from service.common import S_Text, open_snack_bar, S_Button, close_dlg, progress_bar, build_tab_container, human_size, \
+    build_alert
 from service.es_service import es_service
 from service.markdown_custom import Markdown
 
@@ -71,6 +72,7 @@ class Index(object):
                 cells=[
                     ft.DataCell(S_Text(offset + i + 1)),
                     ft.DataCell(S_Text(f"{_index['index']}", data=_index['index'])),
+                    ft.DataCell(S_Text(f"{es_service.get_index_aliases(_index['index'])}", data=_index['index'], num=6)),
                     ft.DataCell(S_Text(f"{_index['health'] if _index['health'] is not None else ''}",
                                        color=_index['health'] if _index['health'] != "yellow" else "amber")),
                     ft.DataCell(S_Text(f"{_index['status'] if _index['status'] is not None else ''}",
@@ -92,13 +94,19 @@ class Index(object):
                                     controls=[
                                         ft.MenuItemButton(
                                             data=_index['index'],
-                                            content=ft.Text("详情"),
+                                            content=ft.Text("索引详情"),
                                             leading=ft.Icon(ft.icons.DETAILS),
                                             on_click=self.view_index_detail,
                                         ),
                                         ft.MenuItemButton(
                                             data=_index['index'],
-                                            content=ft.Text("文档"),
+                                            content=ft.Text("索引别名"),
+                                            leading=ft.Icon(ft.icons.LABEL),
+                                            on_click=self.get_label,
+                                        ),
+                                        ft.MenuItemButton(
+                                            data=_index['index'],
+                                            content=ft.Text("查看10条文档"),
                                             leading=ft.Icon(ft.icons.BOOK),
                                             on_click=self.get_doc_10
                                         ),
@@ -110,13 +118,13 @@ class Index(object):
                                         ),
                                         ft.MenuItemButton(
                                             data=_index['index'],
-                                            content=ft.Text("删除"),
+                                            content=ft.Text("删除索引"),
                                             leading=ft.Icon(ft.icons.DELETE),
                                             on_click=self.delete_index,
                                         ),
                                         ft.MenuItemButton(
                                             data=_index['index'],
-                                            content=ft.Text("关闭" if _index['status'] == "open" else "打开"),
+                                            content=ft.Text("关闭索引" if _index['status'] == "open" else "打开"),
                                             leading=ft.Icon(
                                                 ft.icons.CLOSE if _index['status'] == "open" else ft.icons.OPEN_WITH),
                                             on_click=self.close_index if _index['status'] == "open" else self.open_index
@@ -156,12 +164,13 @@ class Index(object):
             columns=[
                 ft.DataColumn(S_Text("序号")),
                 ft.DataColumn(ft.Row([S_Text("索引名"),ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(1) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
-                ft.DataColumn(ft.Row([S_Text("健康状态"),ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(2) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
-                ft.DataColumn(ft.Row([S_Text("状态"),ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(3) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
-                ft.DataColumn(ft.Row([S_Text("主分片/副本"),ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(4) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
-                ft.DataColumn(ft.Row([S_Text("文档总数"),ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(5) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
-                ft.DataColumn(ft.Row([S_Text("未清除的删除文档"),ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(6) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
-                ft.DataColumn(ft.Row([S_Text("占用存储（主+副）"),ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(7) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
+                ft.DataColumn(ft.Row([S_Text("别名")])),
+                ft.DataColumn(ft.Row([S_Text("健康状态"),ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(3) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
+                ft.DataColumn(ft.Row([S_Text("状态"),ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(4) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
+                ft.DataColumn(ft.Row([S_Text("主分片/副本"),ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(5) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
+                ft.DataColumn(ft.Row([S_Text("文档总数"),ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(6) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
+                ft.DataColumn(ft.Row([S_Text("未清除的删除文档"),ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(7) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
+                ft.DataColumn(ft.Row([S_Text("占用存储（主+副）"),ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(8) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
                 ft.DataColumn(S_Text("")),
 
             ],
@@ -277,12 +286,12 @@ class Index(object):
             reverse = True
         key = {
             1: lambda x: str(x['index']),  # 索引名
-            2: lambda x: str(x['health']),  # 健康
-            3: lambda x: str(x['status']),  # status
-            4: lambda x: int(x['pri'] if x['pri'] is not None else 0),  # status
-            5: lambda x: int(x['docs.count'] if x['docs.count'] is not None else 0),  # status
-            6: lambda x: int(x['docs.deleted'] if x['docs.deleted'] is not None else 0),  # status
-            7: lambda x: float(x['store.size'] if x['store.size'] is not None else 0),  # status
+            3: lambda x: str(x['health']),  # 健康
+            4: lambda x: str(x['status']),  # status
+            5: lambda x: int(x['pri'] if x['pri'] is not None else 0),  # status
+            6: lambda x: int(x['docs.count'] if x['docs.count'] is not None else 0),  # status
+            7: lambda x: int(x['docs.deleted'] if x['docs.deleted'] is not None else 0),  # status
+            8: lambda x: float(x['store.size'] if x['store.size'] is not None else 0),  # status
         }[e.column_index]
 
         self.indexes = sorted(self.indexes, key=key, reverse=reverse)
@@ -519,4 +528,14 @@ class Index(object):
         )
         e.page.dialog = dlg_modal
         dlg_modal.open = True
+        e.page.update()
+
+    def get_label(self, e):
+        alias = es_service.get_index_aliases(e.control.data)
+        alert = build_alert(e.page, e.control.data + "别名", ft.Column([
+                ft.Text(alias, selectable=True),
+            ], height=130))
+
+        e.page.dialog = alert
+        alert.open = True
         e.page.update()

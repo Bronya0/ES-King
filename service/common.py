@@ -52,6 +52,10 @@ PAGE_MIN_HEIGHT = 720
 def S_Text(value, **kwargs):
     if "tooltip" not in kwargs:
         kwargs["tooltip"] = value
+    if "num" in kwargs:
+        if len(value) > kwargs["num"]:
+            value = value[:kwargs["num"]] + "..."
+        kwargs.pop("num")
     return flet.Text(
         selectable=True,
         value=value,
@@ -210,3 +214,17 @@ def build_tab_container(col_controls):
                 )
             )
         ])
+
+
+def build_alert(page, title, column: flet.Column):
+    dlg_modal = flet.AlertDialog(
+        modal=True,
+        title=flet.Text(title),
+        content=column,
+        actions=[
+            # flet.TextButton("确认", on_click=ensure),
+            flet.TextButton("取消", on_click=close_dlg),
+        ],
+        # actions_alignment=ft.MainAxisAlignment.START,
+    )
+    return dlg_modal
