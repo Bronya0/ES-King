@@ -23,7 +23,7 @@
 
 如需提出需求、bug和改进建议，请提issue。
 
-点个star支持作者吧 谢谢❤❤
+点个star支持作者辛苦开源吧 谢谢❤❤
 
 # 下载
 [下载地址](https://github.com/Bronya0/ES-King/releases)，点击【Assets】，选择自己的平台下载，支持windows、macos、linux。
