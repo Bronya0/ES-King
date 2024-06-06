@@ -28,6 +28,7 @@ FORCE_MERGE = "_forcemerge?wait_for_completion=false"  # 异步
 REFRESH = "_refresh"
 FLUSH = "_flush"
 CACHE_CLEAR = "_cache/clear"
+TASKS_API = "_tasks" + FORMAT
 
 
 class Connect:
@@ -320,12 +321,10 @@ class ESService:
         try:
             res = requests.request(method=method, url=urljoin(self.connect_obj.host, f"{path}"), headers=self.headers,
                                 json=body)
-            res.raise_for_status()
             return True, res.json()
         except Exception as e:
             traceback.print_exc()
             return False, str(e)
-
 
     def get_cluster_settings(self):
         """
@@ -356,14 +355,6 @@ class ESService:
         res.raise_for_status()
         return res.json()
 
-    def get_index_stats(self, index_name):
-        """
-        获取索引stats
-        """
-        res = requests.get(url=urljoin(self.connect_obj.host, f"{index_name}"), headers=self.headers)
-        res.raise_for_status()
-        return res.json()
-
     def get_index_segments(self, index_name):
         """
         获取索引segments
@@ -371,6 +362,33 @@ class ESService:
         res = requests.get(url=urljoin(self.connect_obj.host, f"{index_name}"), headers=self.headers)
         res.raise_for_status()
         return res.json()
+
+    def get_tasks(self):
+        """
+        获取tasks
+        """
+        print(urljoin(self.connect_obj.host, f"{TASKS_API}"))
+        try:
+            res = requests.get(url=urljoin(self.connect_obj.host, f"{TASKS_API}"), headers=self.headers,)
+            nodes: dict = res.json()["nodes"]
+            data = []
+            for node_id, node_obj in nodes.items():
+                for task_id, task_info in node_obj["tasks"].items():
+                    data.append({
+                        "task_id": task_id,
+                        "node_name": node_obj['name'],
+                        "node_ip": node_obj['ip'],
+                        "type": task_info['type'],
+                        "action": task_info['action'],
+                        "start_time_in_millis": task_info['start_time_in_millis'],
+                        "running_time_in_nanos": task_info['running_time_in_nanos'],
+                        "cancellable": task_info['cancellable'],
+                        "parent_task_id": task_info['parent_task_id'] if "parent_task_id" in task_info else "",
+                    })
+            return True, data
+        except Exception as e:
+            traceback.print_exc()
+            return False, str(e)
 
 
 es_service = ESService()

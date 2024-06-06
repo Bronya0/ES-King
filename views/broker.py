@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 # -*-coding:utf-8 -*-
+import datetime
 
 import flet as ft
 from flet_core import DataColumnSortEvent
 
-from service.common import S_Text, build_tab_container
+from service.common import S_Text, build_tab_container, open_snack_bar
 from service.es_service import es_service
 
 
@@ -30,9 +31,20 @@ class Broker(object):
             text='集群节点列表', content=ft.Column(), icon=ft.icons.HIVE_OUTLINED,
         )
 
+        self.task_table_rows = []
+        self.task_table = None
+
+        self.get_task_button = ft.TextButton("读取集群Task列表", on_click=self.get_task, icon=ft.icons.READ_MORE,
+                        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)))
+
+
+        self.task_tab = ft.Tab(
+            text='ES Task列表', content=ft.Column(), icon=ft.icons.HIVE_OUTLINED,
+        )
         self.tab = ft.Tabs(
             tabs=[
                 self.node_tab,
+                self.task_tab,
             ],
             expand=True,
             animation_duration=300,
@@ -156,6 +168,36 @@ class Broker(object):
             ]
         )
 
+        self.task_table = ft.DataTable(
+            columns=[
+                ft.DataColumn(S_Text("task_id")),
+                ft.DataColumn(S_Text("node_name")),
+                ft.DataColumn(S_Text("node_ip")),
+                ft.DataColumn(S_Text("type")),
+                ft.DataColumn(S_Text("action")),
+                ft.DataColumn(S_Text("任务开始时间")),
+                ft.DataColumn(S_Text("运行时间(s)")),
+                ft.DataColumn(S_Text("是否可取消")),
+                ft.DataColumn(S_Text("父任务")),
+
+            ],
+            rows=self.task_table_rows,
+            column_spacing=20,
+            expand=True
+        )
+
+        self.task_tab.content = build_tab_container(
+            col_controls=[
+                ft.Row([
+                    self.get_task_button,
+                ]),
+                ft.Row([
+                    self.task_table,
+                ]),
+
+            ]
+        )
+
     def page_prev(self, e):
         # page
         if self.page_num == 1:
@@ -241,3 +283,29 @@ class Broker(object):
 
         # 用逗号连接翻译后的角色
         return '，'.join(translated_roles)
+
+    def get_task(self, e):
+        success, task_data_lst = es_service.get_tasks()
+        if not success:
+            open_snack_bar(e.page, task_data_lst, success=False)
+            return
+
+        self.task_table_rows = [
+            ft.DataRow(
+                cells=[
+                    ft.DataCell(S_Text(f"{task['task_id']}", size=12)),
+                    ft.DataCell(S_Text(f"{task['node_name']}")),
+                    ft.DataCell(S_Text(f"{task['node_ip']}")),
+                    ft.DataCell(S_Text(f"{task['type']}")),
+                    ft.DataCell(S_Text(f"{task['action']}")),
+                    ft.DataCell(S_Text(f"{datetime.datetime.fromtimestamp(task['start_time_in_millis'] / 1000).strftime('%Y-%m-%d %H:%M:%S') if task['start_time_in_millis'] else ''}")),
+                    ft.DataCell(S_Text(f"{task['running_time_in_nanos'] / 1000000000}", size=12)),
+                    ft.DataCell(S_Text(f"{task['cancellable']}")),
+                    ft.DataCell(S_Text(f"{task['parent_task_id']}", size=12)),
+                ]
+            ) for i, task in enumerate(task_data_lst)  # page
+        ]
+
+        self.init_table()
+
+        e.page.update()
