@@ -233,6 +233,7 @@ class Main:
                 msg = f"连接失败"
                 color = "red"
         e.control.text = msg
+        e.control.tooltip = err
         e.control.style = ft.ButtonStyle(color=color)
         self.page.update()
 
