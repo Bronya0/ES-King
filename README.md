@@ -40,3 +40,9 @@ pip install -r requirements.txt
 flet pack main.py -i assets/icon.ico -n ES-king --add-data=assets/*:assets --product-name ES-king
 ```
 
+# 星
+[![Stargazers over time](https://starchart.cc/Bronya0/ES-King.svg)](https://starchart.cc/Bronya0/ES-King)
+
+
+# 感谢
+- flet-dev：https://github.com/flet-dev/flet
