@@ -220,6 +220,7 @@ class Main:
         print("连接测试：", conn_name_input, es_input, username, password)
 
         color = "green"
+        err = None
         if None in [conn_name_input, es_input] or "" in [conn_name_input, es_input]:
             msg = "请先填写es连接"
         elif username and not password or password and not username:
