@@ -32,10 +32,10 @@ jobs:
         version=$(echo ${{ github.event.release.tag_name }} | sed -e 's/v//g')
         echo "version=$version" >> "$GITHUB_OUTPUT"
 
-    - name: Set up Python 3.9
+    - name: Set up Python 3.11
       uses: actions/setup-python@v3
       with:
-        python-version: "3.9"
+        python-version: "3.11"
 
     - name: Install dependencies
       run: |
@@ -66,10 +66,18 @@ jobs:
       matrix:
         platform:
           - darwin/amd64
+          - darwin/arm64
 
     # 步骤合集
     steps:
     - uses: actions/checkout@v3
+
+    - name: Normalise platform tag
+      id: normalise_platform
+      shell: bash
+      run: |
+        tag=$(echo ${{ matrix.platform }} | sed -e 's/\//_/g' -e 's/darwin/mac/g' -e 's/amd64/intel/g')
+        echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
     - name: Normalise version tag
       id: normalise_version
@@ -78,10 +86,10 @@ jobs:
         version=$(echo ${{ github.event.release.tag_name }} | sed -e 's/v//g')
         echo "version=$version" >> "$GITHUB_OUTPUT"
           
-    - name: Set up Python 3.9
+    - name: Set up Python 3.11
       uses: actions/setup-python@v3
       with:
-        python-version: "3.9"
+        python-version: "3.11"
         
     - name: Install dependencies
       run: |
