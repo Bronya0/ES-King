@@ -71,7 +71,7 @@ class Index(object):
         for i, _index in enumerate(self.indexes_tmp):
             name_lst.append(_index['index'])
         alias = es_service.get_index_aliases(name_lst)
-
+        self.cluster_table_rows = []
         for i, _index in enumerate(self.indexes_tmp):
             self.cluster_table_rows.append(
                 ft.DataRow(
@@ -79,7 +79,7 @@ class Index(object):
                         ft.DataCell(S_Text(offset + i + 1)),
                         ft.DataCell(S_Text(f"{_index['index']}", data=_index['index'])),
                         ft.DataCell(
-                            S_Text(f"{alias.get(_index['index'])}", data=_index['index'], num=6)),
+                            S_Text(f"{alias.get(_index['index'], '')}", data=_index['index'], num=6)),
                         ft.DataCell(S_Text(f"{_index['health'] if _index['health'] is not None else ''}",
                                            color=_index['health'] if _index['health'] != "yellow" else "amber")),
                         ft.DataCell(S_Text(f"{_index['status'] if _index['status'] is not None else ''}",
