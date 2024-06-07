@@ -348,22 +348,25 @@ class ESService:
         res.raise_for_status()
         return res.json()
 
-    def get_index_aliases(self, index_name):
+    def get_index_aliases(self, index_name_list):
         """
         获取索引aliases
         """
-        print(urljoin(self.connect_obj.host, f"{index_name}/_alias"))
+        index_names = ",".join(index_name_list)
+        print(urljoin(self.connect_obj.host, f"{index_names}/_alias"))
+        alias = {}
+
         try:
-            res = requests.get(url=urljoin(self.connect_obj.host, f"{index_name}/_alias"), headers=self.headers)
+            res = requests.get(url=urljoin(self.connect_obj.host, f"{index_names}/_alias"), headers=self.headers)
             res.raise_for_status()
-            data = res.json()
-            alias = data[index_name]['aliases'].keys()
-            if alias:
-                return ",".join(alias)
-            else:
-                return ""
+            data: dict = res.json()
+            for name, obj in data.items():
+                names = list(obj['aliases'].keys())
+                if names:
+                    alias[name] = ','.join(names)
+            return alias
         except Exception as e:
-            return ""
+            return alias
 
     def get_index_segments(self, index_name):
         """

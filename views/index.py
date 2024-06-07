@@ -23,13 +23,13 @@ class Index(object):
         self.page_label = None
         # order
         self.reverse = {}
-        self.cluster_table_rows = None
+        self.cluster_table_rows = []
         self.indexes = []
         self.indexes_table = None
 
         self.create_index_button = ft.TextButton("新建索引", on_click=self.create_index, icon=ft.icons.ADD,
                                                  style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)))
-        self.search_text = ft.TextField(value='*', label=' 检索索引名及别名，支持通配符*', label_style=ft.TextStyle(size=14),
+        self.search_text = ft.TextField(value='*', label=' 检索索引名及别名，支持通配符*。按回车搜索。', label_style=ft.TextStyle(size=14),
                                         on_submit=self.search_table, width=300,
                                         height=38, text_size=14, content_padding=5, autofocus=True, autocorrect=True)
 
@@ -67,94 +67,105 @@ class Index(object):
         # page
         offset = (self.page_num - 1) * self.page_size
 
-        self.cluster_table_rows = [
-            ft.DataRow(
-                cells=[
-                    ft.DataCell(S_Text(offset + i + 1)),
-                    ft.DataCell(S_Text(f"{_index['index']}", data=_index['index'])),
-                    ft.DataCell(S_Text(f"{es_service.get_index_aliases(_index['index'])}", data=_index['index'], num=6)),
-                    ft.DataCell(S_Text(f"{_index['health'] if _index['health'] is not None else ''}",
-                                       color=_index['health'] if _index['health'] != "yellow" else "amber")),
-                    ft.DataCell(S_Text(f"{_index['status'] if _index['status'] is not None else ''}",
-                                       color="green" if _index['status'] == "open" else "red")),
-                    ft.DataCell(S_Text(f"{_index['pri']}/{_index['rep']}")),
-                    ft.DataCell(S_Text(f"{_index['docs.count'] if _index['docs.count'] is not None else ''}")),
-                    ft.DataCell(S_Text(f"{_index['docs.deleted'] if _index['docs.deleted'] is not None else ''}")),
-                    ft.DataCell(S_Text(f"{human_size(int(_index['store.size'])) if _index['store.size'] is not None else ''}")),
-                    ft.DataCell(
-                        ft.MenuBar(
-                            style=ft.MenuStyle(
-                                alignment=ft.alignment.top_left,
-                            ),
-                            controls=[
-                                ft.SubmenuButton(
-                                    content=ft.Text("操作"),
-                                    height=40,
-                                    leading=ft.Icon(ft.icons.MORE_VERT),
-                                    controls=[
-                                        ft.MenuItemButton(
-                                            data=_index['index'],
-                                            content=ft.Text("索引详情"),
-                                            leading=ft.Icon(ft.icons.DETAILS),
-                                            on_click=self.view_index_detail,
-                                        ),
-                                        ft.MenuItemButton(
-                                            data=_index['index'],
-                                            content=ft.Text("索引别名"),
-                                            leading=ft.Icon(ft.icons.LABEL),
-                                            on_click=self.get_label,
-                                        ),
-                                        ft.MenuItemButton(
-                                            data=_index['index'],
-                                            content=ft.Text("查看10条文档"),
-                                            leading=ft.Icon(ft.icons.BOOK),
-                                            on_click=self.get_doc_10
-                                        ),
-                                        ft.MenuItemButton(
-                                            data=_index['index'],
-                                            content=ft.Text("段合并"),
-                                            leading=ft.Icon(ft.icons.MERGE_TYPE),
-                                            on_click=self.merge_segments,
-                                        ),
-                                        ft.MenuItemButton(
-                                            data=_index['index'],
-                                            content=ft.Text("删除索引"),
-                                            leading=ft.Icon(ft.icons.DELETE),
-                                            on_click=self.delete_index,
-                                        ),
-                                        ft.MenuItemButton(
-                                            data=_index['index'],
-                                            content=ft.Text("关闭索引" if _index['status'] == "open" else "打开"),
-                                            leading=ft.Icon(
-                                                ft.icons.CLOSE if _index['status'] == "open" else ft.icons.OPEN_WITH),
-                                            on_click=self.close_index if _index['status'] == "open" else self.open_index
-                                        ),
-                                        ft.MenuItemButton(
-                                            data=_index['index'],
-                                            content=ft.Text("refresh"),
-                                            leading=ft.Icon(ft.icons.REFRESH),
-                                            on_click=self.refresh
-                                        ),
-                                        ft.MenuItemButton(
-                                            data=_index['index'],
-                                            content=ft.Text("flush"),
-                                            leading=ft.Icon(ft.icons.DOWNLOAD),
-                                            on_click=self.flush
-                                        ),
-                                        ft.MenuItemButton(
-                                            data=_index['index'],
-                                            content=ft.Text("清理缓存"),
-                                            leading=ft.Icon(ft.icons.DELETE_SWEEP_OUTLINED),
-                                            on_click=self.cache_clear
-                                        ),
-                                    ]
+        name_lst = []
+        for i, _index in enumerate(self.indexes_tmp):
+            name_lst.append(_index['index'])
+        alias = es_service.get_index_aliases(name_lst)
+
+        for i, _index in enumerate(self.indexes_tmp):
+            self.cluster_table_rows.append(
+                ft.DataRow(
+                    cells=[
+                        ft.DataCell(S_Text(offset + i + 1)),
+                        ft.DataCell(S_Text(f"{_index['index']}", data=_index['index'])),
+                        ft.DataCell(
+                            S_Text(f"{alias.get(_index['index'])}", data=_index['index'], num=6)),
+                        ft.DataCell(S_Text(f"{_index['health'] if _index['health'] is not None else ''}",
+                                           color=_index['health'] if _index['health'] != "yellow" else "amber")),
+                        ft.DataCell(S_Text(f"{_index['status'] if _index['status'] is not None else ''}",
+                                           color="green" if _index['status'] == "open" else "red")),
+                        ft.DataCell(S_Text(f"{_index['pri']}/{_index['rep']}")),
+                        ft.DataCell(S_Text(f"{_index['docs.count'] if _index['docs.count'] is not None else ''}")),
+                        ft.DataCell(S_Text(f"{_index['docs.deleted'] if _index['docs.deleted'] is not None else ''}")),
+                        ft.DataCell(S_Text(
+                            f"{human_size(int(_index['store.size'])) if _index['store.size'] is not None else ''}")),
+                        ft.DataCell(
+                            ft.MenuBar(
+                                style=ft.MenuStyle(
+                                    alignment=ft.alignment.top_left,
                                 ),
-                            ]
-                        )
-                    ),
-                ]
-            ) for i, _index in enumerate(self.indexes_tmp)  # page
-        ]
+                                controls=[
+                                    ft.SubmenuButton(
+                                        content=ft.Text("操作"),
+                                        height=40,
+                                        leading=ft.Icon(ft.icons.MORE_VERT),
+                                        controls=[
+                                            ft.MenuItemButton(
+                                                data=_index['index'],
+                                                content=ft.Text("索引详情"),
+                                                leading=ft.Icon(ft.icons.DETAILS),
+                                                on_click=self.view_index_detail,
+                                            ),
+                                            ft.MenuItemButton(
+                                                data=_index['index'],
+                                                content=ft.Text("索引别名"),
+                                                leading=ft.Icon(ft.icons.LABEL),
+                                                on_click=self.get_label,
+                                            ),
+                                            ft.MenuItemButton(
+                                                data=_index['index'],
+                                                content=ft.Text("查看10条文档"),
+                                                leading=ft.Icon(ft.icons.BOOK),
+                                                on_click=self.get_doc_10
+                                            ),
+                                            ft.MenuItemButton(
+                                                data=_index['index'],
+                                                content=ft.Text("段合并"),
+                                                leading=ft.Icon(ft.icons.MERGE_TYPE),
+                                                on_click=self.merge_segments,
+                                            ),
+                                            ft.MenuItemButton(
+                                                data=_index['index'],
+                                                content=ft.Text("删除索引"),
+                                                leading=ft.Icon(ft.icons.DELETE),
+                                                on_click=self.delete_index,
+                                            ),
+                                            ft.MenuItemButton(
+                                                data=_index['index'],
+                                                content=ft.Text("关闭索引" if _index['status'] == "open" else "打开"),
+                                                leading=ft.Icon(
+                                                    ft.icons.CLOSE if _index[
+                                                                          'status'] == "open" else ft.icons.OPEN_WITH),
+                                                on_click=self.close_index if _index[
+                                                                                 'status'] == "open" else self.open_index
+                                            ),
+                                            ft.MenuItemButton(
+                                                data=_index['index'],
+                                                content=ft.Text("refresh"),
+                                                leading=ft.Icon(ft.icons.REFRESH),
+                                                on_click=self.refresh
+                                            ),
+                                            ft.MenuItemButton(
+                                                data=_index['index'],
+                                                content=ft.Text("flush"),
+                                                leading=ft.Icon(ft.icons.DOWNLOAD),
+                                                on_click=self.flush
+                                            ),
+                                            ft.MenuItemButton(
+                                                data=_index['index'],
+                                                content=ft.Text("清理缓存"),
+                                                leading=ft.Icon(ft.icons.DELETE_SWEEP_OUTLINED),
+                                                on_click=self.cache_clear
+                                            ),
+                                        ]
+                                    ),
+                                ]
+                            )
+                        ),
+                    ]
+                )  # page
+            )
+
 
     def init_table(self):
         if not es_service.connect_obj:
@@ -278,6 +289,9 @@ class Index(object):
         """
         # order
         # 反转true false
+        progress_bar.visible = True
+        e.page.update()
+
         if e.column_index in self.reverse:
             reverse = not self.reverse[e.column_index]
             self.reverse[e.column_index] = reverse
@@ -298,6 +312,8 @@ class Index(object):
         self.indexes_tmp = self.indexes[:self.page_size]
         self.init_rows()
         self.init_table()
+
+        progress_bar.visible = False
         e.page.update()
 
     def create_index(self, e):
