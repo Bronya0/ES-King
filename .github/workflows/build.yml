@@ -61,7 +61,7 @@ jobs:
         asset_content_type: application/octet-stream # 对于.exe文件，可以是application/octet-stream
 
   build-macos:
-    runs-on: macos-latest
+    runs-on: macos-11
     strategy:
       matrix:
         platform:
