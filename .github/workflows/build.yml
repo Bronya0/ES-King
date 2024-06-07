@@ -66,18 +66,10 @@ jobs:
       matrix:
         platform:
           - darwin/amd64
-          - darwin/arm64
 
     # 步骤合集
     steps:
     - uses: actions/checkout@v3
-
-    - name: Normalise platform tag
-      id: normalise_platform
-      shell: bash
-      run: |
-        tag=$(echo ${{ matrix.platform }} | sed -e 's/\//_/g' -e 's/darwin/mac/g' -e 's/amd64/intel/g')
-        echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
     - name: Normalise version tag
       id: normalise_version
