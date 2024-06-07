@@ -219,20 +219,19 @@ class Main:
         conn_name_input, es_input, username, password = [i.value for i in e.control.data]
         print("连接测试：", conn_name_input, es_input, username, password)
 
+        color = "green"
         if None in [conn_name_input, es_input] or "" in [conn_name_input, es_input]:
             msg = "请先填写es连接"
-            color = "#000000"
         elif username and not password or password and not username:
             msg = "用户名密码填写不正确（如未开启认证可以不填）"
-            color = "#000000"
         else:
             res, err = es_service.test_client(es_input, username, password)
             if res:
                 msg = f"连接成功"
-                color = "#00a0b0"
+                color = "green"
             else:
-                msg = f"连接失败: {err}"
-                color = "#000000"
+                msg = f"连接失败"
+                color = "red"
         e.control.text = msg
         e.control.style = ft.ButtonStyle(color=color)
         self.page.update()
@@ -292,7 +291,7 @@ class Main:
                     self.password,
                     ft.Row([
                         ft.TextButton("连接测试", on_click=self.test_connect, on_long_press=True,
-                                      style=ft.ButtonStyle(color=ft.colors.RED),
+                                      style=ft.ButtonStyle(color=ft.colors.BLUE),
                                       data=[self.conn_name_input, self.es_input,
                                             self.username, self.password],
                                       ),
