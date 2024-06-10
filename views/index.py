@@ -342,7 +342,7 @@ class Index(object):
             e.page.update()
 
         dlg_modal = ft.AlertDialog(
-            modal=True,
+            modal=False,
             title=ft.Text("创建索引"),
             content=ft.Column([
                 input_name,
@@ -351,7 +351,6 @@ class Index(object):
             ], height=130),
             actions=[
                 ft.TextButton("确认", on_click=ensure),
-                ft.TextButton("取消", on_click=close_dlg),
             ],
             # actions_alignment=ft.MainAxisAlignment.START,
         )
@@ -368,7 +367,7 @@ class Index(object):
             open_snack_bar(e.page, res, success=False)
             return
         dlg_modal = ft.AlertDialog(
-            modal=True,
+            modal=False,
             title=ft.Text(e.control.data),
             actions=[
                 ft.Row(
@@ -390,11 +389,6 @@ class Index(object):
                                     height=600,
                                     width=600,
                                 ),
-                                ft.Row(
-                                    [
-                                        ft.TextButton("取消", on_click=close_dlg)
-                                    ]
-                                )
                             ],
                             scroll=ft.ScrollMode.ALWAYS,
                         )],
@@ -504,7 +498,7 @@ class Index(object):
             return
 
         dlg_modal = ft.AlertDialog(
-            modal=True,
+            modal=False,
             title=ft.Text(e.control.data),
             actions=[
                 ft.Row(
@@ -525,11 +519,7 @@ class Index(object):
                                     height=600,
                                     width=600,
                                 ),
-                                ft.Row(
-                                    [
-                                        ft.TextButton("取消", on_click=close_dlg)
-                                    ]
-                                )
+
                             ],
                             scroll=ft.ScrollMode.ALWAYS,
                         )],

@@ -29,7 +29,7 @@ class Main:
         # 存储当前实例化的页面，用于左侧点击切换
 
         self.delete_modal = ft.AlertDialog(
-            modal=True,
+            modal=False,
             title=S_Text("删除es连接？"),
             actions=[
             ],
@@ -283,7 +283,7 @@ class Main:
             self.password.value = None
 
         dlg_modal = ft.AlertDialog(
-            modal=True,
+            modal=False,
             title=S_Text("添加es连接"),
             actions=[
                 ft.Column([
@@ -345,7 +345,7 @@ class Main:
         self.edit_es_input.value, self.edit_username.value, self.edit_password.value = connects
 
         e.page.dialog = ft.AlertDialog(
-            modal=True,
+            modal=False,
             open=True,
             title=S_Text("编辑连接"),
             actions=[

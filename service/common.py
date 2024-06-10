@@ -184,7 +184,7 @@ class page_info:
         self.page = None
 
     def set_page(self, page):
-        self.page = page
+        self.page: flet.Page = page
 
 
 common_page = page_info()
@@ -218,12 +218,10 @@ def build_tab_container(col_controls):
 
 def build_alert(page, title, column: flet.Column):
     dlg_modal = flet.AlertDialog(
-        modal=True,
+        modal=False,
         title=flet.Text(title),
         content=column,
         actions=[
-            # flet.TextButton("确认", on_click=ensure),
-            flet.TextButton("取消", on_click=close_dlg),
         ],
         # actions_alignment=ft.MainAxisAlignment.START,
     )

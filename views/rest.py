@@ -169,6 +169,7 @@ class Rest(object):
     """
 
     def __init__(self):
+        self.page_height = None
         self.history_key = "history_key"
 
         method_groups_dd_param = {
@@ -216,7 +217,7 @@ class Rest(object):
         }
         self.dsl_input1, self.dsl_input2 = ft.TextField(**dsl_input_param), ft.TextField(**dsl_input_param),
 
-        self.result_input1, self.result_input2 = Markdown(width=690), Markdown(width=690)
+        self.result_input1, self.result_input2 = Markdown(), Markdown()
 
         send_button_param = {
             "text": "发送请求",
@@ -338,6 +339,8 @@ class Rest(object):
         if not es_service.connect_obj:
             return "请先选择一个可用的ES连接！\nPlease select an available ES connection first!"
 
+        self.page_height = common_page.page.window_height
+
         self.rest_tab1.content = build_tab_container(
             col_controls=[
                 ft.Row([
@@ -349,7 +352,7 @@ class Rest(object):
                         ft.Row(
                             [
                                 self.dsl_input1,
-                            ], width=600
+                            ],
                         ),
                         ft.Row(
                             [
@@ -358,35 +361,20 @@ class Rest(object):
                                 self.format_button1,
                                 self.demos,
                             ]
+                        ),
+                        ft.Row(
+                            [
+                                self.export_json_button1
+
+                            ]
                         )
                     ], expand=True),
                     ft.Column(
                         [
-                            ft.Row(
-                                [
+                            self.result_input1,
+                        ], height=self.page_height - 250, scroll=ft.ScrollMode.ALWAYS, expand=True
+                    ),
 
-                                    ft.Container(
-                                        content=ft.Column(
-                                            [
-                                                self.result_input1
-                                            ], scroll=ft.ScrollMode.ALWAYS,
-                                        ),
-                                        border=ft.border.all(1),
-                                        height=514,
-                                        width=710,
-                                        # bgcolor="#282c34"
-                                        # expand=True
-                                    )
-
-                                ], vertical_alignment=ft.CrossAxisAlignment.START, scroll=ft.ScrollMode.ALWAYS
-                            ),
-
-                            ft.Row(
-                                [
-                                    self.export_json_button1
-                                ], vertical_alignment=ft.CrossAxisAlignment.START
-                            ),
-                        ], expand=True, scroll=ft.ScrollMode.ALWAYS, ),
                 ], vertical_alignment=ft.CrossAxisAlignment.START)
 
             ]
@@ -403,7 +391,7 @@ class Rest(object):
                         ft.Row(
                             [
                                 self.dsl_input2,
-                            ], width=600
+                            ]
                         ),
                         ft.Row(
                             [
@@ -412,35 +400,19 @@ class Rest(object):
                                 self.format_button2,
                                 self.demos,
                             ]
+                        ),
+                        ft.Row(
+                            [
+                                self.export_json_button2,
+
+                            ]
                         )
                     ], expand=True),
                     ft.Column(
                         [
-                            ft.Row(
-                                [
-
-                                    ft.Container(
-                                        content=ft.Column(
-                                            [
-                                                self.result_input2
-                                            ], scroll=ft.ScrollMode.ALWAYS,
-                                        ),
-                                        border=ft.border.all(1),
-                                        height=514,
-                                        width=710,
-                                        # bgcolor="#282c34"
-                                        # expand=True
-                                    )
-
-                                ], vertical_alignment=ft.CrossAxisAlignment.START, scroll=ft.ScrollMode.ALWAYS
-                            ),
-
-                            ft.Row(
-                                [
-                                    self.export_json_button2
-                                ], vertical_alignment=ft.CrossAxisAlignment.START
-                            ),
-                        ], expand=True, scroll=ft.ScrollMode.ALWAYS, ),
+                            self.result_input2,
+                        ], height=self.page_height - 250, scroll=ft.ScrollMode.ALWAYS, expand=True
+                    ),
                 ], vertical_alignment=ft.CrossAxisAlignment.START)
 
             ]
@@ -518,14 +490,11 @@ class Rest(object):
     def insert_demo(self, e):
         """ 选择示例查询 """
         dlg_modal = ft.AlertDialog(
-            modal=True,
+            modal=False,
             title=ft.Text("创建索引"),
             content=ft.Column([
                 ft.Text(e.control.data, selectable=True)
             ], scroll=ft.ScrollMode.ALWAYS),
-            actions=[
-                ft.TextButton("取消", on_click=close_dlg),
-            ],
         )
         e.page.dialog = dlg_modal
         dlg_modal.open = True
@@ -546,6 +515,7 @@ class Rest(object):
                 self.dsl_input2,
                 self.result_input2,
             )
+        self.page_height = common_page.page.window_height
 
     def _send_search(self, path_input, method_groups_dd, dsl_input, result_input):
         """
