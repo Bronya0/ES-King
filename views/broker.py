@@ -3,10 +3,11 @@
 import datetime
 
 import flet as ft
-from flet_core import DataColumnSortEvent
+from flet_core import DataColumnSortEvent, ControlEvent
 
-from service.common import S_Text, build_tab_container, open_snack_bar, S_Button, progress_bar
+from service.common import S_Text, build_tab_container, open_snack_bar, S_Button, progress_bar, common_page
 from service.es_service import es_service
+from service.page_table import PageTable
 
 
 class Broker(object):
@@ -16,10 +17,11 @@ class Broker(object):
 
     def __init__(self):
         # page
+        self.task_data_lst = []
+        self.task_data_lst_tmp = []
         self.nodes_tmp = []
         self.page_num = 1
         self.page_size = 10
-        self.page_label = None
         # order
         # 每列对应的排序状态
         self.reverse = {}
@@ -35,8 +37,7 @@ class Broker(object):
         self.task_table = None
 
         self.get_task_button = ft.TextButton("读取集群Task列表", on_click=self.get_task, icon=ft.icons.READ_MORE,
-                        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)))
-
+                                             style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)))
 
         self.task_tab = ft.Tab(
             text='ES Task列表', content=ft.Column(), icon=ft.icons.HIVE_OUTLINED,
@@ -59,7 +60,6 @@ class Broker(object):
             return "请先选择一个可用的ES连接！\nPlease select an available ES connection first!"
 
         self.init_data()
-        self.init_rows()
         self.init_table()
 
     def init_data(self):
@@ -69,12 +69,11 @@ class Broker(object):
         # 只在最开始、排序时执行一次
         self.nodes_tmp = self.nodes[:self.page_size]
 
-    def init_rows(self):
-        # page
-        offset = (self.page_num - 1) * self.page_size
+    def init_table(self):
 
-        self.cluster_table_rows = [
-            ft.DataRow(
+        # 节点列表表格
+        def cluster_table_row_func(i, offset, _node):
+            row = ft.DataRow(
                 cells=[
                     ft.DataCell(S_Text(offset + i + 1)),
                     ft.DataCell(S_Text(f"{_node['ip']}")),
@@ -106,33 +105,45 @@ class Broker(object):
                     ft.DataCell(S_Text(f"{_node['master']}")),
                     ft.DataCell(S_Text(f"{_node['cpu']}%")),
                     ft.DataCell(S_Text(f"{_node['load_5m']}")),
-                    ft.DataCell(S_Text(f"{_node['fielddataMemory']}/{_node['queryCacheMemory']}/{_node['requestCacheMemory']}/{_node['segmentsMemory']}")),
+                    ft.DataCell(S_Text(
+                        f"{_node['fielddataMemory']}/{_node['queryCacheMemory']}/{_node['requestCacheMemory']}/{_node['segmentsMemory']}")),
                     ft.DataCell(S_Text(f"{_node['segments.count']}")),
                 ]
-            ) for i, _node in enumerate(self.nodes_tmp)  # page
-        ]
+            )
+            return row
 
-    def init_table(self):
-
-        # 节点列表表格
-        self.cluster_table = ft.DataTable(
+        self.cluster_table = PageTable(
+            page=common_page.page,
+            data_lst=self.nodes,
+            data_lst_tmp=self.nodes_tmp,
             columns=[
                 ft.DataColumn(S_Text("序号")),
                 ft.DataColumn(S_Text("ip")),
                 ft.DataColumn(S_Text("name")),
-                ft.DataColumn(ft.Row([S_Text("堆使用率"), ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(3) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
-                ft.DataColumn(ft.Row([S_Text("内存使用率"), ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(4) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
-                ft.DataColumn(ft.Row([S_Text("磁盘使用率"), ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(5) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
+                ft.DataColumn(ft.Row([S_Text("堆使用率"), ft.Icon(
+                    ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(3) else ft.icons.KEYBOARD_ARROW_UP)]),
+                              on_sort=self.on_sort),
+                ft.DataColumn(ft.Row([S_Text("内存使用率"), ft.Icon(
+                    ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(4) else ft.icons.KEYBOARD_ARROW_UP)]),
+                              on_sort=self.on_sort),
+                ft.DataColumn(ft.Row([S_Text("磁盘使用率"), ft.Icon(
+                    ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(5) else ft.icons.KEYBOARD_ARROW_UP)]),
+                              on_sort=self.on_sort),
                 ft.DataColumn(S_Text("角色")),
                 ft.DataColumn(S_Text("主节点")),
-                ft.DataColumn(ft.Row([S_Text("cpu"), ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(8) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
-                ft.DataColumn(ft.Row([S_Text("5m负载"), ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(9) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
+                ft.DataColumn(ft.Row([S_Text("cpu"), ft.Icon(
+                    ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(8) else ft.icons.KEYBOARD_ARROW_UP)]),
+                              on_sort=self.on_sort),
+                ft.DataColumn(ft.Row([S_Text("5m负载"), ft.Icon(
+                    ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(9) else ft.icons.KEYBOARD_ARROW_UP)]),
+                              on_sort=self.on_sort),
                 ft.DataColumn(ft.Row([S_Text("字段/查询/请求/段内存")])),
-                ft.DataColumn(ft.Row([S_Text("段总数"), ft.Icon(ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(11) else ft.icons.KEYBOARD_ARROW_UP)]), on_sort=self.on_sort),
-
+                ft.DataColumn(ft.Row([S_Text("段总数"), ft.Icon(
+                    ft.icons.KEYBOARD_ARROW_DOWN if self.reverse.get(11) else ft.icons.KEYBOARD_ARROW_UP)]),
+                              on_sort=self.on_sort),
 
             ],
-            rows=self.cluster_table_rows,
+            row_func=cluster_table_row_func,
             column_spacing=20,
             expand=True
         )
@@ -143,46 +154,46 @@ class Broker(object):
                 ft.Row([
                     self.cluster_table,
                 ]),
-                # page
-                ft.Row(
-                    [
-                        # 翻页图标和当前页显示
-                        ft.IconButton(
-                            icon=ft.icons.ARROW_BACK,
-                            icon_size=20,
-                            on_click=self.page_prev,
-                            tooltip="上一页",
-                        ),
-                        ft.Text(f"{self.page_num}/{int(len(self.nodes) / self.page_size) + 1}"),
-                        ft.IconButton(
-                            icon=ft.icons.ARROW_FORWARD,
-                            icon_size=20,
-                            on_click=self.page_next,
-                            tooltip="下一页",
-                        ),
-                        ft.Text(f"每页{self.page_size}条"),
-                        ft.Slider(min=5, max=55, divisions=10, round=1,value=self.page_size, label="{value}", on_change_end=self.page_size_change),
-
-                    ]
-                )
+                self.cluster_table.page_controls
             ]
         )
 
-        self.task_table = ft.DataTable(
+        def task_table_row_func(i, offset, task):
+            row = ft.DataRow(
+                cells=[
+                    ft.DataCell(S_Text(f"{task['task_id']}", size=12)),
+                    ft.DataCell(S_Text(f"{task['node_name']}")),
+                    # ft.DataCell(S_Text(f"{task['node_ip']}")),
+                    ft.DataCell(S_Text(f"{task['type']}")),
+                    ft.DataCell(S_Text(f"{task['action']}")),
+                    ft.DataCell(S_Text(
+                        f"{datetime.datetime.fromtimestamp(task['start_time_in_millis'] / 1000).strftime('%Y-%m-%d %H:%M:%S') if task['start_time_in_millis'] else ''}")),
+                    ft.DataCell(S_Text(f"{task['running_time_in_nanos'] / 1000000000}", size=12)),
+                    # ft.DataCell(S_Text(f"{task['cancellable']}")),
+                    ft.DataCell(S_Text(f"{task['parent_task_id']}", size=12)),
+                    ft.DataCell(S_Button(text="取消任务", on_click=self.cancel_task, data=task['task_id'])),
+                ]
+            )
+            return row
+
+        self.task_table = PageTable(
+            page=common_page.page,
+            data_lst=self.task_data_lst,
+            data_lst_tmp=self.task_data_lst_tmp,
             columns=[
                 ft.DataColumn(S_Text("task_id")),
-                ft.DataColumn(S_Text("node_name")),
-                ft.DataColumn(S_Text("node_ip")),
+                ft.DataColumn(S_Text("node")),
+                # ft.DataColumn(S_Text("node_ip")),
                 ft.DataColumn(S_Text("type")),
                 ft.DataColumn(S_Text("action")),
                 ft.DataColumn(S_Text("任务开始时间")),
                 ft.DataColumn(S_Text("运行时间(s)")),
-                ft.DataColumn(S_Text("是否可取消")),
+                # ft.DataColumn(S_Text("是否可取消")),
                 ft.DataColumn(S_Text("父任务")),
                 ft.DataColumn(S_Text("")),
 
             ],
-            rows=self.task_table_rows,
+            row_func=task_table_row_func,
             column_spacing=20,
             expand=True
         )
@@ -195,11 +206,13 @@ class Broker(object):
                 ft.Row([
                     self.task_table,
                 ]),
+                self.task_table.page_controls
 
             ]
         )
 
-    def page_prev(self, e):
+    def page_prev(self, e: ControlEvent):
+
         # page
         if self.page_num == 1:
             return
@@ -208,7 +221,6 @@ class Broker(object):
         offset = (self.page_num - 1) * self.page_size
         self.nodes_tmp = self.nodes[offset:offset + self.page_size]
 
-        self.init_rows()
         self.init_table()
         e.page.update()
 
@@ -221,7 +233,6 @@ class Broker(object):
         offset = (self.page_num - 1) * self.page_size
         self.nodes_tmp = self.nodes[offset:offset + self.page_size]
 
-        self.init_rows()
         self.init_table()
         e.page.update()
 
@@ -230,7 +241,6 @@ class Broker(object):
         self.page_size = int(e.control.value)
         self.nodes_tmp = self.nodes[:self.page_size]
 
-        self.init_rows()
         self.init_table()
         e.page.update()
 
@@ -258,7 +268,6 @@ class Broker(object):
 
         self.nodes = sorted(self.nodes, key=key, reverse=reverse)
         self.nodes_tmp = self.nodes[:self.page_size]
-        self.init_rows()
         self.init_table()
         e.page.update()
 
@@ -280,33 +289,17 @@ class Broker(object):
         role_list = list(roles)
 
         # 将角色翻译为中文
-        translated_roles = [role_mapping.get(role,role) for role in role_list if role in role_mapping]
+        translated_roles = [role_mapping.get(role, role) for role in role_list if role in role_mapping]
 
         # 用逗号连接翻译后的角色
         return '，'.join(translated_roles)
 
     def get_task(self, e):
-        success, task_data_lst = es_service.get_tasks()
+        success, self.task_data_lst = es_service.get_tasks()
         if not success:
-            open_snack_bar(e.page, task_data_lst, success=False)
+            open_snack_bar(e.page, self.task_data_lst, success=False)
             return
-
-        self.task_table_rows = [
-            ft.DataRow(
-                cells=[
-                    ft.DataCell(S_Text(f"{task['task_id']}", size=12)),
-                    ft.DataCell(S_Text(f"{task['node_name']}")),
-                    ft.DataCell(S_Text(f"{task['node_ip']}")),
-                    ft.DataCell(S_Text(f"{task['type']}")),
-                    ft.DataCell(S_Text(f"{task['action']}")),
-                    ft.DataCell(S_Text(f"{datetime.datetime.fromtimestamp(task['start_time_in_millis'] / 1000).strftime('%Y-%m-%d %H:%M:%S') if task['start_time_in_millis'] else ''}")),
-                    ft.DataCell(S_Text(f"{task['running_time_in_nanos'] / 1000000000}", size=12)),
-                    ft.DataCell(S_Text(f"{task['cancellable']}")),
-                    ft.DataCell(S_Text(f"{task['parent_task_id']}", size=12)),
-                    ft.DataCell(S_Button(text="取消任务", on_click=self.cancel_task, data=task['task_id'])),
-                ]
-            ) for i, task in enumerate(task_data_lst)  # page
-        ]
+        self.task_data_lst_tmp = self.task_data_lst[:self.task_table.page_size]
 
         self.init_table()
 

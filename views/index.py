@@ -166,7 +166,6 @@ class Index(object):
                 )  # page
             )
 
-
     def init_table(self):
         if not es_service.connect_obj:
             return "请先选择一个可用的ES连接！\nPlease select an available ES connection first!"
@@ -510,10 +509,10 @@ class Index(object):
                                         Markdown(
                                             f"""
 ```json
-{json.dumps(res, ensure_ascii=False, indent=4)}
+{json.dumps(res['hits']['hits'], ensure_ascii=False, indent=4)}
 ```
 """,
-                                        )
+                                        width=580)
                                     ],
                                     scroll=ft.ScrollMode.ALWAYS,
                                     height=600,
@@ -537,9 +536,9 @@ class Index(object):
         e.page.update()
 
     def get_label(self, e):
-        alias = es_service.get_index_aliases(e.control.data)
+        alias = es_service.get_index_aliases([e.control.data])
         alert = build_alert(e.page, e.control.data + "别名", ft.Column([
-                ft.Text(alias, selectable=True),
+                ft.Text(alias.get(e.control.data) if alias else "无别名", selectable=True),
             ], height=130))
 
         e.page.dialog = alert
