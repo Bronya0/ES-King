@@ -8,11 +8,11 @@ on:
 jobs:
   build-windows:
     runs-on: windows-latest
-    strategy:
-      matrix:
-        platform:
-          - windows/amd64
-          - windows/arm64
+#    strategy:
+#      matrix:
+#        platform:
+#          - windows/amd64
+#          - windows/arm64
 
     # 步骤合集
     steps:
@@ -61,12 +61,11 @@ jobs:
         asset_content_type: application/octet-stream # 对于.exe文件，可以是application/octet-stream
 
   build-macos:
-    runs-on: macos-12
     strategy:
       matrix:
-        platform:
-          - darwin/amd64
-          - darwin/arm64
+        os: [macos-13, macos-14]  # 定义多个 macOS 版本，macos-14是m1芯片
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
 
     # 步骤合集
     steps:
@@ -118,11 +117,11 @@ jobs:
         asset_content_type: application/octet-stream
 
   build-ubuntu:
-    runs-on: ubuntu-22.04
-    strategy:
-      matrix:
-        platform:
-          - linux/amd64
+    runs-on: ubuntu-latest
+#    strategy:
+#      matrix:
+#        platform:
+#          - linux/amd64
 
     # 步骤合集
     steps:
