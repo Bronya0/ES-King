@@ -168,7 +168,7 @@ class Broker(object):
                     ft.DataCell(S_Text(f"{task['action']}")),
                     ft.DataCell(S_Text(
                         f"{datetime.datetime.fromtimestamp(task['start_time_in_millis'] / 1000).strftime('%Y-%m-%d %H:%M:%S') if task['start_time_in_millis'] else ''}")),
-                    ft.DataCell(S_Text(f"{task['running_time_in_nanos'] / 1000000000}", size=12)),
+                    ft.DataCell(S_Text(f"{int(task['running_time_in_nanos'] / 1000000000)}", size=12)),
                     # ft.DataCell(S_Text(f"{task['cancellable']}")),
                     ft.DataCell(S_Text(f"{task['parent_task_id']}", size=12)),
                     ft.DataCell(S_Button(text="取消任务", on_click=self.cancel_task, data=task['task_id'])),
@@ -295,14 +295,17 @@ class Broker(object):
         return '，'.join(translated_roles)
 
     def get_task(self, e):
+        progress_bar.visible = True
+        progress_bar.update()
+
         success, self.task_data_lst = es_service.get_tasks()
-        if not success:
+        if success:
+            self.task_data_lst_tmp = self.task_data_lst[:self.task_table.page_size]
+
+            self.init_table()
+        else:
             open_snack_bar(e.page, self.task_data_lst, success=False)
-            return
-        self.task_data_lst_tmp = self.task_data_lst[:self.task_table.page_size]
-
-        self.init_table()
-
+        progress_bar.visible = False
         e.page.update()
 
     def cancel_task(self, e):

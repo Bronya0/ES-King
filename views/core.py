@@ -190,10 +190,10 @@ class Core(object):
 {json.dumps(self.settings, ensure_ascii=False, indent=4)}
 ```
 """,
-                                    ),
+                                    width=1260),
 
                                 ],
-                                scroll=ft.ScrollMode.ALWAYS,
+                                scroll=ft.ScrollMode.ALWAYS, width=1280,
                             ),
 
                         ], vertical_alignment=ft.CrossAxisAlignment.START
