@@ -65,7 +65,7 @@ jobs:
   build-macos:
     strategy:
       matrix:
-        os: [macos-13, macos-14]  # 定义多个 macOS 版本，macos-14是m1芯片
+        os: [macos-12, macos-13, macos-14]  # 定义多个 macOS 版本，macos-14是m1芯片
     name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
 
