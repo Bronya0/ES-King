@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*-coding:utf-8 -*-
 import datetime
+from typing import Optional
 
 import flet as ft
 from flet_core import DataColumnSortEvent, ControlEvent
@@ -32,9 +33,10 @@ class Broker(object):
         self.node_tab = ft.Tab(
             text='集群节点列表', content=ft.Column(), icon=ft.icons.HIVE_OUTLINED,
         )
-
+        self.search_text = ft.TextField(label='检索action', on_submit=self.search_table, width=200,
+                                        height=38, text_size=14, content_padding=5)
         self.task_table_rows = []
-        self.task_table = None
+        self.task_table: Optional[PageTable] = None
 
         self.get_task_button = ft.TextButton("读取集群Task列表", on_click=self.get_task, icon=ft.icons.READ_MORE,
                                              style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)))
@@ -202,6 +204,7 @@ class Broker(object):
             col_controls=[
                 ft.Row([
                     self.get_task_button,
+                    self.search_text
                 ]),
                 ft.Row([
                     self.task_table,
@@ -210,39 +213,6 @@ class Broker(object):
 
             ]
         )
-
-    def page_prev(self, e: ControlEvent):
-
-        # page
-        if self.page_num == 1:
-            return
-        self.page_num -= 1
-
-        offset = (self.page_num - 1) * self.page_size
-        self.nodes_tmp = self.nodes[offset:offset + self.page_size]
-
-        self.init_table()
-        e.page.update()
-
-    def page_next(self, e):
-        # page
-        # 最后一页则return
-        if self.page_num * self.page_size >= len(self.nodes):
-            return
-        self.page_num += 1
-        offset = (self.page_num - 1) * self.page_size
-        self.nodes_tmp = self.nodes[offset:offset + self.page_size]
-
-        self.init_table()
-        e.page.update()
-
-    def page_size_change(self, e):
-        # page
-        self.page_size = int(e.control.value)
-        self.nodes_tmp = self.nodes[:self.page_size]
-
-        self.init_table()
-        e.page.update()
 
     def on_sort(self, e: DataColumnSortEvent):
         """
@@ -293,6 +263,27 @@ class Broker(object):
 
         # 用逗号连接翻译后的角色
         return '，'.join(translated_roles)
+
+    def search_table(self, e: ControlEvent):
+        """
+        搜索，配合分页
+        :param e:
+        :return:
+        """
+        progress_bar.visible = True
+        progress_bar.update()
+
+        search_text_value = self.search_text.value
+        if search_text_value is not None:
+            print(search_text_value)
+            self.task_table.data_lst = [i for i in self.task_data_lst if search_text_value in i.get('action')]
+            self.task_table.data_lst_tmp = self.task_table.data_lst[:self.task_table.page_size]
+            self.task_table.page_num = 1
+            self.task_table.update_page_info()
+            self.task_table.init_rows()
+
+        progress_bar.visible = False
+        e.page.update()
 
     def get_task(self, e):
         progress_bar.visible = True

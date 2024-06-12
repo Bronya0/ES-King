@@ -7,7 +7,7 @@ from flet_core import TextField, ControlEvent
 from service.check import version_check
 from service.common import S_Text, prefix, GITHUB_URL, TITLE, open_snack_bar, close_dlg, PAGE_WIDTH, PAGE_HEIGHT, \
     WINDOW_TOP, WINDOW_LEFT, view_instance_map, Navigation, body, progress_bar, CONFIG_KEY, PAGE_MIN_WIDTH, \
-    PAGE_MIN_HEIGHT, common_page
+    PAGE_MIN_HEIGHT, common_page, CommonAlert
 from service.font import get_default_font, get_os_platform
 from service.es_service import es_service
 from service.translate import lang, i18n
@@ -28,13 +28,10 @@ class Main:
 
         # 存储当前实例化的页面，用于左侧点击切换
 
-        self.delete_modal = ft.AlertDialog(
-            modal=False,
-            title=S_Text("删除es连接？"),
+        self.delete_modal = CommonAlert(
+            title_str="删除es连接？",
             actions=[
             ],
-            actions_alignment=ft.MainAxisAlignment.CENTER,
-            shape=ft.RoundedRectangleBorder(radius=8),
 
         )
 
@@ -282,9 +279,8 @@ class Main:
             self.username.value = None
             self.password.value = None
 
-        dlg_modal = ft.AlertDialog(
-            modal=False,
-            title=S_Text("添加es连接"),
+        dlg_modal = CommonAlert(
+            title_str="添加es连接",
             actions=[
                 ft.Column([
                     self.conn_name_input,
@@ -306,12 +302,9 @@ class Main:
                     width=360
                 )
             ],
-            actions_alignment=ft.MainAxisAlignment.CENTER,
-            shape=ft.RoundedRectangleBorder(radius=8)
 
         )
         e.page.dialog = dlg_modal
-        dlg_modal.open = True
         e.page.update()
 
     def delete_connect(self, e):
@@ -344,10 +337,8 @@ class Main:
         self.edit_conn_name_input.value = key
         self.edit_es_input.value, self.edit_username.value, self.edit_password.value = connects
 
-        e.page.dialog = ft.AlertDialog(
-            modal=False,
-            open=True,
-            title=S_Text("编辑连接"),
+        e.page.dialog = CommonAlert(
+            title_str="编辑连接",
             actions=[
                 ft.Column([
                     self.edit_conn_name_input,
@@ -378,8 +369,6 @@ class Main:
                     width=360
                 )
             ],
-            actions_alignment=ft.MainAxisAlignment.CENTER,
-            shape=ft.RoundedRectangleBorder(radius=8)
 
         )
 
@@ -530,13 +519,9 @@ class Main:
             page.window_top = self.window_top
             page.window_left = self.window_left
 
-        elif e.data == "resized":
+        else:
             self.page_width = page.window_width
             self.page_height = page.window_height
-            self.window_top = page.window_top
-            self.window_left = page.window_left
-
-        elif e.data == "moved":
             self.window_top = page.window_top
             self.window_left = page.window_left
 

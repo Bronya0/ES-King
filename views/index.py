@@ -5,10 +5,11 @@ import json
 import flet as ft
 from flet_core import ControlEvent, DataColumnSortEvent
 
-from service.common import S_Text, open_snack_bar, S_Button, close_dlg, progress_bar, build_tab_container, human_size, \
-    build_alert
+from service.common import S_Text, open_snack_bar, close_dlg, progress_bar, build_tab_container, human_size, \
+    CommonAlert
 from service.es_service import es_service
 from service.markdown_custom import Markdown
+from service.page_table import PageTable
 
 
 class Index(object):
@@ -29,7 +30,8 @@ class Index(object):
 
         self.create_index_button = ft.TextButton("新建索引", on_click=self.create_index, icon=ft.icons.ADD,
                                                  style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)))
-        self.search_text = ft.TextField(value='*', label=' 检索索引名及别名，支持通配符*。按回车搜索。', label_style=ft.TextStyle(size=14),
+        self.search_text = ft.TextField(value='*', label=' 检索索引名及别名，支持通配符*。按回车搜索。',
+                                        label_style=ft.TextStyle(size=14),
                                         on_submit=self.search_table, width=300,
                                         height=38, text_size=14, content_padding=5, autofocus=True, autocorrect=True)
 
@@ -340,9 +342,8 @@ class Index(object):
             close_dlg(e)
             e.page.update()
 
-        dlg_modal = ft.AlertDialog(
-            modal=False,
-            title=ft.Text("创建索引"),
+        dlg_modal = CommonAlert(
+            title_str="创建索引",
             content=ft.Column([
                 input_name,
                 input_primary_shard,
@@ -350,11 +351,11 @@ class Index(object):
             ], height=130),
             actions=[
                 ft.TextButton("确认", on_click=ensure),
+                ft.TextButton("取消", on_click=close_dlg),
             ],
             # actions_alignment=ft.MainAxisAlignment.START,
         )
         e.page.dialog = dlg_modal
-        dlg_modal.open = True
         e.page.update()
 
     def view_index_detail(self, e):
@@ -365,9 +366,9 @@ class Index(object):
         if not success:
             open_snack_bar(e.page, res, success=False)
             return
-        dlg_modal = ft.AlertDialog(
-            modal=False,
-            title=ft.Text(e.control.data),
+
+        dlg_modal = CommonAlert(
+            title_str=e.control.data,
             actions=[
                 ft.Row(
                     controls=[
@@ -375,13 +376,14 @@ class Index(object):
                             [
                                 ft.Column(
                                     [
-                                        Markdown(
+
+                                        ft.Container(Markdown(
                                             f"""
 ```json
 {json.dumps(res, ensure_ascii=False, indent=4)}
 ```
                                             """,
-                                        )
+                                        ), padding=ft.padding.only(right=15))
 
                                     ],
                                     scroll=ft.ScrollMode.ALWAYS,
@@ -396,25 +398,33 @@ class Index(object):
                 )
 
             ],
-            actions_alignment=ft.MainAxisAlignment.CENTER,
-            shape=ft.RoundedRectangleBorder(radius=8),
-            open=True,
         )
         e.page.dialog = dlg_modal
-        dlg_modal.open = True
         e.page.update()
 
     def delete_index(self, e):
-        progress_bar.visible = True
-        e.page.update()
 
-        success, res = es_service.delete_index(e.control.data)
-        progress_bar.visible = False
+        def delete(e):
+            progress_bar.visible = True
+            e.page.update()
+
+            success, res = es_service.delete_index(e.control.data)
+
+            progress_bar.visible = False
+            e.page.update()
+            if not success:
+                open_snack_bar(e.page, res, success=False)
+            else:
+                open_snack_bar(e.page, "删除成功", success=True)
+
+        dlg_modal = CommonAlert(
+            title_str="危险",
+            content=ft.Text(f"你确定删除索引： {e.control.data} ？\n请谨慎操作！"),
+            actions=[ft.TextButton(text="我知道风险，确认删除", on_click=delete),
+                     ft.TextButton(text="取消", on_click=close_dlg)]
+        )
+        e.page.dialog = dlg_modal
         e.page.update()
-        if not success:
-            open_snack_bar(e.page, res, success=False)
-        else:
-            open_snack_bar(e.page, "删除成功", success=True)
 
     def open_index(self, e):
         progress_bar.visible = True
@@ -496,9 +506,8 @@ class Index(object):
             open_snack_bar(e.page, res, success=False)
             return
 
-        dlg_modal = ft.AlertDialog(
-            modal=False,
-            title=ft.Text(e.control.data),
+        dlg_modal = CommonAlert(
+            title_str=e.control.data,
             actions=[
                 ft.Row(
                     controls=[
@@ -506,17 +515,20 @@ class Index(object):
                             [
                                 ft.Column(
                                     [
-                                        Markdown(
-                                            f"""
+                                        ft.Row(
+                                            [
+                                                ft.Container(Markdown(
+                                                    f"""
 ```json
 {json.dumps(res['hits']['hits'], ensure_ascii=False, indent=4)}
 ```
-""",
-                                        width=580)
+""", ), padding=ft.padding.only(right=15))
+                                            ], scroll=ft.ScrollMode.ALWAYS, width=580
+                                        )
                                     ],
                                     scroll=ft.ScrollMode.ALWAYS,
                                     height=600,
-                                    width=600,
+                                    width=600
                                 ),
 
                             ],
@@ -527,20 +539,15 @@ class Index(object):
                 )
 
             ],
-            actions_alignment=ft.MainAxisAlignment.CENTER,
-            shape=ft.RoundedRectangleBorder(radius=8),
-            open=True,
         )
         e.page.dialog = dlg_modal
-        dlg_modal.open = True
         e.page.update()
 
     def get_label(self, e):
         alias = es_service.get_index_aliases([e.control.data])
-        alert = build_alert(e.page, e.control.data + "别名", ft.Column([
-                ft.Text(alias.get(e.control.data) if alias else "无别名", selectable=True),
-            ], height=130))
+        alert = CommonAlert(title_str=e.control.data + "别名", content=ft.Column([
+            ft.Text(alias.get(e.control.data) if alias else "无别名", selectable=True),
+        ], height=130))
 
         e.page.dialog = alert
-        alert.open = True
         e.page.update()

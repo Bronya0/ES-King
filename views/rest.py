@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 # -*-coding:utf-8 -*-
+import datetime
 import json
-import time
+import os
 
 import flet as ft
+import openpyxl
 from flet_core import TextStyle
 
-from service.common import S_Button, open_snack_bar, build_tab_container, close_dlg, progress_bar, common_page
+from service.common import S_Button, open_snack_bar, build_tab_container, progress_bar, common_page, \
+    open_directory, CommonAlert
 from service.es_service import es_service
 from service.markdown_custom import Markdown
 
@@ -182,7 +185,7 @@ class Rest(object):
                 ft.dropdown.Option("HEAD"),
                 ft.dropdown.Option("PATCH"),
                 ft.dropdown.Option("OPTIONS"),
-                ft.dropdown.Option("DELETE", disabled=True),
+                ft.dropdown.Option("DELETE"),
             ],
             "width": 120,
             "dense": True,
@@ -240,6 +243,14 @@ class Rest(object):
         }
         self.export_json_button1, self.export_json_button2 = S_Button(**export_json_button_param), S_Button(
             **export_json_button_param)
+
+        export_excel_button_param = {
+            "text": "导出为excel",
+            "height": 38,
+            "on_click": self.export_excel_button_func,
+        }
+        self.export_excel_button1, self.export_excel_button2 = S_Button(**export_excel_button_param), S_Button(
+            **export_excel_button_param)
 
         self.history_menu_controls = []
 
@@ -352,27 +363,40 @@ class Rest(object):
                         ft.Row(
                             [
                                 self.dsl_input1,
-                            ],
+                            ]
                         ),
                         ft.Row(
                             [
                                 self.send_button1,
-                                self.history_menu,
                                 self.format_button1,
-                                self.demos,
                             ]
                         ),
                         ft.Row(
                             [
-                                self.export_json_button1
+                                self.history_menu,
+                                self.demos,
 
                             ]
                         )
-                    ], expand=True),
+                    ], width=500),
                     ft.Column(
                         [
-                            self.result_input1,
-                        ], height=self.page_height - 250, scroll=ft.ScrollMode.ALWAYS, expand=True
+                            ft.Row(
+                                [
+                                    ft.Container(self.result_input1, padding=ft.padding.only(right=15)),
+                                ], scroll=ft.ScrollMode.ALWAYS, width=680
+                            )
+
+                        ], height=self.page_height - 250, scroll=ft.ScrollMode.ALWAYS, width=700
+                    ),
+
+                    ft.Column(
+                        [
+
+                            self.export_json_button1,
+                            self.export_excel_button1,
+
+                        ], scroll=ft.ScrollMode.ALWAYS
                     ),
 
                 ], vertical_alignment=ft.CrossAxisAlignment.START)
@@ -404,13 +428,14 @@ class Rest(object):
                         ft.Row(
                             [
                                 self.export_json_button2,
+                                self.export_excel_button2,
 
                             ]
                         )
                     ], expand=True),
                     ft.Column(
                         [
-                            self.result_input2,
+                            ft.Container(self.result_input2, padding=ft.padding.only(right=15)),
                         ], height=self.page_height - 250, scroll=ft.ScrollMode.ALWAYS, expand=True
                     ),
                 ], vertical_alignment=ft.CrossAxisAlignment.START)
@@ -452,6 +477,7 @@ class Rest(object):
             self._format_button_func(self.dsl_input1, e.control)
         elif self.tab.selected_index == 1:
             self._format_button_func(self.dsl_input2, e.control)
+        e.page.update()
 
     def _format_button_func(self, _input, button):
         flag, res = self.is_json(_input.value)
@@ -460,8 +486,6 @@ class Rest(object):
         else:
             _input.value = self.format_json(_input.value)
             button.text = "格式化完成"
-        button.update()
-        _input.update()
 
     def export_json_button_func(self, e):
         """ 导出json """
@@ -474,11 +498,67 @@ class Rest(object):
         if data:
             self._export_json_button_func(data, e.page)
 
+    def export_excel_button_func(self, e):
+        """ 导出excel """
+        data = ""
+
+        if self.tab.selected_index == 0:
+            data: str = self.result_input1.data
+        elif self.tab.selected_index == 1:
+            data: str = self.result_input2.data
+        if data:
+            self._export_excel_button_func(data, e.page)
+
     def _export_json_button_func(self, data, page):
-        path = f"/es-king-export-{int(time.time())}.json"
+        # 创建目录
+        root = os.path.normpath("/es-king-export")
+        if not os.path.exists(root):
+            os.mkdir(root)
+
+        path = os.path.join(root, f"{datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}.json")
+        print(path)
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(json.loads(data), f, ensure_ascii=False, indent=2)
-        open_snack_bar(page, f"成功导出到根目录：{path}", success=True)
+
+        bar = ft.SnackBar(content=ft.Text(f"成功导出：{path}", selectable=True), open=True, action="打开目录", on_action=lambda e: open_directory(root))
+        page.snack_bar = bar
+        page.update()
+
+    def _export_excel_button_func(self, data: str, page):
+        # 创建目录
+        try:
+            root = os.path.normpath("/es-king-export")
+            if not os.path.exists(root):
+                os.mkdir(root)
+
+            path = os.path.join(root, f"{datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}.xlsx")
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            data_dict = json.loads(data)
+            header = []
+            hits = data_dict.get("hits", {}).get("hits", [])
+            for i in hits:
+                _source = i.get("_source", {})
+                header.extend(list(_source.keys()))
+            header = list(set(header))
+            ws.append(header)
+
+            for i in hits:
+                _source = i.get("_source", {})
+                line = [str(_source.get(i, "")) for i in header]
+                ws.append(line)
+            # 设置样式
+            ws.auto_filter.ref = "A1:Z1"
+            ws.freeze_panes = 'A2'
+
+            wb.save(path)
+            print(path)
+            page.snack_bar = ft.SnackBar(content=ft.Text(f"成功导出：{path}", selectable=True), open=True, action="打开目录",
+                              on_action=lambda e: open_directory(root))
+        except Exception as e:
+            open_snack_bar(page, f"导出失败：{e}")
+
+        page.update()
 
     def format_json(self, data):
         flag, res = self.is_json(data)
@@ -489,15 +569,13 @@ class Rest(object):
 
     def insert_demo(self, e):
         """ 选择示例查询 """
-        dlg_modal = ft.AlertDialog(
-            modal=False,
-            title=ft.Text("创建索引"),
+        dlg_modal = CommonAlert(
+            title_str="创建索引",
             content=ft.Column([
                 ft.Text(e.control.data, selectable=True)
             ], scroll=ft.ScrollMode.ALWAYS),
         )
         e.page.dialog = dlg_modal
-        dlg_modal.open = True
         e.page.update()
 
     def send_search(self, e):
@@ -532,13 +610,29 @@ class Rest(object):
         if not success:
             open_snack_bar(common_page.page, res, success=False)
         else:
-            result_input.value = f"""
+
+            # 以markdown渲染显示，但是太多内容的话就只渲染一部分，剩下的让下载自己看
+            res_str = json.dumps(res, ensure_ascii=False, indent=2)
+            res_clean_str = res_str.replace(" ", "")
+            limit = 100000
+            print(len(res_str), len(res_clean_str))
+            if len(res_clean_str) < limit:
+                result_input.code_theme = "a11y-dark"
+                result_input.value = f"""
 ```json
-{json.dumps(res, ensure_ascii=False, indent=4)}
+{res_str}
 ```
 """
-        result_input.data = json.dumps(res, ensure_ascii=False, indent=4)
+            else:
+                result_input.value = f"""
+```json
+字数过长（>{limit}），完整内容请导出JSON本地查看。\n{res_str[:limit]}
+```
+                """
+                result_input.code_theme = None
         common_page.page.update()
+
+        result_input.data = json.dumps(res, ensure_ascii=False, indent=4)
 
         # 存储历史
         history = common_page.page.client_storage.get(self.history_key)

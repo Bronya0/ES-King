@@ -1,2 +1,3 @@
 flet
 pyinstaller
+openpyxl

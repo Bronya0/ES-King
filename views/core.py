@@ -3,7 +3,6 @@
 import json
 
 import flet as ft
-from flet_core import ControlEvent, DataColumnSortEvent
 
 from service.common import S_Text, build_tab_container, human_size
 from service.es_service import es_service
@@ -184,16 +183,17 @@ class Core(object):
                         [
                             ft.Column(
                                 [
-                                    Markdown(
-                                        f"""
+                                    ft.Row(
+                                        [
+                                            ft.Container(Markdown(
+                                                f"""
 ```json
 {json.dumps(self.settings, ensure_ascii=False, indent=4)}
 ```
-""",
-                                    width=1260),
+""", ), padding=ft.padding.only(right=15))], scroll=ft.ScrollMode.ALWAYS)
 
                                 ],
-                                scroll=ft.ScrollMode.ALWAYS, width=1280,
+                                scroll=ft.ScrollMode.ALWAYS, width=1200
                             ),
 
                         ], vertical_alignment=ft.CrossAxisAlignment.START
