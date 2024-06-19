@@ -53,13 +53,15 @@ class ESService:
             username=username,
             pwd=pwd,
         )
-        self.headers = {'Authorization': base64.b64encode(f"{username}:{pwd}".encode()).decode()}
+        encode = base64.b64encode(f"{username}:{pwd}".encode()).decode()
+        self.headers = {'Authorization': f'Basic {encode}'}
         print("设置当前连接：", self.connect_obj.host)
 
     def test_client(self, host, username, pwd):
         # 测试连接
         try:
-            res = requests.get(url=urljoin(host, HEALTH_API), headers={'Authorization': base64.b64encode(f"{username}:{pwd}".encode()).decode()})
+            encode = base64.b64encode(f"{username}:{pwd}".encode()).decode()
+            res = requests.get(url=urljoin(host, HEALTH_API), headers={'Authorization': f'Basic {encode}'})
             if res.status_code != 200:
                 return False, res.text
             return True, None
