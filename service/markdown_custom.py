@@ -15,9 +15,9 @@ class Markdown(ft.Markdown):
     :param kwargs: 传递给ft.Markdown基类构造函数的额外参数。
     """
 
-    def __init__(self, value="", selectable=True, extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
+    def __init__(self, value="", selectable=True, extension_set=ft.MarkdownExtensionSet.COMMON_MARK,
                  code_style=ft.TextStyle(),
-                 code_theme="darcula", **kwargs):
+                 code_theme="a11y-dark", **kwargs):
 
         # 使用try-except结构以处理可能的异常
         try:

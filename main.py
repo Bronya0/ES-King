@@ -7,7 +7,7 @@ from flet_core import TextField, ControlEvent
 from service.check import version_check
 from service.common import S_Text, prefix, GITHUB_URL, TITLE, open_snack_bar, close_dlg, PAGE_WIDTH, PAGE_HEIGHT, \
     WINDOW_TOP, WINDOW_LEFT, view_instance_map, Navigation, body, progress_bar, CONFIG_KEY, PAGE_MIN_WIDTH, \
-    PAGE_MIN_HEIGHT, common_page
+    PAGE_MIN_HEIGHT, common_page, CommonAlert
 from service.font import get_default_font, get_os_platform
 from service.es_service import es_service
 from service.translate import lang, i18n
@@ -28,13 +28,10 @@ class Main:
 
         # 存储当前实例化的页面，用于左侧点击切换
 
-        self.delete_modal = ft.AlertDialog(
-            modal=False,
-            title=S_Text("删除es连接？"),
+        self.delete_modal = CommonAlert(
+            title_str="删除es连接？",
             actions=[
             ],
-            actions_alignment=ft.MainAxisAlignment.CENTER,
-            shape=ft.RoundedRectangleBorder(radius=8),
 
         )
 
@@ -132,15 +129,14 @@ class Main:
             ),
 
         ]
-        self.color_menu = ft.MenuBar(
-            style=ft.MenuStyle(),
-            controls=[
-                ft.SubmenuButton(
-                    content=ft.Text(f"配色"),
-                    leading=ft.Icon(ft.icons.COLORIZE),
-                    controls=self.color_menu_item
-                )
-            ]
+
+        self.color_menu = ft.Dropdown(
+            options=self.color_menu_item,
+            label="  配色",
+            height=35,
+            alignment=ft.alignment.center_left,
+            content_padding=5,
+            width=100,
         )
         self.tools = [
             ft.TextButton("添加es连接", on_click=self.add_dlg_modal, icon=ft.icons.ADD_BOX_OUTLINED,
@@ -161,7 +157,7 @@ class Main:
         self.body.controls = self.tools
 
         # 底部提示
-        self.page.snack_bar = ft.SnackBar(content=ft.Text(""))
+        self.page.overlay.append(ft.SnackBar(content=ft.Text("")))
 
         # 顶部导航
         # 如果 AppBar.adaptive=True 且应用程序在 iOS 或 macOS 设备上打开，则仅使用此列表的第一个元素!!!!!!
@@ -282,9 +278,8 @@ class Main:
             self.username.value = None
             self.password.value = None
 
-        dlg_modal = ft.AlertDialog(
-            modal=False,
-            title=S_Text("添加es连接"),
+        dlg_modal = CommonAlert(
+            title_str="添加es连接",
             actions=[
                 ft.Column([
                     self.conn_name_input,
@@ -306,12 +301,9 @@ class Main:
                     width=360
                 )
             ],
-            actions_alignment=ft.MainAxisAlignment.CENTER,
-            shape=ft.RoundedRectangleBorder(radius=8)
 
         )
         e.page.dialog = dlg_modal
-        dlg_modal.open = True
         e.page.update()
 
     def delete_connect(self, e):
@@ -344,10 +336,8 @@ class Main:
         self.edit_conn_name_input.value = key
         self.edit_es_input.value, self.edit_username.value, self.edit_password.value = connects
 
-        e.page.dialog = ft.AlertDialog(
-            modal=False,
-            open=True,
-            title=S_Text("编辑连接"),
+        e.page.dialog = CommonAlert(
+            title_str="编辑连接",
             actions=[
                 ft.Column([
                     self.edit_conn_name_input,
@@ -378,8 +368,6 @@ class Main:
                     width=360
                 )
             ],
-            actions_alignment=ft.MainAxisAlignment.CENTER,
-            shape=ft.RoundedRectangleBorder(radius=8)
 
         )
 
@@ -399,7 +387,7 @@ class Main:
         else:
             self.connect_dd.label = i18n("请选择连接")
             for name, info_lst in conns.items():
-                op = ft.dropdown.Option(key=name, text=info_lst[0])
+                op = ft.dropdown.Option(key=name, content=ft.Text(f"{name}（{info_lst[0]}）", selectable=True, tooltip=info_lst[0]))
                 options.append(op)
         self.connect_dd.options = options
 
@@ -523,22 +511,18 @@ class Main:
         """
         修复flet恢复窗口时会导致的无法展开的问题！！
         """
-        page = e.page
+        page: ft.Page = e.page
         if e.data == 'restore':
-            page.window_width = self.page_width
-            page.window_height = self.page_height
-            page.window_top = self.window_top
-            page.window_left = self.window_left
+            page.window.width = self.page_width
+            page.window.height = self.page_height
+            page.window.top = self.window_top
+            page.window.left = self.window_left
 
-        elif e.data == "resized":
-            self.page_width = page.window_width
-            self.page_height = page.window_height
-            self.window_top = page.window_top
-            self.window_left = page.window_left
-
-        elif e.data == "moved":
-            self.window_top = page.window_top
-            self.window_left = page.window_left
+        else:
+            self.page_width = page.window.width
+            self.page_height = page.window.height
+            self.window_top = page.window.top
+            self.window_left = page.window.left
 
         page.update()
 
@@ -582,10 +566,10 @@ def init(page: ft.Page):
     page.theme = ft.Theme(font_family=font_family, color_scheme_seed=color)
 
     # 窗口大小
-    page.window_width = config['es_default_width'] if 'es_default_width' in config else PAGE_WIDTH
-    page.window_height = config['es_default_height'] if 'es_default_height' in config else PAGE_HEIGHT
-    page.window_min_width = PAGE_MIN_WIDTH
-    page.window_min_height = PAGE_MIN_HEIGHT
+    page.window.width = config['es_default_width'] if 'es_default_width' in config else PAGE_WIDTH
+    page.window.height = config['es_default_height'] if 'es_default_height' in config else PAGE_HEIGHT
+    page.window.min_width = PAGE_MIN_WIDTH
+    page.window.min_height = PAGE_MIN_HEIGHT
 
     Main(page)
 

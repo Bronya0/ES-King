@@ -63,17 +63,41 @@ def S_Text(value, **kwargs):
     )
 
 
-def S_Button(**kwargs):
-    return flet.ElevatedButton(
-        style=flet.ButtonStyle(
+class S_Button(flet.ElevatedButton):
+
+    def __init__(self, **kwargs):
+
+        super().__init__(style=flet.ButtonStyle(
             shape={
                 flet.MaterialState.HOVERED: flet.RoundedRectangleBorder(radius=2),
                 flet.MaterialState.DEFAULT: flet.RoundedRectangleBorder(radius=10),
-            },
-        ),
-        **kwargs,
-    )
+            }), **kwargs)
 
+
+import os
+import platform
+import subprocess
+
+
+def open_directory(path):
+    """
+    打开指定的本地目录。
+
+    :param path: 要打开的目录路径
+    """
+    if platform.system() == "Windows":
+        # Windows系统使用start命令
+        os.startfile(os.path.normpath(path))
+    elif platform.system() == "Darwin":  # macOS
+        # macOS使用open命令
+        subprocess.Popen(["open", path])
+    else:  # Linux系统
+        # 假设使用Nautilus，其他Linux发行版可能需要使用不同的命令，如xdg-open
+        try:
+            subprocess.Popen(["xdg-open", path])
+        except OSError:
+            # 如果xdg-open不可用，尝试使用Nautilus
+            subprocess.Popen(["nautilus", path])
 
 def open_snack_bar(page: flet.Page, msg, success=True):
     page.snack_bar.content = flet.Text(msg, selectable=True)
@@ -216,13 +240,14 @@ def build_tab_container(col_controls):
         ])
 
 
-def build_alert(page, title, column: flet.Column):
-    dlg_modal = flet.AlertDialog(
-        modal=False,
-        title=flet.Text(title),
-        content=column,
-        actions=[
-        ],
-        # actions_alignment=ft.MainAxisAlignment.START,
-    )
-    return dlg_modal
+class CommonAlert(flet.AlertDialog):
+
+    def __init__(self, title_str, **kwargs):
+        super().__init__(
+            modal=False,
+            title=flet.Text(title_str),
+            actions_alignment=flet.MainAxisAlignment.CENTER,
+            shape=flet.RoundedRectangleBorder(radius=8),
+            open=True,
+            **kwargs
+        )

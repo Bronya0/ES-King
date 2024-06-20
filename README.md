@@ -25,12 +25,12 @@
 
 点个star支持作者辛苦开源吧 谢谢❤❤
 
+加群和作者一起交流： <a target="_blank" href="https://qm.qq.com/cgi-bin/qm/qr?k=pDqlVFyLMYEEw8DPJlRSBN27lF8qHV2v&jump_from=webapi&authKey=Wle/K0ARM1YQWlpn6vvfiZuMedy2tT9BI73mUvXVvCuktvi0fNfmNR19Jhyrf2Nz">研发技术交流群：964440643</a>
+
+
 # 下载
 [下载地址](https://github.com/Bronya0/ES-King/releases)，点击【Assets】，选择自己的平台下载，支持windows、macos、linux。
 
-（mac m1/m2芯片请下载arm64版本）
-
-（windows用户通常下载amd64版本即可）
 
 # 构建
 ```

@@ -53,14 +53,17 @@ class ESService:
             username=username,
             pwd=pwd,
         )
-        self.headers = {'Authorization': base64.b64encode(f"{username}:{pwd}".encode()).decode()}
+        encode = base64.b64encode(f"{username}:{pwd}".encode()).decode()
+        self.headers = {'Authorization': f'Basic {encode}'}
         print("设置当前连接：", self.connect_obj.host)
 
     def test_client(self, host, username, pwd):
         # 测试连接
         try:
-            res = requests.get(url=urljoin(host, HEALTH_API), headers={'Authorization': base64.b64encode(f"{username}:{pwd}".encode()).decode()})
-            res.raise_for_status()
+            encode = base64.b64encode(f"{username}:{pwd}".encode()).decode()
+            res = requests.get(url=urljoin(host, HEALTH_API), headers={'Authorization': f'Basic {encode}'})
+            if res.status_code != 200:
+                return False, res.text
             return True, None
         except Exception as e:
             return False, str(e)
@@ -187,7 +190,8 @@ class ESService:
         }
         try:
             res = requests.put(url=urljoin(self.connect_obj.host, f"{name}"), headers=self.headers, json=index_config)
-            res.raise_for_status()
+            if res.status_code != 200:
+                return False, res.text
             return True, None
         except Exception as e:
             traceback.print_exc()
@@ -200,7 +204,8 @@ class ESService:
         try:
             print(urljoin(self.connect_obj.host, f"{index_name}"))
             res = requests.get(url=urljoin(self.connect_obj.host, f"{index_name}"), headers=self.headers)
-            res.raise_for_status()
+            if res.status_code != 200:
+                return False, res.text
             return True, res.json()
         except Exception as e:
             traceback.print_exc()
@@ -212,7 +217,8 @@ class ESService:
         """
         try:
             res = requests.delete(url=urljoin(self.connect_obj.host, f"{index_name}"), headers=self.headers)
-            res.raise_for_status()
+            if res.status_code != 200:
+                return False, res.text
             return True, res.json()
         except Exception as e:
             traceback.print_exc()
@@ -230,7 +236,8 @@ class ESService:
             print(urljoin(self.connect_obj.host, f"{index_name}/{action}"))
 
             res = requests.post(url=urljoin(self.connect_obj.host, f"{index_name}/{action}"), headers=self.headers)
-            res.raise_for_status()
+            if res.status_code != 200:
+                return False, res.text
             return True, res.json()
         except Exception as e:
             traceback.print_exc()
@@ -251,7 +258,8 @@ class ESService:
         print(urljoin(self.connect_obj.host, f"{index_name}/{FORCE_MERGE}"))
         try:
             res = requests.post(url=urljoin(self.connect_obj.host, f"{index_name}/{FORCE_MERGE}"), headers=self.headers)
-            res.raise_for_status()
+            if res.status_code != 200:
+                return False, res.text
             return True, res.json()
         except Exception as e:
             traceback.print_exc()
@@ -263,7 +271,8 @@ class ESService:
         print(urljoin(self.connect_obj.host, f"{index_name}/{REFRESH}"))
         try:
             res = requests.post(url=urljoin(self.connect_obj.host, f"{index_name}/{REFRESH}"), headers=self.headers)
-            res.raise_for_status()
+            if res.status_code != 200:
+                return False, res.text
             return True, res.json()
         except Exception as e:
             traceback.print_exc()
@@ -275,7 +284,8 @@ class ESService:
         print(urljoin(self.connect_obj.host, f"{index_name}/{FLUSH}"))
         try:
             res = requests.post(url=urljoin(self.connect_obj.host, f"{index_name}/{FLUSH}"), headers=self.headers)
-            res.raise_for_status()
+            if res.status_code != 200:
+                return False, res.text
             return True, res.json()
         except Exception as e:
             traceback.print_exc()
@@ -287,7 +297,8 @@ class ESService:
         print(urljoin(self.connect_obj.host, f"{index_name}/{CACHE_CLEAR}"))
         try:
             res = requests.post(url=urljoin(self.connect_obj.host, f"{index_name}/{CACHE_CLEAR}"), headers=self.headers)
-            res.raise_for_status()
+            if res.status_code != 200:
+                return False, res.text
             return True, res.json()
         except Exception as e:
             traceback.print_exc()
@@ -309,7 +320,8 @@ class ESService:
                                     "from": 0,
                                     "sort": []
                                 })
-            res.raise_for_status()
+            if res.status_code != 200:
+                return False, res.text
             return True, res.json()
         except Exception as e:
             traceback.print_exc()
@@ -322,6 +334,8 @@ class ESService:
         try:
             res = requests.request(method=method, url=urljoin(self.connect_obj.host, f"{path}"), headers=self.headers,
                                 json=body)
+            if res.status_code != 200:
+                return False, res.text
             return True, res.json()
         except Exception as e:
             traceback.print_exc()
@@ -410,7 +424,8 @@ class ESService:
         print(urljoin(self.connect_obj.host,  CANCEL_TASKS_API.format(task_id=task_id)))
         try:
             res = requests.post(url=urljoin(self.connect_obj.host, CANCEL_TASKS_API.format(task_id=task_id)), headers=self.headers,)
-            res.raise_for_status()
+            if res.status_code != 200:
+                return False, res.text
             return True, res.json()
         except Exception as e:
             traceback.print_exc()

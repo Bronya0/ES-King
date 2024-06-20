@@ -1,14 +1,10 @@
 #!/usr/bin/env python
 # -*-coding:utf-8 -*-
-import datetime
-import time
-import traceback
 
 import flet as ft
 import requests
 
-from service.common import UPDATE_URL, BASEDIR, GITHUB_URL, close_dlg
-from service.es_service import es_service
+from service.common import UPDATE_URL, BASEDIR, GITHUB_URL, close_dlg, CommonAlert
 
 
 def version_check(page: ft.Page):
@@ -27,9 +23,8 @@ def version_check(page: ft.Page):
     if version != latest_version:
         print("需要更新 {} -> {}".format(version, latest_version))
 
-        page.dialog = ft.AlertDialog(
-            modal=False,
-            title=ft.Text("🎉🎉发现新版本: {}".format(latest_version)),
+        page.dialog = CommonAlert(
+            title_str="🎉🎉发现新版本: {}".format(latest_version),
             actions=[
                 ft.Row(
                     controls=[
@@ -58,9 +53,6 @@ def version_check(page: ft.Page):
 
                 )
             ],
-            actions_alignment=ft.MainAxisAlignment.CENTER,
-            shape=ft.RoundedRectangleBorder(radius=8),
-            open=True,
         )
 
         page.update()

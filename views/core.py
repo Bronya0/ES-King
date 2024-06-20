@@ -3,7 +3,6 @@
 import json
 
 import flet as ft
-from flet_core import ControlEvent, DataColumnSortEvent
 
 from service.common import S_Text, build_tab_container, human_size
 from service.es_service import es_service
@@ -80,6 +79,26 @@ class Core(object):
                             ft.DataRow(cells=[ft.DataCell(S_Text("仅投票节点数")),
                                               ft.DataCell(S_Text(f"{stats_nodes['count'].get('voting_only')}"))]),
                         ], column_spacing=10, ), ),
+
+                        ft.Card(ft.DataTable(columns=[
+                            ft.DataColumn(S_Text("集群系统", weight=ft.FontWeight.BOLD)), ft.DataColumn(S_Text("")),
+                        ], rows=[
+                            ft.DataRow(cells=[ft.DataCell(S_Text("可用CPU核心数")),
+                                              ft.DataCell(S_Text(f"{stats_nodes['os']['available_processors']}")), ]),
+                            ft.DataRow(cells=[ft.DataCell(S_Text("分配给ES进程使用的CPU核心数")),
+                                              ft.DataCell(S_Text(f"{stats_nodes['os']['allocated_processors']}")), ]),
+                            ft.DataRow(cells=[ft.DataCell(S_Text("操作系统及总数")), ft.DataCell(
+                                ft.Text(value=json.dumps(f"{stats_nodes['os']['pretty_names']}")[:10] + "...",
+                                        tooltip=json.dumps(f"{stats_nodes['os']['pretty_names']}"))), ]),
+                            ft.DataRow(cells=[ft.DataCell(S_Text("总内存")), ft.DataCell(
+                                S_Text(f"{human_size(stats_nodes['os']['mem']['total_in_bytes'])}")), ]),
+                            ft.DataRow(cells=[ft.DataCell(S_Text("已使用内存")), ft.DataCell(
+                                S_Text(f"{human_size(stats_nodes['os']['mem']['used_in_bytes'])}")), ]),
+                            ft.DataRow(cells=[ft.DataCell(S_Text("已使用内存百分比")),
+                                              ft.DataCell(S_Text(f"{stats_nodes['os']['mem']['used_percent']}%")), ]),
+
+                        ], column_spacing=10, )),
+
                         ft.Card(ft.DataTable(columns=[
                             ft.DataColumn(S_Text("索引、分片", weight=ft.FontWeight.BOLD)), ft.DataColumn(S_Text("")),
                         ], rows=[
@@ -98,6 +117,7 @@ class Core(object):
                             ft.DataRow(cells=[ft.DataCell(S_Text("最大索引主分片数")), ft.DataCell(
                                 S_Text(f"{stats_indices['shards']['index']['primaries']['max']}")), ]),
                         ], column_spacing=10, )),
+
                         ft.Card(ft.DataTable(columns=[
                             ft.DataColumn(S_Text("文档、存储、缓存", weight=ft.FontWeight.BOLD)),
                             ft.DataColumn(S_Text("")),
@@ -149,6 +169,7 @@ class Core(object):
                                 f"{human_size(stats_indices['segments']['fixed_bit_set_memory_in_bytes'])}"))]),
                         ], column_spacing=10, )),
 
+
                         ft.Card(ft.DataTable(columns=[
                             ft.DataColumn(S_Text("集群系统", weight=ft.FontWeight.BOLD)), ft.DataColumn(S_Text("")),
                         ], rows=[
@@ -166,7 +187,6 @@ class Core(object):
                             ft.DataRow(cells=[ft.DataCell(S_Text("已使用内存百分比")),
                                               ft.DataCell(S_Text(f"{stats_nodes['os']['mem']['used_percent']}%")), ]),
 
-                        ], column_spacing=10, )),
 
                     ], vertical_alignment=ft.CrossAxisAlignment.START
                 ),
@@ -184,16 +204,17 @@ class Core(object):
                         [
                             ft.Column(
                                 [
-                                    Markdown(
-                                        f"""
+                                    ft.Row(
+                                        [
+                                            ft.Container(Markdown(
+                                                f"""
 ```json
 {json.dumps(self.settings, ensure_ascii=False, indent=4)}
 ```
-""",
-                                    ),
+""", ), padding=ft.padding.only(right=15))], scroll=ft.ScrollMode.ALWAYS)
 
                                 ],
-                                scroll=ft.ScrollMode.ALWAYS,
+                                scroll=ft.ScrollMode.ALWAYS, width=1200
                             ),
 
                         ], vertical_alignment=ft.CrossAxisAlignment.START
