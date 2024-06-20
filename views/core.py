@@ -169,7 +169,6 @@ class Core(object):
                                 f"{human_size(stats_indices['segments']['fixed_bit_set_memory_in_bytes'])}"))]),
                         ], column_spacing=10, )),
 
-
                         ft.Card(ft.DataTable(columns=[
                             ft.DataColumn(S_Text("集群系统", weight=ft.FontWeight.BOLD)), ft.DataColumn(S_Text("")),
                         ], rows=[
@@ -187,8 +186,8 @@ class Core(object):
                             ft.DataRow(cells=[ft.DataCell(S_Text("已使用内存百分比")),
                                               ft.DataCell(S_Text(f"{stats_nodes['os']['mem']['used_percent']}%")), ]),
 
+                        ]))], vertical_alignment=ft.CrossAxisAlignment.START
 
-                    ], vertical_alignment=ft.CrossAxisAlignment.START
                 ),
             ]
         )
