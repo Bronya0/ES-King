@@ -13,6 +13,7 @@ from typing import Optional
 from urllib.parse import urljoin
 
 import requests
+from requests.auth import HTTPBasicAuth
 
 # 配置日志输出
 logging.basicConfig(level=logging.INFO)
@@ -43,7 +44,7 @@ class ESService:
     def __init__(self):
         self.connect_name = None
         self.connect_obj: Optional[Connect] = None
-        self.headers = None
+        self.auth = None
         self.host = None
 
     def set_connect(self, key, host, username, pwd):
@@ -53,15 +54,13 @@ class ESService:
             username=username,
             pwd=pwd,
         )
-        encode = base64.b64encode(f"{username}:{pwd}".encode()).decode()
-        self.headers = {'Authorization': f'Basic {encode}'}
+        self.auth = HTTPBasicAuth(username, pwd)
         print("设置当前连接：", self.connect_obj.host)
 
     def test_client(self, host, username, pwd):
         # 测试连接
         try:
-            encode = base64.b64encode(f"{username}:{pwd}".encode()).decode()
-            res = requests.get(url=urljoin(host, HEALTH_API), headers={'Authorization': f'Basic {encode}'})
+            res = requests.get(url=urljoin(host, HEALTH_API), auth=HTTPBasicAuth(username, pwd))
             if res.status_code != 200:
                 return False, res.text
             return True, None
@@ -95,7 +94,7 @@ class ESService:
         ]
         """
         print(urljoin(self.connect_obj.host, NODES_API))
-        res = requests.get(url=urljoin(self.connect_obj.host, NODES_API), headers=self.headers)
+        res = requests.get(url=urljoin(self.connect_obj.host, NODES_API), auth=self.auth)
         res.raise_for_status()
         return res.json()
 
@@ -121,7 +120,7 @@ class ESService:
             }
         ]
         """
-        res = requests.get(url=urljoin(self.connect_obj.host, HEALTH_API), headers=self.headers)
+        res = requests.get(url=urljoin(self.connect_obj.host, HEALTH_API), auth=self.auth)
         res.raise_for_status()
         return res.json()
 
@@ -148,7 +147,7 @@ class ESService:
         ]
         """
         print(urljoin(self.connect_obj.host, STATS_API))
-        res = requests.get(url=urljoin(self.connect_obj.host, STATS_API), headers=self.headers)
+        res = requests.get(url=urljoin(self.connect_obj.host, STATS_API), auth=self.auth)
         res.raise_for_status()
         return res.json()
 
@@ -171,8 +170,7 @@ class ESService:
         """
         print(urljoin(self.connect_obj.host, ALL_INDEX_API + f"&index={name}" if name else ALL_INDEX_API))
         res = requests.get(
-            url=urljoin(self.connect_obj.host, ALL_INDEX_API + f"&index={name}" if name else ALL_INDEX_API),
-            headers=self.headers)
+            url=urljoin(self.connect_obj.host, ALL_INDEX_API + f"&index={name}" if name else ALL_INDEX_API), auth=self.auth)
         if res.status_code == 404:
             return []
         res.raise_for_status()
@@ -189,7 +187,7 @@ class ESService:
             }
         }
         try:
-            res = requests.put(url=urljoin(self.connect_obj.host, f"{name}"), headers=self.headers, json=index_config)
+            res = requests.put(url=urljoin(self.connect_obj.host, f"{name}"), auth=self.auth, json=index_config)
             if res.status_code != 200:
                 return False, res.text
             return True, None
@@ -203,7 +201,7 @@ class ESService:
         """
         try:
             print(urljoin(self.connect_obj.host, f"{index_name}"))
-            res = requests.get(url=urljoin(self.connect_obj.host, f"{index_name}"), headers=self.headers)
+            res = requests.get(url=urljoin(self.connect_obj.host, f"{index_name}"), auth=self.auth)
             if res.status_code != 200:
                 return False, res.text
             return True, res.json()
@@ -216,7 +214,7 @@ class ESService:
         删除索引
         """
         try:
-            res = requests.delete(url=urljoin(self.connect_obj.host, f"{index_name}"), headers=self.headers)
+            res = requests.delete(url=urljoin(self.connect_obj.host, f"{index_name}"), auth=self.auth)
             if res.status_code != 200:
                 return False, res.text
             return True, res.json()
@@ -235,7 +233,7 @@ class ESService:
             }[now]
             print(urljoin(self.connect_obj.host, f"{index_name}/{action}"))
 
-            res = requests.post(url=urljoin(self.connect_obj.host, f"{index_name}/{action}"), headers=self.headers)
+            res = requests.post(url=urljoin(self.connect_obj.host, f"{index_name}/{action}"), auth=self.auth)
             if res.status_code != 200:
                 return False, res.text
             return True, res.json()
@@ -247,7 +245,7 @@ class ESService:
         """
         获取索引mappings
         """
-        res = requests.get(url=urljoin(self.connect_obj.host, f"{index_name}"), headers=self.headers)
+        res = requests.get(url=urljoin(self.connect_obj.host, f"{index_name}"), auth=self.auth)
         res.raise_for_status()
         return res.json()
 
@@ -257,7 +255,7 @@ class ESService:
         """
         print(urljoin(self.connect_obj.host, f"{index_name}/{FORCE_MERGE}"))
         try:
-            res = requests.post(url=urljoin(self.connect_obj.host, f"{index_name}/{FORCE_MERGE}"), headers=self.headers)
+            res = requests.post(url=urljoin(self.connect_obj.host, f"{index_name}/{FORCE_MERGE}"), auth=self.auth)
             if res.status_code != 200:
                 return False, res.text
             return True, res.json()
@@ -270,7 +268,7 @@ class ESService:
         """
         print(urljoin(self.connect_obj.host, f"{index_name}/{REFRESH}"))
         try:
-            res = requests.post(url=urljoin(self.connect_obj.host, f"{index_name}/{REFRESH}"), headers=self.headers)
+            res = requests.post(url=urljoin(self.connect_obj.host, f"{index_name}/{REFRESH}"), auth=self.auth)
             if res.status_code != 200:
                 return False, res.text
             return True, res.json()
@@ -283,7 +281,7 @@ class ESService:
         """
         print(urljoin(self.connect_obj.host, f"{index_name}/{FLUSH}"))
         try:
-            res = requests.post(url=urljoin(self.connect_obj.host, f"{index_name}/{FLUSH}"), headers=self.headers)
+            res = requests.post(url=urljoin(self.connect_obj.host, f"{index_name}/{FLUSH}"), auth=self.auth)
             if res.status_code != 200:
                 return False, res.text
             return True, res.json()
@@ -296,7 +294,7 @@ class ESService:
         """
         print(urljoin(self.connect_obj.host, f"{index_name}/{CACHE_CLEAR}"))
         try:
-            res = requests.post(url=urljoin(self.connect_obj.host, f"{index_name}/{CACHE_CLEAR}"), headers=self.headers)
+            res = requests.post(url=urljoin(self.connect_obj.host, f"{index_name}/{CACHE_CLEAR}"), auth=self.auth)
             if res.status_code != 200:
                 return False, res.text
             return True, res.json()
@@ -309,7 +307,7 @@ class ESService:
         """
         print(urljoin(self.connect_obj.host, f"{index_name}/_search"))
         try:
-            res = requests.post(url=urljoin(self.connect_obj.host, f"{index_name}/_search"), headers=self.headers,
+            res = requests.post(url=urljoin(self.connect_obj.host, f"{index_name}/_search"), auth=self.auth,
                                 json={
                                     "query": {
                                         "query_string": {
@@ -332,7 +330,7 @@ class ESService:
         """
         print(method, urljoin(self.connect_obj.host, f"{path}"))
         try:
-            res = requests.request(method=method, url=urljoin(self.connect_obj.host, f"{path}"), headers=self.headers,
+            res = requests.request(method=method, url=urljoin(self.connect_obj.host, f"{path}"), auth=self.auth,
                                 json=body)
             if res.status_code != 200:
                 return False, res.text
@@ -347,7 +345,7 @@ class ESService:
         """
         try:
             print(urljoin(self.connect_obj.host, f"{CLUSTER_SETTINGS}"))
-            res = requests.get(url=urljoin(self.connect_obj.host, f"{CLUSTER_SETTINGS}"), headers=self.headers)
+            res = requests.get(url=urljoin(self.connect_obj.host, f"{CLUSTER_SETTINGS}"), auth=self.auth)
             res.raise_for_status()
             return res.json()
         except Exception as e:
@@ -358,7 +356,7 @@ class ESService:
         """
         获取索引settings
         """
-        res = requests.get(url=urljoin(self.connect_obj.host, f"{index_name}"), headers=self.headers)
+        res = requests.get(url=urljoin(self.connect_obj.host, f"{index_name}"), auth=self.auth)
         res.raise_for_status()
         return res.json()
 
@@ -371,7 +369,7 @@ class ESService:
         alias = {}
 
         try:
-            res = requests.get(url=urljoin(self.connect_obj.host, f"{index_names}/_alias"), headers=self.headers)
+            res = requests.get(url=urljoin(self.connect_obj.host, f"{index_names}/_alias"), auth=self.auth)
             res.raise_for_status()
             data: dict = res.json()
             for name, obj in data.items():
@@ -386,7 +384,7 @@ class ESService:
         """
         获取索引segments
         """
-        res = requests.get(url=urljoin(self.connect_obj.host, f"{index_name}"), headers=self.headers)
+        res = requests.get(url=urljoin(self.connect_obj.host, f"{index_name}"), auth=self.auth)
         res.raise_for_status()
         return res.json()
 
@@ -396,7 +394,7 @@ class ESService:
         """
         print(urljoin(self.connect_obj.host, f"{TASKS_API}"))
         try:
-            res = requests.get(url=urljoin(self.connect_obj.host, f"{TASKS_API}"), headers=self.headers,)
+            res = requests.get(url=urljoin(self.connect_obj.host, f"{TASKS_API}"), auth=self.auth,)
             nodes: dict = res.json()["nodes"]
             data = []
             for node_id, node_obj in nodes.items():
@@ -423,7 +421,7 @@ class ESService:
         """
         print(urljoin(self.connect_obj.host,  CANCEL_TASKS_API.format(task_id=task_id)))
         try:
-            res = requests.post(url=urljoin(self.connect_obj.host, CANCEL_TASKS_API.format(task_id=task_id)), headers=self.headers,)
+            res = requests.post(url=urljoin(self.connect_obj.host, CANCEL_TASKS_API.format(task_id=task_id)), auth=self.auth,)
             if res.status_code != 200:
                 return False, res.text
             return True, res.json()
