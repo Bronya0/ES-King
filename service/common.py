@@ -69,8 +69,8 @@ class S_Button(flet.ElevatedButton):
 
         super().__init__(style=flet.ButtonStyle(
             shape={
-                flet.MaterialState.HOVERED: flet.RoundedRectangleBorder(radius=2),
-                flet.MaterialState.DEFAULT: flet.RoundedRectangleBorder(radius=10),
+                "hovered": flet.RoundedRectangleBorder(radius=2),
+                "": flet.RoundedRectangleBorder(radius=10),
             }), **kwargs)
 
 
@@ -99,14 +99,12 @@ def open_directory(path):
             # 如果xdg-open不可用，尝试使用Nautilus
             subprocess.Popen(["nautilus", path])
 
+
 def open_snack_bar(page: flet.Page, msg, success=True):
-    page.snack_bar.content = flet.Text(msg, selectable=True)
-    page.snack_bar.open = True
-    # if success:
-    #     color = "#1677ff"
-    # else:
-    #     color = "#000000"
-    # page.snack_bar.bgcolor = color
+    page.overlay.append(flet.SnackBar(
+        content=flet.Text(msg, selectable=True),
+        open=True
+    ))
     page.update()
 
 

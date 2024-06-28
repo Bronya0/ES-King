@@ -124,7 +124,7 @@ class ESService:
         res.raise_for_status()
         return res.json()
 
-    def get_stats(self):
+    def get_stats(self) -> str:
         """
         获取集群健康信息
         [
