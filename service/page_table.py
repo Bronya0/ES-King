@@ -6,6 +6,8 @@
 @Project : ES-King
 @Desc    : 
 """
+import math
+
 import flet as ft
 from flet_core import ControlEvent
 
@@ -21,7 +23,7 @@ class PageTable(ft.DataTable):
         self.data_lst_tmp = data_lst_tmp
         self.page_num = 1
         self.page_size = 10
-        self.page_info = ft.Text(f"{self.page_num}/{int(len(self.data_lst) / self.page_size) + 1}")
+        self.page_info = ft.Text(f"{self.page_num}/{math.ceil(len(self.data_lst) / self.page_size)}")
         self.page_size_info = ft.Text(f"每页{self.page_size}条")
         self.page_controls = None
         self.init_page_controls()
@@ -60,7 +62,7 @@ class PageTable(ft.DataTable):
                             tooltip="下一页",
                         ),
                         self.page_size_info,
-                        ft.Slider(min=5, max=55, divisions=10, round=1, value=self.page_size, label="{value}",
+                        ft.Slider(min=5, max=55, divisions=50, round=1, value=self.page_size, label="{value}",
                                   on_change_end=self.page_size_change),
 
                     ]
@@ -104,6 +106,8 @@ class PageTable(ft.DataTable):
     def page_size_change(self, e):
         # page
         self.page_size = int(e.control.value)
+        self.page_num = 1
+
         self.data_lst_tmp = self.data_lst[:self.page_size]
         self.init_rows()
 

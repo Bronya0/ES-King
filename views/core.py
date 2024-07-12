@@ -62,7 +62,10 @@ class Core(object):
             col_controls=[
 
                 ft.Row(
-                    [
+                    # expand=True,
+                    # expand_loose=True,
+                    scroll=ft.ScrollMode.ALWAYS,
+                    controls=[
                         ft.Card(ft.DataTable(columns=[
                             ft.DataColumn(S_Text("节点", weight=ft.FontWeight.BOLD)), ft.DataColumn(S_Text("")),
                         ], rows=[
@@ -140,6 +143,31 @@ class Core(object):
                         ], column_spacing=10, )),
 
                         ft.Card(ft.DataTable(columns=[
+                            ft.DataColumn(S_Text("集群系统", weight=ft.FontWeight.BOLD)), ft.DataColumn(S_Text("")),
+                        ], rows=[
+                            ft.DataRow(cells=[ft.DataCell(S_Text("可用CPU核心数")),
+                                              ft.DataCell(S_Text(f"{stats_nodes['os']['available_processors']}")), ]),
+                            ft.DataRow(cells=[ft.DataCell(S_Text("分配给ES进程使用的CPU核心数")),
+                                              ft.DataCell(S_Text(f"{stats_nodes['os']['allocated_processors']}")), ]),
+                            ft.DataRow(cells=[ft.DataCell(S_Text("操作系统及总数")), ft.DataCell(
+                                ft.Text(value=json.dumps(f"{stats_nodes['os'].get('pretty_names')}")[:10] + "...",
+                                        tooltip=json.dumps(f"{stats_nodes['os'].get('pretty_names')}"))), ]),
+                            ft.DataRow(cells=[ft.DataCell(S_Text("总内存")), ft.DataCell(
+                                S_Text(f"{human_size(stats_nodes['os']['mem']['total_in_bytes'])}")), ]),
+                            ft.DataRow(cells=[ft.DataCell(S_Text("已使用内存")), ft.DataCell(
+                                S_Text(f"{human_size(stats_nodes['os']['mem']['used_in_bytes'])}")), ]),
+                            ft.DataRow(cells=[ft.DataCell(S_Text("已使用内存百分比")),
+                                              ft.DataCell(S_Text(f"{stats_nodes['os']['mem']['used_percent']}%")), ]),
+
+                        ])),
+
+                    ], vertical_alignment=ft.CrossAxisAlignment.START
+
+                ),
+                ft.Row(
+                    [
+
+                        ft.Card(ft.DataTable(columns=[
                             ft.DataColumn(S_Text("段", weight=ft.FontWeight.BOLD)), ft.DataColumn(S_Text("")),
                         ], rows=[
                             ft.DataRow(
@@ -169,26 +197,8 @@ class Core(object):
                                 f"{human_size(stats_indices['segments']['fixed_bit_set_memory_in_bytes'])}"))]),
                         ], column_spacing=10, )),
 
-                        ft.Card(ft.DataTable(columns=[
-                            ft.DataColumn(S_Text("集群系统", weight=ft.FontWeight.BOLD)), ft.DataColumn(S_Text("")),
-                        ], rows=[
-                            ft.DataRow(cells=[ft.DataCell(S_Text("可用CPU核心数")),
-                                              ft.DataCell(S_Text(f"{stats_nodes['os']['available_processors']}")), ]),
-                            ft.DataRow(cells=[ft.DataCell(S_Text("分配给ES进程使用的CPU核心数")),
-                                              ft.DataCell(S_Text(f"{stats_nodes['os']['allocated_processors']}")), ]),
-                            ft.DataRow(cells=[ft.DataCell(S_Text("操作系统及总数")), ft.DataCell(
-                                ft.Text(value=json.dumps(f"{stats_nodes['os'].get('pretty_names')}")[:10] + "...",
-                                        tooltip=json.dumps(f"{stats_nodes['os'].get('pretty_names')}"))), ]),
-                            ft.DataRow(cells=[ft.DataCell(S_Text("总内存")), ft.DataCell(
-                                S_Text(f"{human_size(stats_nodes['os']['mem']['total_in_bytes'])}")), ]),
-                            ft.DataRow(cells=[ft.DataCell(S_Text("已使用内存")), ft.DataCell(
-                                S_Text(f"{human_size(stats_nodes['os']['mem']['used_in_bytes'])}")), ]),
-                            ft.DataRow(cells=[ft.DataCell(S_Text("已使用内存百分比")),
-                                              ft.DataCell(S_Text(f"{stats_nodes['os']['mem']['used_percent']}%")), ]),
-
-                        ]))], vertical_alignment=ft.CrossAxisAlignment.START
-
-                ),
+                    ]
+                )
             ]
         )
 

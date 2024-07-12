@@ -218,7 +218,7 @@ class Index(object):
                             tooltip="下一页",
                         ),
                         ft.Text(f"每页{self.page_size}条"),
-                        ft.Slider(min=5, max=55, divisions=10, round=1, value=self.page_size, label="{value}",
+                        ft.Slider(min=5, max=55, divisions=50, round=1, value=self.page_size, label="{value}",
                                   on_change_end=self.page_size_change),
 
                     ]
