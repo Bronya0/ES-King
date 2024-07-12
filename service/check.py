@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 # -*-coding:utf-8 -*-
+import platform
 
 import flet as ft
 import requests
 
-from service.common import UPDATE_URL, BASEDIR, GITHUB_URL, close_dlg, CommonAlert
+from service.common import UPDATE_URL, BASEDIR, GITHUB_URL, close_dlg, CommonAlert, c_version
 
 
 def version_check(page: ft.Page):
@@ -42,7 +43,8 @@ def version_check(page: ft.Page):
                                 ft.Row(
                                     [
                                         ft.TextButton(text="前往下载", url=GITHUB_URL),
-                                        ft.TextButton(text="下次再说", on_click=close_dlg, tooltip="长期未更新可能会导致故障累积",
+                                        ft.TextButton(text="下次再说", on_click=close_dlg,
+                                                      tooltip="长期未更新可能会导致故障累积",
                                                       style=ft.ButtonStyle(color=ft.colors.GREY)),
                                     ]
                                 )
@@ -57,3 +59,15 @@ def version_check(page: ft.Page):
 
         page.update()
 
+
+def ping():
+    # 统计使用情况， 不涉及敏感信息。
+    try:
+        ping_url = "https://ysboke.cn/api/kingTool/ping"
+        requests.post(url=ping_url, json={
+            "name": "ES-King",
+            "version": c_version,
+            "platform": platform.system()
+        })
+    except Exception as e:
+        pass
