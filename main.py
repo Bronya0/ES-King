@@ -513,16 +513,16 @@ class Main:
         """
         page: ft.Page = e.page
         if e.data == 'restore':
-            page.window_width = self.page_width
-            page.window_height = self.page_height
-            page.window_top = self.window_top
-            page.window_left = self.window_left
+            page.window.width = self.page_width
+            page.window.height = self.page_height
+            page.window.top = self.window_top
+            page.window.left = self.window_left
 
         else:
-            self.page_width = page.window_width
-            self.page_height = page.window_height
-            self.window_top = page.window_top
-            self.window_left = page.window_left
+            self.page_width = page.window.width
+            self.page_height = page.window.height
+            self.window_top = page.window.top
+            self.window_left = page.window.left
 
         page.update()
 
