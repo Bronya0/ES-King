@@ -14,11 +14,6 @@
 
 </div>
 
-![](docs/snap/1.png)
-
-多种配色可选，例如猛男粉:
-![](docs/snap/2.png)
-
 同款已经开发好的Kafka客户端，已有一千多人下载：[Kafka-King](https://github.com/Bronya0/Kafka-King)
 
 如需提出需求、bug和改进建议，请提issue。
@@ -28,9 +23,6 @@
 加群和作者一起交流： <a target="_blank" href="https://qm.qq.com/cgi-bin/qm/qr?k=pDqlVFyLMYEEw8DPJlRSBN27lF8qHV2v&jump_from=webapi&authKey=Wle/K0ARM1YQWlpn6vvfiZuMedy2tT9BI73mUvXVvCuktvi0fNfmNR19Jhyrf2Nz">研发技术交流群：964440643</a>
 
 
-# 下载
-[下载地址](https://github.com/Bronya0/ES-King/releases)，点击【Assets】，选择自己的平台下载，支持windows、macos、linux。
-
 # 功能清单
 - 详尽的集群信息：节点信息、堆内存占用、总内存占用、cpu占用、磁盘占用、网络流量、节点角色、集群健康、5分钟负载、每个节点的字段缓存、段缓存、查询缓存、请求缓存、段总数指标都有
 - 页面查看ES集群后台Task列表，开始时间、持续时间、Task内容、设涉及IP
@@ -39,6 +31,18 @@
 - 支持索引操作：索引管理、索引别名、索引映射查看、索引设置查看、索引刷新、索引段合并、索引分片、索引刷新、删除索引、关闭or打开索引、flush索引、清理索引缓存……点点点就行了
 - 自带2个rest窗口（当然你喜欢也可以自己用postman），一键补全常用DSL，自动记录历史100个查询,一键恢复，再也不用重新输入。敲关键字自动补全完成dsl，支持将结果导出为json或者excel……
 - ……
+
+
+# 截图
+![](docs/snap/1.png)
+
+多种配色可选，例如猛男粉:
+![](docs/snap/2.png)
+
+
+# 下载
+[下载地址](https://github.com/Bronya0/ES-King/releases)，点击【Assets】，选择自己的平台下载，支持windows、macos、linux。
+
 
 # 构建
 ```
