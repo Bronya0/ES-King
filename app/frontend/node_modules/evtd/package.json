@@ -1,0 +1,39 @@
+{
+  "name": "evtd",
+  "version": "0.2.4",
+  "description": "Event delegation with native events and extended events.",
+  "main": "lib/index.js",
+  "module": "es/index.js",
+  "scripts": {
+    "test": "jest",
+    "lint": "eslint src/**/*",
+    "docs": "vitepress dev docs",
+    "build:site": "vitepress build docs",
+    "build": "tsc -p tsconfig.cjs.json && tsc -p tsconfig.esm.json",
+    "release": "rm -rf es lib && npm run build && npm publish"
+  },
+  "files": [
+    "lib",
+    "es"
+  ],
+  "author": "07akioni",
+  "license": "MIT",
+  "sideEffects": false,
+  "devDependencies": {
+    "@babel/core": "^7.11.6",
+    "@babel/preset-env": "^7.11.5",
+    "@babel/preset-typescript": "^7.10.4",
+    "@types/jest": "^27.0.1",
+    "@typescript-eslint/eslint-plugin": "^4.4.0",
+    "babel-jest": "^28.0.1",
+    "eslint": "^7.10.0",
+    "eslint-config-standard-with-typescript": "^21.0.1",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^5.1.0",
+    "jest": "^27.1.0",
+    "typescript": "^4.0.3",
+    "vite": "^2.0.2",
+    "vitepress": "^0.21.3"
+  }
+}

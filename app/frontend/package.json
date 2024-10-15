@@ -1,0 +1,24 @@
+{
+  "name": "app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@vicons/ionicons5": "^0.12.0",
+    "mitt": "^3.0.1",
+    "vue": "^3.5.8"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.1.4",
+    "naive-ui": "^2.39.0",
+    "vfonts": "^0.0.3",
+    "vite": "^5.4.7"
+  },
+  "keywords": [],
+  "author": "bronya0"
+}
