@@ -23,7 +23,5 @@ const handleMenuSelect = (key, item) => {
 </script>
 
 <style>
-.aside-btn .n-button .n-button__icon {
-  font-size: 22px;
-}
+
 </style>

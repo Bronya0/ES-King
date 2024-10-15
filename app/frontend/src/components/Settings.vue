@@ -1,8 +1,8 @@
 <template>
-  <n-text>Settings</n-text>
     <!--  https://www.naiveui.com/zh-CN/os-theme/components/form  -->
+  <h2 style="width: 42px;">设置</h2>
+  <n-flex vertical justify="start">
     <n-form :model="config" label-placement="left">
-
       <n-form-item label="窗口宽度">
         <n-input-number v-model:value="config.width" :min="800" :max="1920" :style="{ maxWidth: '120px' }"/>
       </n-form-item>
@@ -15,8 +15,8 @@
 
       <n-form-item label="主题">
         <n-flex>
-          <n-button @click="theme=lightTheme" :render-icon="renderIcon(SunnyOutline)"/>
-          <n-button @click="theme=darkTheme" :render-icon="renderIcon(Moon)"/>
+          <n-button @click="theme=lightTheme" :render-icon="renderIcon(WbSunnyOutlined)"/>
+          <n-button @click="theme=darkTheme" :render-icon="renderIcon(NightlightRoundFilled)"/>
         </n-flex>
       </n-form-item>
 
@@ -27,6 +27,7 @@
 
 
     </n-form>
+  </n-flex>
 </template>
 
 <script setup>
@@ -41,10 +42,11 @@ import {
   NSelect,
   useMessage,
 } from 'naive-ui'
+import {WbSunnyOutlined, NightlightRoundFilled, RemoveOutlined, CloseFilled} from '@vicons/material'
+
 import {GetConfig, SaveConfig} from '../../wailsjs/go/config/AppConfig'
 import {WindowSetSize} from "../../wailsjs/runtime";
 import {renderIcon} from "../utils/common";
-import {Moon, SunnyOutline} from "@vicons/ionicons5";
 import emitter from "../utils/eventBus";
 
 const message = useMessage()

@@ -32,7 +32,7 @@
               />
 
             </n-layout-sider>
-            <n-layout-content style="padding: 16px;">
+            <n-layout-content style="padding: 0 16px;">
               <keep-alive>
                 <component :is="activeItem.component"></component>
               </keep-alive>
@@ -55,18 +55,15 @@ import {
   NLayoutContent,
   NLayoutHeader,
   NMessageProvider,
-  NTabPane,
-  NTabs
 } from 'naive-ui'
-import {HomeOutline, SettingsOutline,} from '@vicons/ionicons5'
 import Header from './components/Header.vue'
 import Settings from './components/Settings.vue'
-import HelloWorld from './components/HelloWorld.vue'
 import Health from './components/Health.vue'
 import Core from './components/Core.vue'
 import Nodes from './components/Nodes.vue'
 import Index from './components/Index.vue'
 import Rest from './components/Rest.vue'
+import Conn from './components/Conn.vue'
 import Issue from './components/Issue.vue'
 import Snapshot from './components/Snapshot.vue'
 import {GetConfig, SaveTheme} from "../wailsjs/go/config/AppConfig";
@@ -74,6 +71,12 @@ import {WindowSetSize} from "../wailsjs/runtime";
 import {renderIcon} from "./utils/common";
 import Aside from "./components/Aside.vue";
 import emitter from "./utils/eventBus";
+import {
+  FavoriteTwotone,
+  HiveOutlined,
+  SettingsSuggestOutlined,
+  AutoGraphOutlined, ApiOutlined, LibraryBooksOutlined, AllOutOutlined, BarChartOutlined, AddAPhotoTwotone
+} from '@vicons/material'
 
 let headerClass = shallowRef('lightTheme')
 
@@ -96,57 +99,57 @@ onMounted(async () => {
 // 左侧菜单
 const sideMenuOptions = [
   {
+    label: '集群',
+    key: '集群',
+    icon: renderIcon(HiveOutlined),
+    component: Conn,
+  },
+  {
     label: '健康',
     key: '健康',
-    icon: renderIcon(HomeOutline),
+    icon: renderIcon(FavoriteTwotone),
     component: Health,
   },
   {
     label: '指标',
     key: '指标',
-    icon: renderIcon(HomeOutline),
+    icon: renderIcon(BarChartOutlined),
     component: Core,
   },
   {
-    label: '集群',
-    key: '集群',
-    icon: renderIcon(HomeOutline),
+    label: '节点',
+    key: '节点',
+    icon: renderIcon(AllOutOutlined),
     component: Nodes,
   },
   {
     label: '索引',
     key: '索引',
-    icon: renderIcon(HomeOutline),
+    icon: renderIcon(LibraryBooksOutlined),
     component: Index,
   },
   {
     label: 'REST',
     key: 'REST',
-    icon: renderIcon(HomeOutline),
+    icon: renderIcon(ApiOutlined),
     component: Rest,
-  },
-  {
-    label: '主页',
-    key: '主页',
-    icon: renderIcon(HomeOutline),
-    component: HelloWorld,
   },
   {
     label: '建议',
     key: '建议',
-    icon: renderIcon(HomeOutline),
+    icon: renderIcon(AutoGraphOutlined),
     component: Issue,
   },
   {
     label: '快照',
     key: '快照',
-    icon: renderIcon(HomeOutline),
+    icon: renderIcon(AddAPhotoTwotone),
     component: Snapshot,
   },
   {
     label: '设置',
     key: '设置',
-    icon: renderIcon(SettingsOutline),
+    icon: renderIcon(SettingsSuggestOutlined),
     component: Settings
   },
 
