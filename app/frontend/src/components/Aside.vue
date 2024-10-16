@@ -13,11 +13,12 @@
 
 <script setup>
 
+import emitter from "../utils/eventBus";
+
 const props = defineProps(['options', 'value']);
-const emit = defineEmits(['update:value'])
 
 const handleMenuSelect = (key, item) => {
-  emit('update:value', key, item)
+  emitter.emit('menu_select', key)
 }
 
 </script>

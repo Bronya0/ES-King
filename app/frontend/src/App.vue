@@ -11,8 +11,6 @@
             <Header
                 :value="activeItem.label"
                 :options="menuOptions"
-                @update:value="handleMenuSelect"
-                @update_theme="themeChange"
             />
           </n-layout-header>
           <!--side + content-->
@@ -33,7 +31,6 @@
                   :collapsed="collapsed"
                   :icon-size="24"
                   :value="activeItem.label"
-                  @update:value="handleMenuSelect"
                   :options="sideMenuOptions"
               />
 
@@ -101,7 +98,11 @@ onMounted(async () => {
     }
   }
 
+  // =====================注册事件监听=====================
+  // 主题切换
   emitter.on('update_theme', themeChange)
+  // 菜单切换
+  emitter.on('menu_select', handleMenuSelect)
 })
 // 左侧菜单
 const sideMenuOptions = [
@@ -170,8 +171,9 @@ const menuOptions = []
 const activeItem = shallowRef(sideMenuOptions[0])
 
 // 切换菜单
-function handleMenuSelect(key, item) {
-  activeItem.value = item;
+function handleMenuSelect(key) {
+  // 根据key寻找item
+  activeItem.value = sideMenuOptions.find(item => item.key === key)
 }
 
 let Theme = shallowRef(lightTheme)

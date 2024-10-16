@@ -81,6 +81,7 @@ import { ref, computed } from 'vue'
 import { useMessage } from 'naive-ui'
 import {renderIcon} from "../utils/common";
 import {AddFilled} from "@vicons/material";
+import emitter from "../utils/eventBus";
 
 const message = useMessage()
 
@@ -151,5 +152,10 @@ function selectNode(node) {
   // 这里实现切换菜单的逻辑
   console.log('选中节点:', node)
   message.info(`选中了节点: ${node.name}`)
+  emitter.emit('menu_select', "健康" )
+
+
+  // node：{ id: 1, name: 'ES节点1', host: 'localhost', port: 9200, username: 'user1', password: 'pass1' },
+  emitter.emit('selectNode', node)
 }
 </script>
