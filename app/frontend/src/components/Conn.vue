@@ -82,6 +82,7 @@ import { useMessage } from 'naive-ui'
 import {renderIcon} from "../utils/common";
 import {AddFilled} from "@vicons/material";
 import emitter from "../utils/eventBus";
+import esService from "../utils/http_service";
 
 const message = useMessage()
 
@@ -148,14 +149,21 @@ function deleteNode(id) {
   message.success('删除成功')
 }
 
-function selectNode(node) {
+const selectNode = async (node) => {
   // 这里实现切换菜单的逻辑
   console.log('选中节点:', node)
-  message.info(`选中了节点: ${node.name}`)
   emitter.emit('menu_select', "健康" )
 
 
   // node：{ id: 1, name: 'ES节点1', host: 'localhost', port: 9200, username: 'user1', password: 'pass1' },
   emitter.emit('selectNode', node)
+  esService.setConnect(node.name, node.host, node.username, node.password)
+  const [res, err] = await esService.testClient(node.host, node.username, node.password)
+  console.log(res, err)
+  if (res) {
+    message.success('连接成功')
+  } else {
+    message.error("连接失败："+err)
+  }
 }
 </script>

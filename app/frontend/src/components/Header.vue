@@ -125,8 +125,13 @@ onMounted(async () => {
   version.value.tag_name = v
   subtitle.value = desc + v
   await checkForUpdates()
+
+  emitter.on('selectNode', selectNode)
 })
 
+const selectNode = (node) => {
+  subtitle.value = "当前集群：【"+node.name + "】  地址：" + node.host + ":" + node.port
+}
 
 const minimizeWindow = () => {
   WindowMinimise()

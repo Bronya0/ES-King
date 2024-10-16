@@ -5,44 +5,47 @@
     <!--https://www.naiveui.com/zh-CN/os-theme/components/layout-->
     <n-message-provider>
       <n-notification-provider placement="bottom-right">
-        <n-layout has-sider position="absolute" style="height: 100vh;" :class="headerClass">
-          <!--header-->
-          <n-layout-header bordered style="height: 42px; bottom: 0; padding: 0; ">
-            <Header
-                :value="activeItem.label"
-                :options="menuOptions"
-            />
-          </n-layout-header>
-          <!--side + content-->
-          <n-layout has-sider position="absolute" style="top: 42px; bottom: 0;">
-            <n-layout-sider
-                bordered
-                collapse-mode="width"
-                :collapsed-width="60"
-                :width="130"
-                :collapsed="collapsed"
-                show-trigger
-                @collapse="collapsed = true"
-                @expand="collapsed = false"
-                style="--wails-draggable:drag"
-            >
-              <Aside
-                  :collapsed-width="60"
-                  :collapsed="collapsed"
-                  :icon-size="24"
+        <n-loading-bar-provider>
+
+          <n-layout has-sider position="absolute" style="height: 100vh;" :class="headerClass">
+            <!--header-->
+            <n-layout-header bordered style="height: 42px; bottom: 0; padding: 0; ">
+              <Header
                   :value="activeItem.label"
-                  :options="sideMenuOptions"
+                  :options="menuOptions"
               />
+            </n-layout-header>
+            <!--side + content-->
+            <n-layout has-sider position="absolute" style="top: 42px; bottom: 0;">
+              <n-layout-sider
+                  bordered
+                  collapse-mode="width"
+                  :collapsed-width="60"
+                  :width="130"
+                  :collapsed="collapsed"
+                  show-trigger
+                  @collapse="collapsed = true"
+                  @expand="collapsed = false"
+                  style="--wails-draggable:drag"
+              >
+                <Aside
+                    :collapsed-width="60"
+                    :collapsed="collapsed"
+                    :icon-size="24"
+                    :value="activeItem.label"
+                    :options="sideMenuOptions"
+                />
 
-            </n-layout-sider>
-            <n-layout-content style="padding: 0 16px;">
-              <keep-alive>
-                <component :is="activeItem.component"></component>
-              </keep-alive>
+              </n-layout-sider>
+              <n-layout-content style="padding: 0 16px;">
+                <keep-alive>
+                  <component :is="activeItem.component"></component>
+                </keep-alive>
 
-            </n-layout-content>
+              </n-layout-content>
+            </n-layout>
           </n-layout>
-        </n-layout>
+        </n-loading-bar-provider>
       </n-notification-provider>
     </n-message-provider>
   </n-config-provider>
