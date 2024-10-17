@@ -13,7 +13,7 @@ import (
 
 const (
 	FORMAT          = "?format=json&pretty"
-	StatsApi        = "_cluster/stats" + FORMAT
+	StatsApi        = "/_cluster/stats" + FORMAT
 	HealthApi       = "/_cluster/health"
 	NodesApi        = "/_cat/nodes?format=json&pretty&h=ip,name,heap.percent,heap.current,heap.max,ram.percent,ram.current,ram.max,node.role,master,cpu,load_5m,disk.used_percent,disk.used,disk.total,fielddataMemory,queryCacheMemory,requestCacheMemory,segmentsMemory,segments.count"
 	AllIndexApi     = "/_cat/indices?format=json&pretty&bytes=b"
@@ -42,10 +42,10 @@ func NewESService() *ESService {
 
 func (es *ESService) SetConnect(key, host, username, pwd string) {
 	es.ConnectObj = &types.Connect{
-		ConnectName: key,
-		Host:        host,
-		Username:    username,
-		Password:    pwd,
+		Name:     key,
+		Host:     host,
+		Username: username,
+		Password: pwd,
 	}
 	es.Client.SetBasicAuth(username, pwd)
 	fmt.Println("设置当前连接：", es.ConnectObj.Host)

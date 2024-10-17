@@ -11,20 +11,26 @@
       <n-table :bordered="false" :single-line="false">
         <thead>
         <tr>
-          <th>指标</th>
-          <th>说明</th>
+          <th>健康指标</th>
           <th>值</th>
+          <th>完整键</th>
         </tr>
         </thead>
         <tbody>
-        <tr v-for="(value, key) in clusterHealth" :key="key">
-          <td>{{ key }}</td>
-          <td>{{ getDescription(key) }}</td>
+        <tr v-for="(value, key) in data" :key="key">
+          <td>{{ getLabel(key) }}</td>
           <td>
-            <n-tag :type="getTagType(key, value)">
+            <n-tooltip placement="left" trigger="hover">
+              <template #trigger>
+                <n-tag :type="getTagType(key, value)">
+                  {{ value }}
+                </n-tag>
+              </template>
               {{ value }}
-            </n-tag>
+            </n-tooltip>
           </td>
+          <td>{{ key }}</td>
+
         </tr>
         </tbody>
       </n-table>
@@ -38,7 +44,7 @@ import emitter from "../utils/eventBus";
 import {useMessage} from "naive-ui";
 import {GetHealth} from "../../wailsjs/go/service/ESService";
 
-const clusterHealth = ref({})
+const data = ref({})
 const loading = ref(false)
 
 const message = useMessage()
@@ -54,7 +60,7 @@ onActivated(async () => {
 })
 
 const Clean = async () => {
-  clusterHealth.value = {}
+  data.value = {}
 }
 
 const getHealth = async () => {
@@ -63,36 +69,35 @@ const getHealth = async () => {
   if (res.err !== "") {
     message.error(res.err)
   } else {
-    clusterHealth.value = res.result
+    data.value = res.result
   }
-  console.log(clusterHealth.value)
+  console.log(data.value)
   loading.value = false
-
 
 }
 
 const getTagType = (key, value) => {
-  if (['cluster_name'].includes(key)){
+  if (['cluster_name'].includes(key)) {
     return 'success'
   }
-  if (['unassigned_shards', 'delayed_unassigned_shards', 'initializing_shards'].includes(key)){
+  if (['unassigned_shards', 'delayed_unassigned_shards', 'initializing_shards'].includes(key)) {
     return 'warning'
   }
 
-  if (key === 'timed_out'){
+  if (key === 'timed_out') {
     return value === true ? 'error' : 'success'
   }
   if (key === 'status') {
-    if (value === 'green'){
+    if (value === 'green') {
       return 'success'
-    }else {
+    } else {
       return value === 'yellow' ? 'warning' : 'error'
     }
   }
   return 'default'
 }
 
-const getDescription = (key) => {
+const getLabel = (key) => {
   const descriptions = {
     cluster_name: '集群名称',
     status: '集群健康状态（绿色、黄色、红色）',

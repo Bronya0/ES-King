@@ -20,8 +20,9 @@ type ResultResp struct {
 	Err    string                 `json:"err"`
 }
 type Connect struct {
-	ConnectName string
-	Host        string
-	Username    string
-	Password    string
+	Id       int    `json:"id"`
+	Name     string `json:"name"`
+	Host     string `json:"host"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 }

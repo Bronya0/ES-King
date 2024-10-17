@@ -1,10 +1,11 @@
 export namespace types {
 	
 	export class Connect {
-	    ConnectName: string;
-	    Host: string;
-	    Username: string;
-	    Password: string;
+	    id: number;
+	    name: string;
+	    host: string;
+	    username: string;
+	    password: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Connect(source);
@@ -12,10 +13,11 @@ export namespace types {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.ConnectName = source["ConnectName"];
-	        this.Host = source["Host"];
-	        this.Username = source["Username"];
-	        this.Password = source["Password"];
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.host = source["host"];
+	        this.username = source["username"];
+	        this.password = source["password"];
 	    }
 	}
 	export class Config {

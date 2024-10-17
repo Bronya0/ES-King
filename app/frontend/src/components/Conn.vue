@@ -107,8 +107,10 @@ onMounted(async () => {
 })
 
 const refreshNodeList = async () => {
+  spin_loading.value = true
   const config = await GetConfig()
   esNodes.value = config.connects
+  spin_loading.value = false
 }
 
 function editNode(node) {
@@ -130,20 +132,28 @@ const saveNode = async () => {
       const config = await GetConfig()
       // edit
       if (isEditing.value) {
-        const index = esNodes.value.findIndex(node => node.name === currentNode.value.name)
+        console.log("edit")
+        const index = esNodes.value.findIndex(node => node.id === currentNode.value.id)
+        console.log(index)
+        console.log(currentNode.value)
         if (index !== -1) {
           esNodes.value[index] = {...currentNode.value}
+          console.log(currentNode.value)
         }
       } else {
         // add
-        esNodes.value.push({...currentNode.value})
+        const newId = Math.max(...esNodes.value.map(node => node.id), 0) + 1
+        esNodes.value.push({ ...currentNode.value, id: newId })
       }
+      console.log(config)
 
       // 保存
       config.connects = esNodes.value
+      console.log(config)
       await SaveConfig(config)
-      await refreshNodeList()
       showEditDrawer.value = false
+
+      await refreshNodeList()
       message.success('保存成功')
     } else {
       message.error('请填写所有必填字段')
@@ -151,8 +161,8 @@ const saveNode = async () => {
   })
 }
 
-const deleteNode = async (name) => {
-  esNodes.value = esNodes.value.filter(node => node.name !== name)
+const deleteNode = async (id) => {
+  esNodes.value = esNodes.value.filter(node => node.id !== id)
   await refreshNodeList()
   message.success('删除成功')
 }
