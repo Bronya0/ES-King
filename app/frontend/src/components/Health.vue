@@ -6,24 +6,25 @@
         刷新
       </n-button>
     </n-flex>
-    <n-spin :show="loading">
+    <n-spin :show="loading" description="Connecting...">
+
       <n-table :bordered="false" :single-line="false">
         <thead>
         <tr>
           <th>指标</th>
-          <th>值</th>
           <th>说明</th>
+          <th>值</th>
         </tr>
         </thead>
         <tbody>
         <tr v-for="(value, key) in clusterHealth" :key="key">
           <td>{{ key }}</td>
+          <td>{{ getDescription(key) }}</td>
           <td>
             <n-tag :type="getTagType(key, value)">
               {{ value }}
             </n-tag>
           </td>
-          <td>{{ getDescription(key) }}</td>
         </tr>
         </tbody>
       </n-table>
@@ -44,11 +45,12 @@ const message = useMessage()
 
 
 onMounted(async () => {
-  // emitter.on('selectNode', selectNode)
+  emitter.on('selectNode', selectNode)
+  await selectNode()
 })
 
 onActivated(async () => {
-  await getHealth()
+  // await getHealth()
 })
 
 const Clean = async () => {
@@ -70,16 +72,21 @@ const getHealth = async () => {
 }
 
 const getTagType = (key, value) => {
+  if (['cluster_name'].includes(key)){
+    return 'success'
+  }
+  if (['unassigned_shards', 'delayed_unassigned_shards', 'initializing_shards'].includes(key)){
+    return 'warning'
+  }
+
+  if (key === 'timed_out'){
+    return value === true ? 'error' : 'success'
+  }
   if (key === 'status') {
-    switch (value) {
-      case 'green':
-        return 'success'
-      case 'yellow':
-        return 'warning'
-      case 'red':
-        return 'error'
-      default:
-        return 'default'
+    if (value === 'green'){
+      return 'success'
+    }else {
+      return value === 'yellow' ? 'warning' : 'error'
     }
   }
   return 'default'
@@ -106,11 +113,13 @@ const getDescription = (key) => {
   return descriptions[key] || '暂无说明'
 }
 
-// const selectNode = async (node) => {
-//   await Clean()
-//   await getHealth()
-//
-// }
+const selectNode = async (node) => {
+  console.log("清空 Health")
+  await Clean()
+  console.log("获取 Health")
+  await getHealth()
+
+}
 </script>
 <style scoped>
 

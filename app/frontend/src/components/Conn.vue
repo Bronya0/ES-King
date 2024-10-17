@@ -6,7 +6,7 @@
         <n-text>共有 {{ esNodes.length }} 个</n-text>
         <n-button @click="addNewNode" :render-icon="renderIcon(AddFilled)">添加集群</n-button>
       </n-flex>
-      <n-spin :show="spin_loading">
+      <n-spin :show="spin_loading" description="Connecting...">
 
         <n-grid :x-gap="12" :y-gap="12" :cols="4">
           <n-gi v-for="node in esNodes" :key="node.id">
@@ -16,7 +16,7 @@
                   <n-button @click.stop="editNode(node)" size="small">
                     编辑
                   </n-button>
-                  <n-popconfirm @positive-click="deleteNode(node.id)">
+                  <n-popconfirm @positive-click="deleteNode(node.name)">
                     <template #trigger>
                       <n-button @click.stop size="small">
                         删除
@@ -74,23 +74,18 @@
 </template>
 
 <script setup>
-import {computed, ref} from 'vue'
+import {computed, onMounted, ref} from 'vue'
 import {useMessage} from 'naive-ui'
 import {renderIcon} from "../utils/common";
 import {AddFilled} from "@vicons/material";
 import emitter from "../utils/eventBus";
 import {SetConnect, TestClient} from "../../wailsjs/go/service/ESService";
+import {GetConfig, SaveConfig} from "../../wailsjs/go/config/AppConfig";
 
 
 const message = useMessage()
 
-const esNodes = ref([
-  {id: 1, name: 'ES节点1', host: 'localhost:9200', username: 'user1', password: 'pass1'},
-  {id: 2, name: 'ES节点2', host: 'http://10.19.50.103:19399', username: 'user2', password: 'pass2'},
-  {id: 2, name: 'ES节点2', host: 'http://10.19.50.103:19399', username: 'user2', password: 'pass2'},
-  {id: 2, name: 'ES节点2', host: 'http://10.19.50.103:19399', username: 'user2', password: 'pass2'},
-
-])
+const esNodes = ref([])
 
 const showEditDrawer = ref(false)
 const currentNode = ref({})
@@ -107,30 +102,47 @@ const rules = {
 
 const formRef = ref(null)
 
+onMounted(async () => {
+  await refreshNodeList()
+})
+
+const refreshNodeList = async () => {
+  const config = await GetConfig()
+  esNodes.value = config.connects
+}
+
 function editNode(node) {
   currentNode.value = {...node}
   isEditing.value = true
   showEditDrawer.value = true
 }
 
-function addNewNode() {
-  currentNode.value = {name: '', host: '', port: 9200, username: '', password: ''}
+const addNewNode = async () => {
+  currentNode.value = {name: '', host: '',  username: '', password: ''}
   isEditing.value = false
   showEditDrawer.value = true
 }
 
-function saveNode() {
-  formRef.value?.validate((errors) => {
+const saveNode = async () => {
+  formRef.value?.validate(async (errors) => {
     if (!errors) {
+
+      const config = await GetConfig()
+      // edit
       if (isEditing.value) {
-        const index = esNodes.value.findIndex(node => node.id === currentNode.value.id)
+        const index = esNodes.value.findIndex(node => node.name === currentNode.value.name)
         if (index !== -1) {
           esNodes.value[index] = {...currentNode.value}
         }
       } else {
-        const newId = Math.max(...esNodes.value.map(node => node.id), 0) + 1
-        esNodes.value.push({...currentNode.value, id: newId})
+        // add
+        esNodes.value.push({...currentNode.value})
       }
+
+      // 保存
+      config.connects = esNodes.value
+      await SaveConfig(config)
+      await refreshNodeList()
       showEditDrawer.value = false
       message.success('保存成功')
     } else {
@@ -139,8 +151,9 @@ function saveNode() {
   })
 }
 
-function deleteNode(id) {
-  esNodes.value = esNodes.value.filter(node => node.id !== id)
+const deleteNode = async (name) => {
+  esNodes.value = esNodes.value.filter(node => node.name !== name)
+  await refreshNodeList()
   message.success('删除成功')
 }
 

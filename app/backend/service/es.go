@@ -26,16 +26,9 @@ const (
 	CancelTasksApi  = "/_tasks/%s/_cancel"
 )
 
-type Connect struct {
-	Host     string
-	Username string
-	Password string
-}
-
 type ESService struct {
-	ConnectName string
-	ConnectObj  *Connect
-	Client      *resty.Client
+	ConnectObj *types.Connect
+	Client     *resty.Client
 }
 
 func NewESService() *ESService {
@@ -48,11 +41,11 @@ func NewESService() *ESService {
 }
 
 func (es *ESService) SetConnect(key, host, username, pwd string) {
-	es.ConnectName = key
-	es.ConnectObj = &Connect{
-		Host:     host,
-		Username: username,
-		Password: pwd,
+	es.ConnectObj = &types.Connect{
+		ConnectName: key,
+		Host:        host,
+		Username:    username,
+		Password:    pwd,
 	}
 	es.Client.SetBasicAuth(username, pwd)
 	fmt.Println("设置当前连接：", es.ConnectObj.Host)

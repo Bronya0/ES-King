@@ -27,6 +27,7 @@ func (a *AppConfig) GetConfig() *types.Config {
 		Height:   common.Height,
 		Language: common.Language,
 		Theme:    common.Theme,
+		Connects: make([]types.Connect, 0),
 	}
 	data, err := os.ReadFile(configPath)
 	if err != nil {
