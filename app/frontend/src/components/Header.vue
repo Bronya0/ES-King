@@ -130,7 +130,7 @@ onMounted(async () => {
 })
 
 const selectNode = (node) => {
-  subtitle.value = "当前集群：【"+node.name + "】  地址：" + node.host + ":" + node.port
+  subtitle.value = "当前集群：【"+node.name + "】  地址：" + node.host
 }
 
 const minimizeWindow = () => {

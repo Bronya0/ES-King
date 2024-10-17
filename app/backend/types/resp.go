@@ -10,3 +10,11 @@ type Config struct {
 	Language string `json:"language"`
 	Theme    string `json:"theme"`
 }
+type ResultsResp struct {
+	Results []interface{} `json:"results"`
+	Err     string        `json:"err"`
+}
+type ResultResp struct {
+	Result map[string]interface{} `json:"result"`
+	Err    string                 `json:"err"`
+}

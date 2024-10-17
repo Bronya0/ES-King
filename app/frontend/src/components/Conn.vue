@@ -1,40 +1,40 @@
 <template>
   <div>
     <n-flex vertical>
-      <n-flex  align="center" >
+      <n-flex align="center">
         <h2 style="width: 42px;">集群</h2>
         <n-text>共有 {{ esNodes.length }} 个</n-text>
         <n-button @click="addNewNode" :render-icon="renderIcon(AddFilled)">添加集群</n-button>
       </n-flex>
-      <n-grid :x-gap="12" :y-gap="12" :cols="4">
-        <n-gi v-for="node in esNodes" :key="node.id">
-          <n-card :title="node.name" @click="selectNode(node)" hoverable>
-            <template #header-extra>
-              <n-space>
-                <n-button @click.stop="editNode(node)" size="small">
-                  编辑
-                </n-button>
-                <n-popconfirm @positive-click="deleteNode(node.id)">
-                  <template #trigger>
-                    <n-button @click.stop size="small">
-                      删除
-                    </n-button>
-                  </template>
-                  确定删除该节点吗？
-                </n-popconfirm>
-              </n-space>
-            </template>
-            <n-descriptions :column="1" label-placement="left">
-              <n-descriptions-item label="主机">
-                {{ node.host }}
-              </n-descriptions-item>
-              <n-descriptions-item label="端口">
-                {{ node.port }}
-              </n-descriptions-item>
-            </n-descriptions>
-          </n-card>
-        </n-gi>
-      </n-grid>
+      <n-spin :show="spin_loading">
+
+        <n-grid :x-gap="12" :y-gap="12" :cols="4">
+          <n-gi v-for="node in esNodes" :key="node.id">
+            <n-card :title="node.name" @click="selectNode(node)" hoverable>
+              <template #header-extra>
+                <n-space>
+                  <n-button @click.stop="editNode(node)" size="small">
+                    编辑
+                  </n-button>
+                  <n-popconfirm @positive-click="deleteNode(node.id)">
+                    <template #trigger>
+                      <n-button @click.stop size="small">
+                        删除
+                      </n-button>
+                    </template>
+                    确定删除该节点吗？
+                  </n-popconfirm>
+                </n-space>
+              </template>
+              <n-descriptions :column="1" label-placement="left">
+                <n-descriptions-item label="主机">
+                  {{ node.host }}
+                </n-descriptions-item>
+              </n-descriptions>
+            </n-card>
+          </n-gi>
+        </n-grid>
+      </n-spin>
     </n-flex>
 
     <n-drawer v-model:show="showEditDrawer" :width="500" placement="right">
@@ -46,16 +46,13 @@
             label-placement="left"
         >
           <n-form-item label="节点名称" path="name">
-            <n-input v-model:value="currentNode.name" placeholder="输入节点名称" />
+            <n-input v-model:value="currentNode.name" placeholder="输入节点名称"/>
           </n-form-item>
-          <n-form-item label="主机" path="host">
-            <n-input v-model:value="currentNode.host" placeholder="输入主机地址" />
-          </n-form-item>
-          <n-form-item label="端口" path="port">
-            <n-input-number v-model:value="currentNode.port" placeholder="输入端口号" />
+          <n-form-item label="协议://主机:端口" path="host">
+            <n-input v-model:value="currentNode.host" placeholder="输入协议://主机:端口"/>
           </n-form-item>
           <n-form-item label="用户名" path="username">
-            <n-input v-model:value="currentNode.username" placeholder="输入用户名" />
+            <n-input v-model:value="currentNode.username" placeholder="输入用户名"/>
           </n-form-item>
           <n-form-item label="密码" path="password">
             <n-input
@@ -77,49 +74,47 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { useMessage } from 'naive-ui'
+import {computed, ref} from 'vue'
+import {useMessage} from 'naive-ui'
 import {renderIcon} from "../utils/common";
 import {AddFilled} from "@vicons/material";
 import emitter from "../utils/eventBus";
-import esService from "../utils/http_service";
+import {SetConnect, TestClient} from "../../wailsjs/go/service/ESService";
+
 
 const message = useMessage()
 
 const esNodes = ref([
-  { id: 1, name: 'ES节点1', host: 'localhost', port: 9200, username: 'user1', password: 'pass1' },
-  { id: 2, name: 'ES节点2', host: '192.168.1.100', port: 9200, username: 'user2', password: 'pass2' },
-  { id: 2, name: 'ES节点2', host: '192.168.1.100', port: 9200, username: 'user2', password: 'pass2' },
-  { id: 2, name: 'ES节点2', host: '192.168.1.100', port: 9200, username: 'user2', password: 'pass2' },
-  { id: 2, name: 'ES节点2', host: '192.168.1.100', port: 9200, username: 'user2', password: 'pass2' },
-  { id: 2, name: 'ES节点2', host: '192.168.1.100', port: 9200, username: 'user2', password: 'pass2' },
-  { id: 2, name: 'ES节点2', host: '192.168.1.100', port: 9200, username: 'user2', password: 'pass2' },
+  {id: 1, name: 'ES节点1', host: 'localhost:9200', username: 'user1', password: 'pass1'},
+  {id: 2, name: 'ES节点2', host: 'http://10.19.50.103:19399', username: 'user2', password: 'pass2'},
+  {id: 2, name: 'ES节点2', host: 'http://10.19.50.103:19399', username: 'user2', password: 'pass2'},
+  {id: 2, name: 'ES节点2', host: 'http://10.19.50.103:19399', username: 'user2', password: 'pass2'},
 
 ])
 
 const showEditDrawer = ref(false)
-const showAddDrawer = ref(false)
 const currentNode = ref({})
 const isEditing = ref(false)
+const spin_loading = ref(false)
 
 const drawerTitle = computed(() => isEditing.value ? '编辑 ES 连接' : '添加 ES 连接')
 
 const rules = {
-  name: { required: true, message: '请输入节点名称', trigger: 'blur' },
-  host: { required: true, message: '请输入主机地址', trigger: 'blur' },
-  port: { required: true, type: 'number', message: '请输入有效的端口号', trigger: 'blur' },
+  name: {required: true, message: '请输入节点名称', trigger: 'blur'},
+  host: {required: true, message: '请输入主机地址', trigger: 'blur'},
+  port: {required: true, type: 'number', message: '请输入有效的端口号', trigger: 'blur'},
 }
 
 const formRef = ref(null)
 
 function editNode(node) {
-  currentNode.value = { ...node }
+  currentNode.value = {...node}
   isEditing.value = true
   showEditDrawer.value = true
 }
 
 function addNewNode() {
-  currentNode.value = { name: '', host: '', port: 9200, username: '', password: '' }
+  currentNode.value = {name: '', host: '', port: 9200, username: '', password: ''}
   isEditing.value = false
   showEditDrawer.value = true
 }
@@ -130,11 +125,11 @@ function saveNode() {
       if (isEditing.value) {
         const index = esNodes.value.findIndex(node => node.id === currentNode.value.id)
         if (index !== -1) {
-          esNodes.value[index] = { ...currentNode.value }
+          esNodes.value[index] = {...currentNode.value}
         }
       } else {
         const newId = Math.max(...esNodes.value.map(node => node.id), 0) + 1
-        esNodes.value.push({ ...currentNode.value, id: newId })
+        esNodes.value.push({...currentNode.value, id: newId})
       }
       showEditDrawer.value = false
       message.success('保存成功')
@@ -152,18 +147,20 @@ function deleteNode(id) {
 const selectNode = async (node) => {
   // 这里实现切换菜单的逻辑
   console.log('选中节点:', node)
-  emitter.emit('menu_select', "健康" )
-
+  spin_loading.value = true
 
   // node：{ id: 1, name: 'ES节点1', host: 'localhost', port: 9200, username: 'user1', password: 'pass1' },
-  emitter.emit('selectNode', node)
-  esService.setConnect(node.name, node.host, node.username, node.password)
-  const [res, err] = await esService.testClient(node.host, node.username, node.password)
-  console.log(res, err)
-  if (res) {
-    message.success('连接成功')
+  const res = await TestClient(node.host, node.username, node.password)
+  spin_loading.value = false
+
+  console.log(res)
+  if (res !== "") {
+    message.error("连接失败：" + res)
   } else {
-    message.error("连接失败："+err)
+    message.success('连接成功')
+    await SetConnect(node.name, node.host, node.username, node.password)
+    emitter.emit('menu_select', "健康")
+    emitter.emit('selectNode', node)
   }
 }
 </script>
