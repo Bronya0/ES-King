@@ -1,4 +1,3 @@
-
 <template>
   <n-flex vertical>
     <n-flex align="center">
@@ -7,31 +6,149 @@
         刷新
       </n-button>
     </n-flex>
-  <n-spin :show="loading" description="Connecting...">
-    <n-table :bordered="false" :single-line="false">
-      <thead>
-      <tr>
-        <th>说明</th>
-        <th>值</th>
-        <th>指标</th>
-      </tr>
-      </thead>
-      <tbody>
-      <tr v-for="(value, key) in data" :key="key">
-        <td>{{ getLabel(key) }}</td>
-        <td>
-          <n-tooltip placement="top" trigger="hover">
-            <template #trigger>
-                {{ value }}
-            </template>
-            {{ value }}
-          </n-tooltip>
-        </td>
-        <td>{{ key }}</td>
-      </tr>
-      </tbody>
-    </n-table>
-  </n-spin>
+    <n-spin :show="loading" description="Connecting...">
+      <n-collapse>
+        <n-collapse-item title="节点" name="node">
+          <n-table :bordered="false" :single-line="false">
+            <thead>
+            <tr>
+              <th>说明</th>
+              <th>值</th>
+              <th>key</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr v-for="(value, key) in filterByKey(data, 'node')" :key="key">
+              <td>
+                <n-tooltip placement="top" trigger="hover">
+                  <template #trigger>{{ getLabel(key) }}</template>
+                  {{key}}
+                </n-tooltip>
+              </td>
+              <td>{{ value }}</td>
+              <td>{{ key }}</td>
+            </tr>
+            </tbody>
+          </n-table>
+        </n-collapse-item>
+        <n-collapse-item title="内存" name="memory">
+          <n-table :bordered="false" :single-line="false">
+            <thead>
+            <tr>
+              <th>说明</th>
+              <th>值</th>
+              <th>key</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr v-for="(value, key) in filterByKey(data, 'memory')" :key="key">
+              <td>
+                <n-tooltip placement="top" trigger="hover">
+                  <template #trigger>{{ getLabel(key) }}</template>
+                  {{key}}
+                </n-tooltip>
+              </td>
+              <td>{{ value }}</td>
+              <td>{{ key }}</td>
+            </tr>
+            </tbody>
+          </n-table>
+        </n-collapse-item>
+        <n-collapse-item title="索引" name="indices">
+          <n-table :bordered="false" :single-line="false">
+            <thead>
+            <tr>
+              <th>说明</th>
+              <th>值</th>
+              <th>key</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr v-for="(value, key) in filterByKey(data, 'indices')" :key="key">
+              <td>
+                <n-tooltip placement="top" trigger="hover">
+                  <template #trigger>{{ getLabel(key) }}</template>
+                  {{key}}
+                </n-tooltip>
+              </td>
+              <td>{{ value }}</td>
+              <td>{{ key }}</td>
+            </tr>
+            </tbody>
+          </n-table>
+        </n-collapse-item>
+        <n-collapse-item title="文档" name="doc">
+          <n-table :bordered="false" :single-line="false">
+            <thead>
+            <tr>
+              <th>说明</th>
+              <th>值</th>
+              <th>key</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr v-for="(value, key) in filterByKey(data, 'doc')" :key="key">
+              <td>
+                <n-tooltip placement="top" trigger="hover">
+                  <template #trigger>{{ getLabel(key) }}</template>
+                  {{key}}
+                </n-tooltip>
+              </td>
+              <td>{{ value }}</td>
+              <td>{{ key }}</td>
+            </tr>
+            </tbody>
+          </n-table>
+        </n-collapse-item>
+        <n-collapse-item title="分片" name="shard">
+          <n-table :bordered="false" :single-line="false">
+            <thead>
+            <tr>
+              <th>说明</th>
+              <th>值</th>
+              <th>key</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr v-for="(value, key) in filterByKey(data, 'shard')" :key="key">
+              <td>
+                <n-tooltip placement="top" trigger="hover">
+                  <template #trigger>{{ getLabel(key) }}</template>
+                  {{key}}
+                </n-tooltip>
+              </td>
+              <td>{{ value }}</td>
+              <td>{{ key }}</td>
+            </tr>
+            </tbody>
+          </n-table>
+        </n-collapse-item>
+        <n-collapse-item title="存储" name="store">
+          <n-table :bordered="false" :single-line="false">
+            <thead>
+            <tr>
+              <th>说明</th>
+              <th>值</th>
+              <th>key</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr v-for="(value, key) in filterByKey(data, 'store')" :key="key">
+              <td>
+                <n-tooltip placement="top" trigger="hover">
+                  <template #trigger>{{ getLabel(key) }}</template>
+                  {{key}}
+                </n-tooltip>
+              </td>
+              <td>{{ value }}</td>
+              <td>{{ key }}</td>
+            </tr>
+            </tbody>
+          </n-table>
+        </n-collapse-item>
+      </n-collapse>
+
+    </n-spin>
   </n-flex>
 </template>
 
@@ -65,22 +182,31 @@ const getCore = async () => {
   loading.value = false
 
 }
-
+// 方法，返回过滤后的数据
+const filterByKey = (data, searchString) => {
+  const result = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (key.includes(searchString)) {
+      result[key] = value;
+    }
+  }
+  return result;
+};
 const getTagType = (key, value) => {
-  if (['cluster_name'].includes(key)){
+  if (['cluster_name'].includes(key)) {
     return 'success'
   }
-  if (['unassigned_shards', 'delayed_unassigned_shards', 'initializing_shards'].includes(key)){
+  if (['unassigned_shards', 'delayed_unassigned_shards', 'initializing_shards'].includes(key)) {
     return 'warning'
   }
 
-  if (key === 'timed_out'){
+  if (key === 'timed_out') {
     return value === true ? 'error' : 'success'
   }
   if (key === 'status') {
-    if (value === 'green'){
+    if (value === 'green') {
       return 'success'
-    }else {
+    } else {
       return value === 'yellow' ? 'warning' : 'error'
     }
   }
@@ -212,7 +338,8 @@ const getLabel = (key) => {
   return descriptions[key] || '暂无说明'
 }
 
-const selectNode = (node) => {}
+const selectNode = (node) => {
+}
 </script>
 
 <style scoped>
