@@ -2,14 +2,13 @@
   <n-flex vertical>
     <n-flex align="center">
       <h2 style="width: 42px;">指标</h2>
-      <n-button @click="getCore" type="primary">
-        刷新
-      </n-button>
+      <n-button @click="getData" text :render-icon="renderIcon(RefreshOutlined)">refresh</n-button>
+
     </n-flex>
     <n-spin :show="loading" description="Connecting...">
       <n-collapse>
-        <n-collapse-item title="节点" name="node">
-          <n-table :bordered="false" :single-line="false">
+        <n-collapse-item  v-for="(item_v, item_k) in collapse_item" :title="item_v" :name="item_v">
+          <n-table :single-line="false" size="small">
             <thead>
             <tr>
               <th>说明</th>
@@ -18,122 +17,7 @@
             </tr>
             </thead>
             <tbody>
-            <tr v-for="(value, key) in filterByKey(data, 'node')" :key="key">
-              <td>
-                <n-tooltip placement="top" trigger="hover">
-                  <template #trigger>{{ getLabel(key) }}</template>
-                  {{key}}
-                </n-tooltip>
-              </td>
-              <td>{{ value }}</td>
-              <td>{{ key }}</td>
-            </tr>
-            </tbody>
-          </n-table>
-        </n-collapse-item>
-        <n-collapse-item title="内存" name="memory">
-          <n-table :bordered="false" :single-line="false">
-            <thead>
-            <tr>
-              <th>说明</th>
-              <th>值</th>
-              <th>key</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr v-for="(value, key) in filterByKey(data, 'memory')" :key="key">
-              <td>
-                <n-tooltip placement="top" trigger="hover">
-                  <template #trigger>{{ getLabel(key) }}</template>
-                  {{key}}
-                </n-tooltip>
-              </td>
-              <td>{{ value }}</td>
-              <td>{{ key }}</td>
-            </tr>
-            </tbody>
-          </n-table>
-        </n-collapse-item>
-        <n-collapse-item title="索引" name="indices">
-          <n-table :bordered="false" :single-line="false">
-            <thead>
-            <tr>
-              <th>说明</th>
-              <th>值</th>
-              <th>key</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr v-for="(value, key) in filterByKey(data, 'indices')" :key="key">
-              <td>
-                <n-tooltip placement="top" trigger="hover">
-                  <template #trigger>{{ getLabel(key) }}</template>
-                  {{key}}
-                </n-tooltip>
-              </td>
-              <td>{{ value }}</td>
-              <td>{{ key }}</td>
-            </tr>
-            </tbody>
-          </n-table>
-        </n-collapse-item>
-        <n-collapse-item title="文档" name="doc">
-          <n-table :bordered="false" :single-line="false">
-            <thead>
-            <tr>
-              <th>说明</th>
-              <th>值</th>
-              <th>key</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr v-for="(value, key) in filterByKey(data, 'doc')" :key="key">
-              <td>
-                <n-tooltip placement="top" trigger="hover">
-                  <template #trigger>{{ getLabel(key) }}</template>
-                  {{key}}
-                </n-tooltip>
-              </td>
-              <td>{{ value }}</td>
-              <td>{{ key }}</td>
-            </tr>
-            </tbody>
-          </n-table>
-        </n-collapse-item>
-        <n-collapse-item title="分片" name="shard">
-          <n-table :bordered="false" :single-line="false">
-            <thead>
-            <tr>
-              <th>说明</th>
-              <th>值</th>
-              <th>key</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr v-for="(value, key) in filterByKey(data, 'shard')" :key="key">
-              <td>
-                <n-tooltip placement="top" trigger="hover">
-                  <template #trigger>{{ getLabel(key) }}</template>
-                  {{key}}
-                </n-tooltip>
-              </td>
-              <td>{{ value }}</td>
-              <td>{{ key }}</td>
-            </tr>
-            </tbody>
-          </n-table>
-        </n-collapse-item>
-        <n-collapse-item title="存储" name="store">
-          <n-table :bordered="false" :single-line="false">
-            <thead>
-            <tr>
-              <th>说明</th>
-              <th>值</th>
-              <th>key</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr v-for="(value, key) in filterByKey(data, 'store')" :key="key">
+            <tr v-for="(value, key) in filterByKey(data, item_k)" :key="key">
               <td>
                 <n-tooltip placement="top" trigger="hover">
                   <template #trigger>{{ getLabel(key) }}</template>
@@ -158,19 +42,27 @@ import {onMounted, ref} from "vue";
 import emitter from "../utils/eventBus";
 import {useMessage} from "naive-ui";
 import {GetStats} from "../../wailsjs/go/service/ESService";
-import {flattenObject} from "../utils/common";
+import {flattenObject, renderIcon} from "../utils/common";
+import {RefreshOutlined} from "@vicons/material";
 
 const loading = ref(false)
 const data = ref({})
-
 const message = useMessage()
 
 onMounted(async () => {
   emitter.on('selectNode', selectNode)
-  await getCore()
+  await getData()
 })
 
-const getCore = async () => {
+const collapse_item = {
+  'node': '节点',
+  'memory': '内存',
+  'indices': '索引',
+  'doc': '文档',
+  'shard': '分片',
+  'store': '存储'
+}
+const getData = async () => {
   loading.value = true
   const res = await GetStats()
   if (res.err !== "") {
@@ -192,26 +84,6 @@ const filterByKey = (data, searchString) => {
   }
   return result;
 };
-const getTagType = (key, value) => {
-  if (['cluster_name'].includes(key)) {
-    return 'success'
-  }
-  if (['unassigned_shards', 'delayed_unassigned_shards', 'initializing_shards'].includes(key)) {
-    return 'warning'
-  }
-
-  if (key === 'timed_out') {
-    return value === true ? 'error' : 'success'
-  }
-  if (key === 'status') {
-    if (value === 'green') {
-      return 'success'
-    } else {
-      return value === 'yellow' ? 'warning' : 'error'
-    }
-  }
-  return 'default'
-}
 
 const getLabel = (key) => {
   const descriptions = {

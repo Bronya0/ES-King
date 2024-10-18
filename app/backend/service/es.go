@@ -36,7 +36,8 @@ func NewESService() *ESService {
 	client.SetTimeout(30 * time.Second)
 	client.SetRetryCount(0)
 	return &ESService{
-		Client: client,
+		Client:     client,
+		ConnectObj: &types.Connect{},
 	}
 }
 
@@ -64,6 +65,9 @@ func (es *ESService) TestClient(host, username, pwd string) string {
 }
 
 func (es *ESService) GetNodes() *types.ResultsResp {
+	if es.ConnectObj.Host == "" {
+		return &types.ResultsResp{Err: "请先选择一个连接"}
+	}
 	resp, err := es.Client.R().Get(es.ConnectObj.Host + NodesApi)
 	if err != nil {
 		return &types.ResultsResp{Err: err.Error()}
@@ -76,6 +80,9 @@ func (es *ESService) GetNodes() *types.ResultsResp {
 }
 
 func (es *ESService) GetHealth() *types.ResultResp {
+	if es.ConnectObj.Host == "" {
+		return &types.ResultResp{Err: "请先选择一个连接"}
+	}
 	resp, err := es.Client.R().Get(es.ConnectObj.Host + HealthApi)
 	if err != nil {
 		return &types.ResultResp{Err: err.Error()}
@@ -88,6 +95,9 @@ func (es *ESService) GetHealth() *types.ResultResp {
 }
 
 func (es *ESService) GetStats() *types.ResultResp {
+	if es.ConnectObj.Host == "" {
+		return &types.ResultResp{Err: "请先选择一个连接"}
+	}
 	resp, err := es.Client.R().Get(es.ConnectObj.Host + StatsApi)
 	if err != nil {
 		return &types.ResultResp{Err: err.Error()}
@@ -101,6 +111,9 @@ func (es *ESService) GetStats() *types.ResultResp {
 }
 
 func (es *ESService) GetIndexes(name string) *types.ResultsResp {
+	if es.ConnectObj.Host == "" {
+		return &types.ResultsResp{Err: "请先选择一个连接"}
+	}
 	newUrl := es.ConnectObj.Host + AllIndexApi
 	if name != "" {
 		newUrl += "&index=" + name

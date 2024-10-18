@@ -2,9 +2,8 @@
   <n-flex vertical>
     <n-flex align="center">
       <h2 style="width: 42px;">健康</h2>
-      <n-button @click="getHealth" type="primary">
-        刷新
-      </n-button>
+      <n-button @click="getData" text :render-icon="renderIcon(RefreshOutlined)">refresh</n-button>
+
     </n-flex>
     <n-spin :show="loading" description="Connecting...">
 
@@ -43,16 +42,19 @@ import {onActivated, onMounted, ref} from "vue";
 import emitter from "../utils/eventBus";
 import {useMessage} from "naive-ui";
 import {GetHealth} from "../../wailsjs/go/service/ESService";
+import {renderIcon} from "../utils/common";
+import {RefreshOutlined} from "@vicons/material";
 
 const data = ref({})
 const loading = ref(false)
 
 const message = useMessage()
 
-
+const selectNode = (node) => {
+}
 onMounted(async () => {
   emitter.on('selectNode', selectNode)
-  await selectNode()
+  await getData()
 })
 
 onActivated(async () => {
@@ -63,7 +65,7 @@ const Clean = async () => {
   data.value = {}
 }
 
-const getHealth = async () => {
+const getData = async () => {
   loading.value = true
   const res = await GetHealth()
   if (res.err !== "") {
@@ -118,13 +120,6 @@ const getLabel = (key) => {
   return descriptions[key] || '暂无说明'
 }
 
-const selectNode = async (node) => {
-  console.log("清空 Health")
-  await Clean()
-  console.log("获取 Health")
-  await getHealth()
-
-}
 </script>
 <style scoped>
 
