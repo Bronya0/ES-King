@@ -180,7 +180,7 @@ func (es *ESService) CreateIndex(name string, numberOfShards, numberOfReplicas i
 	}
 	resp, err := es.Client.R().
 		SetBody(indexConfig).
-		Put(es.ConnectObj.Host + name)
+		Put(es.ConnectObj.Host + "/" + name)
 	if err != nil {
 		return &types.ResultResp{Err: err.Error()}
 	}

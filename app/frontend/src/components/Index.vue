@@ -15,7 +15,7 @@
         按enter键搜索索引，支持通配符*
       </n-tooltip>
 
-      <n-button @click="" :render-icon="renderIcon(AddFilled)">添加索引</n-button>
+      <n-button @click="CreateIndexDrawerVisible = true" :render-icon="renderIcon(AddFilled)">添加索引</n-button>
       <n-button @click="downloadCsv" :render-icon="renderIcon(DriveFileMoveTwotone)">导出为csv</n-button>
       <n-button @click="queryAlias" :render-icon="renderIcon(AnnouncementOutlined)">读取别名</n-button>
 
@@ -43,10 +43,35 @@
     </n-flex>
 
 
-
     <n-drawer v-model:show="drawerVisible" :width="500">
       <n-drawer-content :title="drawer_title" style="text-align: left;">
         <n-code :code="json_data" language="json" show-line-numbers/>
+      </n-drawer-content>
+    </n-drawer>
+
+    <n-drawer v-model:show="CreateIndexDrawerVisible" :width="500">
+      <n-drawer-content title="创建索引" style="text-align: left;">
+        <n-form
+            :model="indexConfig"
+            label-placement="left"
+        >
+          <n-form-item label="索引名称" path="name">
+            <n-input v-model:value="indexConfig.name"/>
+          </n-form-item>
+          <n-form-item label="主分片" path="numberOfShards">
+            <n-input-number  v-model:value="indexConfig.numberOfShards"/>
+          </n-form-item>
+          <n-form-item label="副本数量" path="numberOfReplicas">
+            <n-input-number v-model:value="indexConfig.numberOfReplicas"/>
+          </n-form-item>
+
+        </n-form>
+        <template #footer>
+          <n-space justify="end">
+            <n-button @click="CreateIndexDrawerVisible = false">取消</n-button>
+            <n-button type="primary" @click="addIndex">保存</n-button>
+          </n-space>
+        </template>
       </n-drawer-content>
     </n-drawer>
 
@@ -64,8 +89,6 @@ import {
   GetDoc10,
   GetIndexAliases,
   GetIndexInfo,
-  GetIndexMappings,
-  GetIndexSegments,
   CacheClear,
   CreateIndex,
   OpenCloseIndex,
@@ -75,10 +98,16 @@ import {
 
 // 抽屉的可见性
 const drawerVisible = ref(false)
+const CreateIndexDrawerVisible = ref(false)
 const json_data = ref(null)
 const drawer_title = ref(null)
 const loading = ref(false)
 const tableRef = ref();
+const indexConfig = ref({
+  name: "",
+  numberOfShards: 1,
+  numberOfReplicas: 0
+});
 const data = ref([])
 const message = useMessage()
 const search_text = ref("*")
@@ -346,6 +375,20 @@ const clearCache = async (row) => {
     await search()
 
   }
+}
+const addIndex = async () =>{
+  try {
+    const res = await CreateIndex(indexConfig.value.name, indexConfig.value.numberOfShards, indexConfig.value.numberOfReplicas)
+    if (res.err !== ""){
+      message.error(res.err)
+    }else {
+      message.success(`索引${indexConfig.value.name}创建成功`)
+      await search()
+    }
+  }catch (e) {
+    message.error(e)
+  }
+  CreateIndexDrawerVisible.value = false
 }
 
 const downloadCsv = () => tableRef.value?.downloadCsv({ fileName: "索引列表" });
