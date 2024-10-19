@@ -6,7 +6,7 @@ on:
 
 env:
   NODE_OPTIONS: "--max-old-space-size=4096"
-  APP_NAME: 'demo-app'
+  APP_NAME: 'ES-King'
   APP_WORKING_DIRECTORY: 'app'
   GO_VERSION: '1.23'
   NODE_VERSION: "20.x"
