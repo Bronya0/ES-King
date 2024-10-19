@@ -211,6 +211,7 @@ const getLabel = (key) => {
 }
 
 const selectNode = (node) => {
+  data.value = {}
 }
 </script>
 

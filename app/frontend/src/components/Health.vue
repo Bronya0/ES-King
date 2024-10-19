@@ -50,20 +50,14 @@ const loading = ref(false)
 
 const message = useMessage()
 
-const selectNode = (node) => {
-}
 onMounted(async () => {
-  emitter.on('selectNode', selectNode)
   await getData()
 })
 
 onActivated(async () => {
-  // await getHealth()
+  await getData()
 })
 
-const Clean = async () => {
-  data.value = {}
-}
 
 const getData = async () => {
   loading.value = true

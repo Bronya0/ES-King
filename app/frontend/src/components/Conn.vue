@@ -10,13 +10,14 @@
 
         <n-grid :x-gap="12" :y-gap="12" :cols="4">
           <n-gi v-for="node in esNodes" :key="node.id">
-            <n-card :title="node.name" @click="selectNode(node)" hoverable>
+            <n-card :title="node.name" @click="selectNode(node)" hoverable class="conn_card">
+
               <template #header-extra>
                 <n-space>
                   <n-button @click.stop="editNode(node)" size="small">
                     编辑
                   </n-button>
-                  <n-popconfirm @positive-click="deleteNode(node.name)">
+                  <n-popconfirm @positive-click="deleteNode(node.id)" negative-text="取消" positive-text="确定">
                     <template #trigger>
                       <n-button @click.stop size="small">
                         删除
@@ -61,6 +62,19 @@
                 placeholder="输入密码"
             />
           </n-form-item>
+
+          <n-form-item label="使用 SSL" path="useSSL">
+            <n-switch v-model:value="currentNode.useSSL"/>
+          </n-form-item>
+
+          <n-form-item label="跳过 SSL 验证" path="skipSSLVerify">
+            <n-switch v-model:value="currentNode.skipSSLVerify"/>
+          </n-form-item>
+
+          <n-form-item label="CA 证书" path="caCert">
+            <n-input v-model:value="currentNode.caCert" type="textarea" placeholder="输入 CA 证书内容"/>
+          </n-form-item>
+
         </n-form>
         <template #footer>
           <n-space justify="end">
@@ -77,7 +91,7 @@
 import {computed, onMounted, ref} from 'vue'
 import {useMessage} from 'naive-ui'
 import {renderIcon} from "../utils/common";
-import {AddFilled} from "@vicons/material";
+import {AddFilled, AllInclusiveFilled} from "@vicons/material";
 import emitter from "../utils/eventBus";
 import {SetConnect, TestClient} from "../../wailsjs/go/service/ESService";
 import {GetConfig, SaveConfig} from "../../wailsjs/go/config/AppConfig";
@@ -120,7 +134,16 @@ function editNode(node) {
 }
 
 const addNewNode = async () => {
-  currentNode.value = {name: '', host: '',  username: '', password: ''}
+  currentNode.value = {
+    name: '',
+    host: '',
+    port: 9200,
+    username: '',
+    password: '',
+    useSSL: false,
+    skipSSLVerify: false,
+    caCert: ''
+  }
   isEditing.value = false
   showEditDrawer.value = true
 }
@@ -143,7 +166,7 @@ const saveNode = async () => {
       } else {
         // add
         const newId = Math.max(...esNodes.value.map(node => node.id), 0) + 1
-        esNodes.value.push({ ...currentNode.value, id: newId })
+        esNodes.value.push({...currentNode.value, id: newId})
       }
       console.log(config)
 
@@ -162,7 +185,13 @@ const saveNode = async () => {
 }
 
 const deleteNode = async (id) => {
+  console.log(esNodes.value)
+  console.log(id)
   esNodes.value = esNodes.value.filter(node => node.id !== id)
+  console.log(esNodes.value)
+  const config = await GetConfig()
+  config.connects = esNodes.value
+  await SaveConfig(config)
   await refreshNodeList()
   message.success('删除成功')
 }
@@ -173,7 +202,7 @@ const selectNode = async (node) => {
   spin_loading.value = true
 
   // node：{ id: 1, name: 'ES节点1', host: 'localhost', port: 9200, username: 'user1', password: 'pass1' },
-  const res = await TestClient(node.host, node.username, node.password)
+  const res = await TestClient(node.host, node.username, node.password, node.caCert, node.useSSL, node.skipSSLVerify)
   spin_loading.value = false
 
   console.log(res)
@@ -181,9 +210,16 @@ const selectNode = async (node) => {
     message.error("连接失败：" + res)
   } else {
     message.success('连接成功')
-    await SetConnect(node.name, node.host, node.username, node.password)
-    emitter.emit('menu_select', "健康")
+    await SetConnect(node.name, node.host, node.username, node.password, node.caCert, node.useSSL, node.skipSSLVerify)
+    emitter.emit('menu_select', "节点")
     emitter.emit('selectNode', node)
   }
 }
 </script>
+
+<style>
+
+.lightTheme .conn_card {
+  background-color: #fafafc
+}
+</style>

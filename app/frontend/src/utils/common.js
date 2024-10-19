@@ -34,3 +34,8 @@ export function flattenObject(obj, parentKey = '') {
 
   return flatResult;
 }
+// 格式化的 JSON 字符串
+export function formattedJson(value) {
+  if (!value) return ''
+  return JSON.stringify(value, null, 1)
+}

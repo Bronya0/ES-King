@@ -9,7 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "ace-builds": "^1.36.2",
     "axios": "^1.7.7",
+    "highlight.js": "^11.10.0",
+    "jsoneditor": "^10.1.0",
     "mitt": "^3.0.1",
     "vue": "^3.5.8"
   },

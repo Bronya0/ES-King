@@ -10,7 +10,7 @@
       <n-flex justify="flex-end" style="--wails-draggable:no-drag" class="right-section">
         <n-button quaternary :focusable="false" @click="changeTheme" :render-icon="renderIcon(MoonOrSunnyOutline)"/>
         <n-button quaternary @click="openUrl(update_url)"
-                  :render-icon="renderIcon(CodeFilled)"/>
+                  :render-icon="renderIcon(NearMeOutlined)"/>
         <n-tooltip placement="bottom" trigger="hover">
           <template #trigger>
             <n-button quaternary :focusable="false" :loading="update_loading" @click="checkForUpdates"
@@ -33,7 +33,7 @@
 <script setup>
 import {darkTheme, lightTheme, NAvatar, NButton,  NFlex, useMessage} from 'naive-ui'
 import {
-  CodeFilled,
+  NearMeOutlined,
   SystemUpdateAltSharp,
   RemoveOutlined,
   CloseFilled,
@@ -58,7 +58,7 @@ const isMaximized = ref(false);
 const check_msg = ref("");
 const app_name = ref("");
 const MaxMinIcon = shallowRef(CropSquareFilled)
-const update_url = "https://github.com/Bronya0/wails-template/releases"
+const update_url = "https://github.com/Bronya0/ES-King/releases"
 const update_loading = ref(false)
 let theme = lightTheme
 
@@ -130,7 +130,7 @@ onMounted(async () => {
 })
 
 const selectNode = (node) => {
-  subtitle.value = "当前集群：【"+node.name + "】  地址：" + node.host
+  subtitle.value = desc + " ==> 当前集群：【"+node.name + "】"
 }
 
 const minimizeWindow = () => {

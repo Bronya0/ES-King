@@ -6,6 +6,9 @@ export namespace types {
 	    host: string;
 	    username: string;
 	    password: string;
+	    useSSL: boolean;
+	    skipSSLVerify: boolean;
+	    caCert: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Connect(source);
@@ -18,6 +21,9 @@ export namespace types {
 	        this.host = source["host"];
 	        this.username = source["username"];
 	        this.password = source["password"];
+	        this.useSSL = source["useSSL"];
+	        this.skipSSLVerify = source["skipSSLVerify"];
+	        this.caCert = source["caCert"];
 	    }
 	}
 	export class Config {

@@ -1,6 +1,7 @@
 <template>
   <n-config-provider
       :theme="Theme"
+      :hljs="hljs"
   >
     <!--https://www.naiveui.com/zh-CN/os-theme/components/layout-->
     <n-message-provider>
@@ -83,9 +84,14 @@ import {
   SettingsSuggestOutlined,
   AutoGraphOutlined, ApiOutlined, LibraryBooksOutlined, AllOutOutlined, BarChartOutlined, AddAPhotoTwotone
 } from '@vicons/material'
+import hljs from 'highlight.js/lib/core'
+import json from 'highlight.js/lib/languages/json'
+
 
 let headerClass = shallowRef('lightTheme')
 const collapsed = ref(true)
+
+hljs.registerLanguage('json', json)
 
 onMounted(async () => {
   // 从后端加载配置
@@ -116,18 +122,6 @@ const sideMenuOptions = [
     component: Conn,
   },
   {
-    label: '健康',
-    key: '健康',
-    icon: renderIcon(FavoriteTwotone),
-    component: Health,
-  },
-  {
-    label: '指标',
-    key: '指标',
-    icon: renderIcon(BarChartOutlined),
-    component: Core,
-  },
-  {
     label: '节点',
     key: '节点',
     icon: renderIcon(AllOutOutlined),
@@ -140,22 +134,34 @@ const sideMenuOptions = [
     component: Index,
   },
   {
+    label: '健康',
+    key: '健康',
+    icon: renderIcon(FavoriteTwotone),
+    component: Health,
+  },
+  {
+    label: '指标',
+    key: '指标',
+    icon: renderIcon(BarChartOutlined),
+    component: Core,
+  },
+  {
     label: 'REST',
     key: 'REST',
     icon: renderIcon(ApiOutlined),
     component: Rest,
   },
   {
-    label: '建议',
-    key: '建议',
-    icon: renderIcon(AutoGraphOutlined),
-    component: Issue,
-  },
-  {
     label: '快照',
     key: '快照',
     icon: renderIcon(AddAPhotoTwotone),
     component: Snapshot,
+  },
+  {
+    label: '建议',
+    key: '建议',
+    icon: renderIcon(AutoGraphOutlined),
+    component: Issue,
   },
   {
     label: '设置',

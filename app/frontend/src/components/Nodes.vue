@@ -20,19 +20,21 @@
 <script setup>
 import {onMounted} from "vue";
 import emitter from "../utils/eventBus";
+import { h, ref, computed } from 'vue'
+import {NDataTable, NProgress, NTag, NText, useMessage} from 'naive-ui'
+import {renderIcon} from "../utils/common";
+import {RefreshOutlined} from "@vicons/material";
+import {GetNodes} from "../../wailsjs/go/service/ESService";
 
-const selectNode = (node) => {}
+const selectNode = async (node) => {
+  await getData()
+}
 
 onMounted(async () => {
   emitter.on('selectNode', selectNode)
   await getData()
 })
 
-import { h, ref, computed } from 'vue'
-import {NDataTable, NProgress, NTag, NText, useMessage} from 'naive-ui'
-import {flattenObject, renderIcon} from "../utils/common";
-import {RefreshOutlined} from "@vicons/material";
-import {GetNodes} from "../../wailsjs/go/service/ESService";
 
 const loading = ref(false)
 const data = ref([])
@@ -49,21 +51,6 @@ const getData = async () => {
   loading.value = false
 
 }
-
-const pagination = computed(() => ({
-  page: 1,
-  pageSize: 10,
-  showSizePicker: true,
-  pageSizes: [10, 20, 30, 40],
-  onChange: (page) => {
-    pagination.value.page = page
-  },
-  onUpdatePageSize: (pageSize) => {
-    pagination.value.pageSize = pageSize
-    pagination.value.page = 1
-  },
-  itemCount: data.value.length
-}))
 
 const getProgressType = (value) => {
   const numValue = Number(value)
@@ -92,7 +79,7 @@ const columns = [
     key: 'node.role',
     sorter: 'default',
     render: (row) => h(NTag, { type: 'info' }, { default: () => row['node.role'] }),
-    width: 60
+    width: 100
   },
   {
     title: '主节点',
