@@ -14,6 +14,7 @@ const (
 	Theme      = "dark"
 	ConfigPath = "config.yaml"
 	Language   = "zh-CN"
+	PingUrl    = "https://ysboke.cn/api/kingTool/ping"
 )
 
 var (

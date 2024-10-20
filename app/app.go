@@ -1,8 +1,12 @@
 package main
 
 import (
+	"app/backend/common"
 	"context"
+	"crypto/tls"
 	"fmt"
+	"github.com/go-resty/resty/v2"
+	"runtime"
 )
 
 // App struct
@@ -24,6 +28,16 @@ func (a *App) Start(ctx context.Context) {
 // domReady is called after front-end resources have been loaded
 func (a *App) domReady(ctx context.Context) {
 	// Add your action here
+
+	// 统计版本使用情况
+	client := resty.New().SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
+	body := map[string]interface{}{
+		"name":     "ES-King",
+		"version":  common.Version,
+		"platform": runtime.GOOS,
+	}
+	_, _ = client.R().SetBody(body).Post(common.PingUrl)
+
 }
 
 // beforeClose is called when the application is about to quit,
