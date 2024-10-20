@@ -12,6 +12,7 @@ const (
 	Width      = 1280
 	Height     = 768
 	Theme      = "dark"
+	ConfigDir  = ".es-king"
 	ConfigPath = "config.yaml"
 	Language   = "zh-CN"
 	PingUrl    = "https://ysboke.cn/api/kingTool/ping"

@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"gopkg.in/yaml.v3"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -75,15 +76,23 @@ func (a *AppConfig) SaveTheme(theme string) string {
 	}
 	return ""
 }
-func (a *AppConfig) getConfigPath() string {
 
-	exePath, err := os.Executable()
+func (a *AppConfig) getConfigPath() string {
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
+		log.Printf("os.UserHomeDir() error: %s", err.Error())
 		return common.ConfigPath
 	}
-	res, _ := filepath.EvalSymlinks(filepath.Dir(exePath))
-	return filepath.Join(res, common.ConfigPath)
-
+	configDir := filepath.Join(homeDir, common.ConfigDir)
+	_, err = os.Stat(configDir)
+	if os.IsNotExist(err) {
+		err = os.Mkdir(configDir, os.ModePerm)
+		if err != nil {
+			log.Printf("create configDir %s error: %s", configDir, err.Error())
+			return common.ConfigPath
+		}
+	}
+	return filepath.Join(configDir, common.ConfigPath)
 }
 
 // GetVersion returns the application version
