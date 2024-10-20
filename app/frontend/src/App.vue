@@ -5,7 +5,7 @@
   >
     <!--https://www.naiveui.com/zh-CN/os-theme/components/layout-->
     <n-message-provider>
-      <n-notification-provider placement="bottom-right">
+      <n-notification-provider placement="bottom-right" container-style="text-align: left;">
         <n-loading-bar-provider>
 
           <n-layout has-sider position="absolute" style="height: 100vh;" :class="headerClass">
