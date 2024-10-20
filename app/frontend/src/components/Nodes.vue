@@ -11,7 +11,6 @@
           :data="data"
           size="small"
           :bordered="false"
-          :max-height="600"
           striped
       />
     </n-spin>

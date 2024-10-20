@@ -210,8 +210,8 @@ const getLabel = (key) => {
   return descriptions[key] || '暂无说明'
 }
 
-const selectNode = (node) => {
-  data.value = {}
+const selectNode = async (node) => {
+  await getData()
 }
 </script>
 
