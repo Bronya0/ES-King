@@ -37,6 +37,7 @@ func NewESService() *ESService {
 	client := resty.New()
 	client.SetTimeout(30 * time.Second)
 	client.SetRetryCount(0)
+	client.SetHeader("Content-Type", "application/json")
 	return &ESService{
 		Client:     client,
 		ConnectObj: &types.Connect{},

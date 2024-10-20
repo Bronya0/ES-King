@@ -89,14 +89,12 @@ jobs:
           wails build -ldflags "-X 'app/backend/common.Version=${{ github.ref_name }}'" --platform ${{ matrix.build.platform }} -o ${{ env.APP_NAME }} 
           chmod +x build/bin/*/Contents/MacOS/*
           ditto -c -k ./build/bin/${{ env.APP_NAME }}.app ./build/bin/${{ env.APP_NAME }}-${{ github.ref_name }}-macos.app.zip
-          productbuild --component ./build/bin/${{ env.APP_NAME }}.app ./build/bin/${{ env.APP_NAME }}-${{ github.ref_name }}-macos.pkg
 
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            ${{ env.APP_WORKING_DIRECTORY }}/build/bin/${{ env.APP_NAME }}-${{ github.ref_name }}-macos.pkg
             ${{ env.APP_WORKING_DIRECTORY }}/build/bin/${{ env.APP_NAME }}-${{ github.ref_name }}-macos.app.zip
           fail_on_unmatched_files: true
         env:
