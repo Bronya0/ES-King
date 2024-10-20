@@ -6,14 +6,8 @@
       <n-text>共计{{ data.length }}个</n-text>
     </n-flex>
     <n-flex align="center">
-      <n-text>搜索：</n-text>
-      <n-tooltip placement="top" trigger="hover">
-        <template #trigger>
-          <n-input @keydown.enter="search" v-model:value="search_text" autosize style="min-width: 30%"
-                   default-value="*"/>
-        </template>
-        按enter键搜索索引，支持通配符*
-      </n-tooltip>
+      <n-input @keydown.enter="search" v-model:value="search_text" autosize style="min-width: 20%"
+                   default-value="*" placeholder="搜索索引，支持通配符*"/>
 
       <n-button @click="search" :render-icon="renderIcon(SearchFilled)"></n-button>
       <n-button @click="CreateIndexDrawerVisible = true" :render-icon="renderIcon(AddFilled)">添加索引</n-button>
