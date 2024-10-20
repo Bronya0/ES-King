@@ -15,6 +15,7 @@
         按enter键搜索索引，支持通配符*
       </n-tooltip>
 
+      <n-button @click="search" :render-icon="renderIcon(SearchFilled)"></n-button>
       <n-button @click="CreateIndexDrawerVisible = true" :render-icon="renderIcon(AddFilled)">添加索引</n-button>
       <n-button @click="downloadCsv" :render-icon="renderIcon(DriveFileMoveTwotone)">导出为csv</n-button>
       <n-button @click="queryAlias" :render-icon="renderIcon(AnnouncementOutlined)">读取别名</n-button>
@@ -83,7 +84,7 @@ import emitter from "../utils/eventBus";
 import {h, ref, computed} from 'vue'
 import {NButton, NDataTable, NDropdown, NIcon, NProgress, NTag, NText, useMessage} from 'naive-ui'
 import {formattedJson, renderIcon} from "../utils/common";
-import {AddFilled, MoreVertFilled, DriveFileMoveTwotone,AnnouncementOutlined} from "@vicons/material";
+import {AddFilled, MoreVertFilled, DriveFileMoveTwotone,AnnouncementOutlined, SearchFilled} from "@vicons/material";
 import {
   GetIndexes,
   GetDoc10,
