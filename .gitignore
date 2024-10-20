@@ -1,9 +1,7 @@
 build/bin
-node_modules
-frontend/dist
-frontend/wailsjs
-frontend/package.json.md5
 .vscode
 .idea
-dist
-/app/frontend/node_modules/
+/app/frontend/node_modules
+/app/frontend/wailsjs
+/app/frontend/dist
+/app/frontend/package.json.md5
