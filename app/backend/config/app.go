@@ -13,7 +13,7 @@ import (
 
 type AppConfig struct {
 	ctx context.Context
-	mu  sync.Mutex
+	mu  sync.RWMutex
 }
 
 func (a *AppConfig) Start(ctx context.Context) {
@@ -21,6 +21,8 @@ func (a *AppConfig) Start(ctx context.Context) {
 }
 
 func (a *AppConfig) GetConfig() *types.Config {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
 	configPath := a.getConfigPath()
 	defaultConfig := &types.Config{
 		Width:    common.Width,
@@ -58,6 +60,8 @@ func (a *AppConfig) SaveConfig(config *types.Config) string {
 	return ""
 }
 func (a *AppConfig) SaveTheme(theme string) string {
+	a.mu.Lock()
+	defer a.mu.Unlock()
 	config := a.GetConfig()
 	config.Theme = theme
 	data, err := yaml.Marshal(config)
