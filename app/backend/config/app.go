@@ -75,15 +75,13 @@ func (a *AppConfig) SaveTheme(theme string) string {
 	}
 	return ""
 }
-func (a *AppConfig) getConfigPath() string {
 
-	exePath, err := os.Executable()
+func (a *AppConfig) getConfigPath() string {
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return common.ConfigPath
 	}
-	res, _ := filepath.EvalSymlinks(filepath.Dir(exePath))
-	return filepath.Join(res, common.ConfigPath)
-
+	return filepath.Join(homeDir, common.ConfigPath)
 }
 
 // GetVersion returns the application version
