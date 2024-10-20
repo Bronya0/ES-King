@@ -13,7 +13,7 @@ import (
 
 type AppConfig struct {
 	ctx context.Context
-	mu  sync.RWMutex
+	mu  sync.Mutex
 }
 
 func (a *AppConfig) Start(ctx context.Context) {
@@ -21,8 +21,8 @@ func (a *AppConfig) Start(ctx context.Context) {
 }
 
 func (a *AppConfig) GetConfig() *types.Config {
-	a.mu.RLock()
-	defer a.mu.RUnlock()
+	a.mu.Lock()
+	defer a.mu.Unlock()
 	configPath := a.getConfigPath()
 	defaultConfig := &types.Config{
 		Width:    common.Width,
