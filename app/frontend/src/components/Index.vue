@@ -95,7 +95,7 @@ import {onMounted} from "vue";
 import emitter from "../utils/eventBus";
 import {h, ref, computed} from 'vue'
 import {NButton, NDataTable, NDropdown, NIcon, NProgress, NTag, NText, useMessage} from 'naive-ui'
-import {formattedJson, isValidJson, renderIcon} from "../utils/common";
+import {formatBytes, formattedJson, isValidJson, renderIcon} from "../utils/common";
 import {AddFilled, MoreVertFilled, DriveFileMoveTwotone, AnnouncementOutlined, SearchFilled} from "@vicons/material";
 import {
   GetIndexes,
@@ -232,8 +232,11 @@ const columns = [
   {
     title: '占用存储',
     key: 'store.size',
-    sorter: 'default',
     width: 60,
+    sorter: 'default',  // 因为原始数据就是数字，所以排序规则不用改
+    render(row) {  // 这里要显示的是label，所以得转换一下
+      return h('span', formatBytes(row['store.size']))
+    }
   },
   {
     title: '操作',
