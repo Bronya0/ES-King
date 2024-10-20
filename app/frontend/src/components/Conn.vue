@@ -43,7 +43,11 @@
         <n-form
             ref="formRef"
             :model="currentNode"
-            :rules="rules"
+            :rules="{
+              name: {required: true, message: '请输入节点名称', trigger: 'blur'},
+              host: {required: true, message: '请输入主机地址', trigger: 'blur'},
+              port: {required: true, type: 'number', message: '请输入有效的端口号', trigger: 'blur'},
+            }"
             label-placement="left"
         >
           <n-form-item label="节点名称" path="name">
@@ -107,12 +111,6 @@ const isEditing = ref(false)
 const spin_loading = ref(false)
 
 const drawerTitle = computed(() => isEditing.value ? '编辑 ES 连接' : '添加 ES 连接')
-
-const rules = {
-  name: {required: true, message: '请输入节点名称', trigger: 'blur'},
-  host: {required: true, message: '请输入主机地址', trigger: 'blur'},
-  port: {required: true, type: 'number', message: '请输入有效的端口号', trigger: 'blur'},
-}
 
 const formRef = ref(null)
 

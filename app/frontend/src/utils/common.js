@@ -39,3 +39,15 @@ export function formattedJson(value) {
   if (!value) return ''
   return JSON.stringify(value, null, 1)
 }
+
+// 验证json
+export function isValidJson(jsonString) {
+  try {
+    // 尝试解析 JSON 字符串
+    JSON.parse(jsonString);
+    return true; // 解析成功，是有效的 JSON
+  } catch (error) {
+    // 解析失败，不是有效的 JSON
+    return false;
+  }
+}

@@ -7,7 +7,7 @@
     </n-flex>
     <n-flex align="center">
       <n-input @keydown.enter="search" v-model:value="search_text" autosize style="min-width: 20%"
-                   default-value="*" placeholder="搜索索引，支持通配符*"/>
+               default-value="*" placeholder="搜索索引，支持通配符*"/>
 
       <n-button @click="search" :render-icon="renderIcon(SearchFilled)"></n-button>
       <n-button @click="CreateIndexDrawerVisible = true" :render-icon="renderIcon(AddFilled)">添加索引</n-button>
@@ -34,7 +34,7 @@
       <n-dropdown :options="bulk_options">
         <n-button>批量操作</n-button>
       </n-dropdown>
-      <n-text> 你选中了 {{ selectedRowKeys.length }} 行。 </n-text>
+      <n-text> 你选中了 {{ selectedRowKeys.length }} 行。</n-text>
     </n-flex>
 
 
@@ -49,17 +49,35 @@
         <n-form
             :model="indexConfig"
             label-placement="left"
+            ref="formRef"
+            :rules="{
+              name: {required: true, message: '请输入索引名称', trigger: 'blur'},
+              numberOfShards: {required: true, type: 'number', message: '请输入主分片', trigger: 'blur'},
+              numberOfReplicas: {required: true, type: 'number', message: '请输入副本数量', trigger: 'blur'},
+            }"
         >
           <n-form-item label="索引名称" path="name">
             <n-input v-model:value="indexConfig.name"/>
           </n-form-item>
           <n-form-item label="主分片" path="numberOfShards">
-            <n-input-number  v-model:value="indexConfig.numberOfShards"/>
+            <n-input-number v-model:value="indexConfig.numberOfShards"/>
           </n-form-item>
           <n-form-item label="副本数量" path="numberOfReplicas">
             <n-input-number v-model:value="indexConfig.numberOfReplicas"/>
           </n-form-item>
-
+          <n-p>mapping</n-p>
+          <n-form-item path="mapping">
+            <n-input v-model:value="indexConfig.mapping" type="textarea" style="min-height: 300px; max-height: 800px;"
+                     placeholder='输入mapping的json，例如
+{
+  "properties": {
+    "created_at": {
+      "type": "date",
+      "format": "yyyy-MM-dd HH:mm:ss"
+    }
+  }
+}'/>
+          </n-form-item>
         </n-form>
         <template #footer>
           <n-space justify="end">
@@ -77,8 +95,8 @@ import {onMounted} from "vue";
 import emitter from "../utils/eventBus";
 import {h, ref, computed} from 'vue'
 import {NButton, NDataTable, NDropdown, NIcon, NProgress, NTag, NText, useMessage} from 'naive-ui'
-import {formattedJson, renderIcon} from "../utils/common";
-import {AddFilled, MoreVertFilled, DriveFileMoveTwotone,AnnouncementOutlined, SearchFilled} from "@vicons/material";
+import {formattedJson, isValidJson, renderIcon} from "../utils/common";
+import {AddFilled, MoreVertFilled, DriveFileMoveTwotone, AnnouncementOutlined, SearchFilled} from "@vicons/material";
 import {
   GetIndexes,
   GetDoc10,
@@ -98,10 +116,12 @@ const json_data = ref(null)
 const drawer_title = ref(null)
 const loading = ref(false)
 const tableRef = ref();
+const formRef = ref();
 const indexConfig = ref({
   name: "",
   numberOfShards: 1,
-  numberOfReplicas: 0
+  numberOfReplicas: 0,
+  mapping: "",
 });
 const data = ref([])
 const message = useMessage()
@@ -226,7 +246,7 @@ const columns = [
         {label: '查看10条文档', key: 'viewDocs'},
         {label: '段合并', key: 'mergeSegments'},
         {label: '删除索引', key: 'deleteIndex'},
-        {label: row.status === 'close' ? '打开索引': '关闭索引', key: 'openCloseIndex'},
+        {label: row.status === 'close' ? '打开索引' : '关闭索引', key: 'openCloseIndex'},
         {label: 'Refresh', key: 'refresh'},
         {label: 'Flush', key: 'flush'},
         {label: '清理缓存', key: 'clearCache'},
@@ -371,22 +391,37 @@ const clearCache = async (row) => {
 
   }
 }
-const addIndex = async () =>{
-  try {
-    const res = await CreateIndex(indexConfig.value.name, indexConfig.value.numberOfShards, indexConfig.value.numberOfReplicas)
-    if (res.err !== ""){
-      message.error(res.err)
+const addIndex = async () => {
+  formRef.value?.validate(async (errors) => {
+    if (!errors) {
+      // 测试mapping有的话，能不能json格式化
+      if (indexConfig.value.mapping){
+        const err = isValidJson(indexConfig.value.mapping)
+        if (!err) {
+          message.error("mapping不是合法的json格式")
+          return
+        }
+      }
+
+      try {
+        const res = await CreateIndex(indexConfig.value.name, indexConfig.value.numberOfShards, indexConfig.value.numberOfReplicas, indexConfig.value.mapping)
+        if (res.err !== "") {
+          message.error(res.err)
+        } else {
+          message.success(`索引${indexConfig.value.name}创建成功`)
+          await search()
+        }
+      } catch (e) {
+        message.error(e)
+      }
+      CreateIndexDrawerVisible.value = false
     }else {
-      message.success(`索引${indexConfig.value.name}创建成功`)
-      await search()
+      message.error('请填写所有必填字段')
     }
-  }catch (e) {
-    message.error(e)
-  }
-  CreateIndexDrawerVisible.value = false
+  })
 }
 
-const downloadCsv = () => tableRef.value?.downloadCsv({ fileName: "索引列表" });
+const downloadCsv = () => tableRef.value?.downloadCsv({fileName: "索引列表"});
 
 const queryAlias = async () => {
   loading.value = true
@@ -399,7 +434,7 @@ const queryAlias = async () => {
   }
   try {
     const res = await GetIndexAliases(name_lst)
-    if (res.err !== ""){
+    if (res.err !== "") {
       loading.value = false
       message.error(res.err)
       return
@@ -416,7 +451,7 @@ const queryAlias = async () => {
         data.value[k].alias = alias
       }
     }
-  }catch (e) {
+  } catch (e) {
     message.error(e)
   }
   loading.value = false
@@ -436,7 +471,7 @@ const bulk_options = [
           if (res.err !== "") {
             message.error(res.err)
             break
-          }else {
+          } else {
             success_count += 1
           }
         }

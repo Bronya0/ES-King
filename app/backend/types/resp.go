@@ -29,3 +29,4 @@ type Connect struct {
 	SkipSSLVerify bool   `json:"skipSSLVerify"`
 	CACert        string `json:"caCert"`
 }
+type H map[string]interface{}

@@ -105,7 +105,7 @@ func (es *ESService) TestClient(host, username, password, CACert string, UseSSL,
 
 func (es *ESService) GetNodes() *types.ResultsResp {
 	if es.ConnectObj.Host == "" {
-		return &types.ResultsResp{Err: "请先选择一个连接"}
+		return &types.ResultsResp{Err: "请先选择一个集群"}
 	}
 	resp, err := es.Client.R().Get(es.ConnectObj.Host + NodesApi)
 	if err != nil {
@@ -120,7 +120,7 @@ func (es *ESService) GetNodes() *types.ResultsResp {
 
 func (es *ESService) GetHealth() *types.ResultResp {
 	if es.ConnectObj.Host == "" {
-		return &types.ResultResp{Err: "请先选择一个连接"}
+		return &types.ResultResp{Err: "请先选择一个集群"}
 	}
 	resp, err := es.Client.R().Get(es.ConnectObj.Host + HealthApi)
 	if err != nil {
@@ -135,7 +135,7 @@ func (es *ESService) GetHealth() *types.ResultResp {
 
 func (es *ESService) GetStats() *types.ResultResp {
 	if es.ConnectObj.Host == "" {
-		return &types.ResultResp{Err: "请先选择一个连接"}
+		return &types.ResultResp{Err: "请先选择一个集群"}
 	}
 	resp, err := es.Client.R().Get(es.ConnectObj.Host + StatsApi)
 	if err != nil {
@@ -151,7 +151,7 @@ func (es *ESService) GetStats() *types.ResultResp {
 
 func (es *ESService) GetIndexes(name string) *types.ResultsResp {
 	if es.ConnectObj.Host == "" {
-		return &types.ResultsResp{Err: "请先选择一个连接"}
+		return &types.ResultsResp{Err: "请先选择一个集群"}
 	}
 	newUrl := es.ConnectObj.Host + AllIndexApi
 	if name != "" {
@@ -168,17 +168,25 @@ func (es *ESService) GetIndexes(name string) *types.ResultsResp {
 
 }
 
-func (es *ESService) CreateIndex(name string, numberOfShards, numberOfReplicas int) *types.ResultResp {
+func (es *ESService) CreateIndex(name string, numberOfShards, numberOfReplicas int, mapping string) *types.ResultResp {
 	if es.ConnectObj.Host == "" {
-		return &types.ResultResp{Err: "请先选择一个连接"}
+		return &types.ResultResp{Err: "请先选择一个集群"}
 	}
-
-	indexConfig := map[string]interface{}{
-		"settings": map[string]interface{}{
+	indexConfig := types.H{
+		"settings": types.H{
 			"number_of_shards":   numberOfShards,
 			"number_of_replicas": numberOfReplicas,
 		},
 	}
+	if mapping != "" {
+		var mappings types.H
+		err := json.Unmarshal([]byte(mapping), &mappings)
+		if err != nil {
+			return &types.ResultResp{Err: err.Error()}
+		}
+		indexConfig["mappings"] = mappings
+	}
+
 	resp, err := es.Client.R().
 		SetBody(indexConfig).
 		Put(es.ConnectObj.Host + "/" + name)
@@ -194,7 +202,7 @@ func (es *ESService) CreateIndex(name string, numberOfShards, numberOfReplicas i
 
 func (es *ESService) GetIndexInfo(indexName string) *types.ResultResp {
 	if es.ConnectObj.Host == "" {
-		return &types.ResultResp{Err: "请先选择一个连接"}
+		return &types.ResultResp{Err: "请先选择一个集群"}
 	}
 
 	resp, err := es.Client.R().Get(es.ConnectObj.Host + "/" + indexName)
@@ -216,7 +224,7 @@ func (es *ESService) GetIndexInfo(indexName string) *types.ResultResp {
 
 func (es *ESService) DeleteIndex(indexName string) *types.ResultResp {
 	if es.ConnectObj.Host == "" {
-		return &types.ResultResp{Err: "请先选择一个连接"}
+		return &types.ResultResp{Err: "请先选择一个集群"}
 	}
 
 	resp, err := es.Client.R().Delete(es.ConnectObj.Host + "/" + indexName)
@@ -239,7 +247,7 @@ func (es *ESService) DeleteIndex(indexName string) *types.ResultResp {
 
 func (es *ESService) OpenCloseIndex(indexName, now string) *types.ResultResp {
 	if es.ConnectObj.Host == "" {
-		return &types.ResultResp{Err: "请先选择一个连接"}
+		return &types.ResultResp{Err: "请先选择一个集群"}
 	}
 
 	action := map[string]string{
@@ -266,7 +274,7 @@ func (es *ESService) OpenCloseIndex(indexName, now string) *types.ResultResp {
 
 func (es *ESService) GetIndexMappings(indexName string) *types.ResultResp {
 	if es.ConnectObj.Host == "" {
-		return &types.ResultResp{Err: "请先选择一个连接"}
+		return &types.ResultResp{Err: "请先选择一个集群"}
 	}
 
 	resp, err := es.Client.R().Get(es.ConnectObj.Host + "/" + indexName)
@@ -282,7 +290,7 @@ func (es *ESService) GetIndexMappings(indexName string) *types.ResultResp {
 
 func (es *ESService) MergeSegments(indexName string) *types.ResultResp {
 	if es.ConnectObj.Host == "" {
-		return &types.ResultResp{Err: "请先选择一个连接"}
+		return &types.ResultResp{Err: "请先选择一个集群"}
 	}
 
 	resp, err := es.Client.R().Post(es.ConnectObj.Host + "/" + indexName + ForceMerge)
@@ -304,7 +312,7 @@ func (es *ESService) MergeSegments(indexName string) *types.ResultResp {
 
 func (es *ESService) Refresh(indexName string) *types.ResultResp {
 	if es.ConnectObj.Host == "" {
-		return &types.ResultResp{Err: "请先选择一个连接"}
+		return &types.ResultResp{Err: "请先选择一个集群"}
 	}
 
 	resp, err := es.Client.R().Post(es.ConnectObj.Host + "/" + indexName + REFRESH)
@@ -326,7 +334,7 @@ func (es *ESService) Refresh(indexName string) *types.ResultResp {
 
 func (es *ESService) Flush(indexName string) *types.ResultResp {
 	if es.ConnectObj.Host == "" {
-		return &types.ResultResp{Err: "请先选择一个连接"}
+		return &types.ResultResp{Err: "请先选择一个集群"}
 	}
 
 	resp, err := es.Client.R().Post(es.ConnectObj.Host + "/" + indexName + FLUSH)
@@ -348,7 +356,7 @@ func (es *ESService) Flush(indexName string) *types.ResultResp {
 
 func (es *ESService) CacheClear(indexName string) *types.ResultResp {
 	if es.ConnectObj.Host == "" {
-		return &types.ResultResp{Err: "请先选择一个连接"}
+		return &types.ResultResp{Err: "请先选择一个集群"}
 	}
 
 	resp, err := es.Client.R().Post(es.ConnectObj.Host + "/" + indexName + CacheClear)
@@ -370,7 +378,7 @@ func (es *ESService) CacheClear(indexName string) *types.ResultResp {
 
 func (es *ESService) GetDoc10(indexName string) *types.ResultResp {
 	if es.ConnectObj.Host == "" {
-		return &types.ResultResp{Err: "请先选择一个连接"}
+		return &types.ResultResp{Err: "请先选择一个集群"}
 	}
 
 	body := map[string]interface{}{
@@ -404,7 +412,7 @@ func (es *ESService) GetDoc10(indexName string) *types.ResultResp {
 
 func (es *ESService) Search(method, path string, body interface{}) *types.ResultResp {
 	if es.ConnectObj.Host == "" {
-		return &types.ResultResp{Err: "请先选择一个连接"}
+		return &types.ResultResp{Err: "请先选择一个集群"}
 	}
 
 	resp, err := es.Client.R().
@@ -426,7 +434,7 @@ func (es *ESService) Search(method, path string, body interface{}) *types.Result
 
 func (es *ESService) GetClusterSettings() *types.ResultResp {
 	if es.ConnectObj.Host == "" {
-		return &types.ResultResp{Err: "请先选择一个连接"}
+		return &types.ResultResp{Err: "请先选择一个集群"}
 	}
 
 	resp, err := es.Client.R().Get(es.ConnectObj.Host + ClusterSettings)
@@ -441,7 +449,7 @@ func (es *ESService) GetClusterSettings() *types.ResultResp {
 
 func (es *ESService) GetIndexSettings(indexName string) *types.ResultResp {
 	if es.ConnectObj.Host == "" {
-		return &types.ResultResp{Err: "请先选择一个连接"}
+		return &types.ResultResp{Err: "请先选择一个集群"}
 	}
 
 	resp, err := es.Client.R().Get(es.ConnectObj.Host + "/" + indexName)
@@ -456,7 +464,7 @@ func (es *ESService) GetIndexSettings(indexName string) *types.ResultResp {
 
 func (es *ESService) GetIndexAliases(indexNameList []string) *types.ResultResp {
 	if es.ConnectObj.Host == "" {
-		return &types.ResultResp{Err: "请先选择一个连接"}
+		return &types.ResultResp{Err: "请先选择一个集群"}
 	}
 
 	indexNames := strings.Join(indexNameList, ",")
@@ -488,7 +496,7 @@ func (es *ESService) GetIndexAliases(indexNameList []string) *types.ResultResp {
 
 func (es *ESService) GetIndexSegments(indexName string) *types.ResultResp {
 	if es.ConnectObj.Host == "" {
-		return &types.ResultResp{Err: "请先选择一个连接"}
+		return &types.ResultResp{Err: "请先选择一个集群"}
 	}
 
 	resp, err := es.Client.R().Get(es.ConnectObj.Host + "/" + indexName)
@@ -503,7 +511,7 @@ func (es *ESService) GetIndexSegments(indexName string) *types.ResultResp {
 
 func (es *ESService) GetTasks() *types.ResultsResp {
 	if es.ConnectObj.Host == "" {
-		return &types.ResultsResp{Err: "请先选择一个连接"}
+		return &types.ResultsResp{Err: "请先选择一个集群"}
 	}
 
 	resp, err := es.Client.R().Get(es.ConnectObj.Host + TasksApi)
@@ -545,7 +553,7 @@ func (es *ESService) GetTasks() *types.ResultsResp {
 
 func (es *ESService) CancelTasks(taskID string) *types.ResultResp {
 	if es.ConnectObj.Host == "" {
-		return &types.ResultResp{Err: "请先选择一个连接"}
+		return &types.ResultResp{Err: "请先选择一个集群"}
 	}
 
 	newUrl := fmt.Sprintf(es.ConnectObj.Host+CancelTasksApi, url.PathEscape(taskID))
