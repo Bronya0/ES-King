@@ -1,0 +1,10 @@
+width: 1280
+height: 768
+language: zh-CN
+theme: light
+connects:
+    - id: 1
+      name: 10.19.50.103
+      host: http://10.19.50.103:19399
+      username: ""
+      password: ""

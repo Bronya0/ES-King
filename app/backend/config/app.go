@@ -22,8 +22,6 @@ func (a *AppConfig) Start(ctx context.Context) {
 }
 
 func (a *AppConfig) GetConfig() *types.Config {
-	a.mu.Lock()
-	defer a.mu.Unlock()
 	configPath := a.getConfigPath()
 	defaultConfig := &types.Config{
 		Width:    common.Width,
