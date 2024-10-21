@@ -95,7 +95,7 @@
 import {computed, onMounted, ref} from 'vue'
 import {useMessage} from 'naive-ui'
 import {renderIcon} from "../utils/common";
-import {AddFilled, AllInclusiveFilled} from "@vicons/material";
+import {AddFilled} from "@vicons/material";
 import emitter from "../utils/eventBus";
 import {SetConnect, TestClient} from "../../wailsjs/go/service/ESService";
 import {GetConfig, SaveConfig} from "../../wailsjs/go/config/AppConfig";
