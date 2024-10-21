@@ -82,6 +82,7 @@
         </n-form>
         <template #footer>
           <n-space justify="end">
+            <n-button @click="test_connect" :loading="test_connect_loading">连接测试</n-button>
             <n-button @click="showEditDrawer = false">取消</n-button>
             <n-button type="primary" @click="saveNode">保存</n-button>
           </n-space>
@@ -109,6 +110,7 @@ const showEditDrawer = ref(false)
 const currentNode = ref({})
 const isEditing = ref(false)
 const spin_loading = ref(false)
+const test_connect_loading = ref(false)
 
 const drawerTitle = computed(() => isEditing.value ? '编辑 ES 连接' : '添加 ES 连接')
 
@@ -194,6 +196,21 @@ const deleteNode = async (id) => {
   message.success('删除成功')
 }
 
+const test_connect = async () => {
+  test_connect_loading.value = true
+  try {
+    const node = currentNode.value
+    const res = await TestClient(node.host, node.username, node.password, node.caCert, node.useSSL, node.skipSSLVerify)
+    if (res !== "") {
+      message.error("连接失败：" + res)
+    } else {
+      message.success('连接成功')
+    }
+  }catch (e) {
+    message.error(e)
+  }
+  test_connect_loading.value = false
+}
 const selectNode = async (node) => {
   // 这里实现切换菜单的逻辑
   console.log('选中节点:', node)

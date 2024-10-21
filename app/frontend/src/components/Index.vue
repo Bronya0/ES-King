@@ -6,8 +6,7 @@
       <n-text>共计{{ data.length }}个</n-text>
     </n-flex>
     <n-flex align="center">
-      <n-input @keydown.enter="search" v-model:value="search_text" autosize style="min-width: 20%"
-               default-value="*" placeholder="搜索索引，支持通配符*"/>
+      <n-input @keydown.enter="search" v-model:value="search_text" autosize style="min-width: 20%" placeholder="模糊搜索索引"/>
 
       <n-button @click="search" :render-icon="renderIcon(SearchFilled)"></n-button>
       <n-button @click="CreateIndexDrawerVisible = true" :render-icon="renderIcon(AddFilled)">添加索引</n-button>
@@ -125,7 +124,7 @@ const indexConfig = ref({
 });
 const data = ref([])
 const message = useMessage()
-const search_text = ref("*")
+const search_text = ref("")
 const selectedRowKeys = ref([]);
 const rowKey = (row) => row.index
 let aliases = {};
@@ -155,6 +154,7 @@ const getData = async (value) => {
   if (res.err !== "") {
     message.error(res.err)
   } else {
+    console.log(res)
     data.value = res.results
   }
 

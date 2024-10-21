@@ -142,6 +142,6 @@ function exportJson() {
 
 <style scoped>
 .editarea, .json_view {
-  height: 70dvh;
+  height: 72dvh;
 }
 </style>

@@ -4,7 +4,7 @@
       <n-avatar :src="icon"/>
     </template>
     <template #title>
-      <div style="font-weight: 800">{{app_name}}</div>
+      <div style="font-weight: 800">{{ app_name }}</div>
     </template>
     <template #extra>
       <n-flex justify="flex-end" style="--wails-draggable:no-drag" class="right-section">
@@ -31,7 +31,7 @@
 </template>
 
 <script setup>
-import {darkTheme, lightTheme, NAvatar, NButton,  NFlex, useMessage} from 'naive-ui'
+import {darkTheme, lightTheme, NAvatar, NButton, NFlex, useMessage} from 'naive-ui'
 import {
   NearMeOutlined,
   SystemUpdateAltSharp,
@@ -79,7 +79,7 @@ const checkForUpdates = async () => {
     const v = await GetVersion()
     const resp = await CheckUpdate()
     if (!resp) {
-      check_msg.value = "无法连接github，请检查网络"
+      message.error("无法连接github，请检查网络")
     } else if (resp.tag_name !== v) {
       check_msg.value = '发现新版本 ' + resp.tag_name
       version.value.body = resp.body
@@ -87,29 +87,31 @@ const checkForUpdates = async () => {
         title: '发现新版本 ' + resp.tag_name,
         description: resp.body,
         action: () =>
-              h(NFlex, {justify: "flex-end" }, () => [
-                h(
-                    NButton,
-                    {
-                      type: 'primary',
-                      secondary: true,
-                      onClick: () => BrowserOpenURL(update_url),
+            h(NFlex, {justify: "flex-end"}, () => [
+              h(
+                  NButton,
+                  {
+                    type: 'primary',
+                    secondary: true,
+                    onClick: () => BrowserOpenURL(update_url),
+                  },
+                  () => "立即下载",
+              ),
+              h(
+                  NButton,
+                  {
+                    secondary: true,
+                    onClick: () => {
+                      n.destroy()
                     },
-                    () => "立即下载",
-                ),
-                h(
-                    NButton,
-                    {
-                      secondary: true,
-                      onClick: () => {
-                        n.destroy()
-                      },
-                    },
-                    () => "取消",
-                ),
+                  },
+                  () => "取消",
+              ),
             ]),
         onPositiveClick: () => BrowserOpenURL(update_url),
       })
+    } else {
+      message.success("当前为最新版本：" + v)
     }
   } finally {
     update_loading.value = false
@@ -130,7 +132,7 @@ onMounted(async () => {
 })
 
 const selectNode = (node) => {
-  subtitle.value = desc + " ==> 当前集群：【"+node.name + "】"
+  subtitle.value = desc + " ==> 当前集群：【" + node.name + "】"
 }
 
 const minimizeWindow = () => {
