@@ -110,8 +110,6 @@ const checkForUpdates = async () => {
             ]),
         onPositiveClick: () => BrowserOpenURL(update_url),
       })
-    } else {
-      message.success("当前为最新版本：" + v)
     }
   } finally {
     update_loading.value = false

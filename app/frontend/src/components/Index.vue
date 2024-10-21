@@ -93,7 +93,7 @@
 import {onMounted} from "vue";
 import emitter from "../utils/eventBus";
 import {h, ref, computed} from 'vue'
-import {NButton, NDataTable, NDropdown, NIcon, NProgress, NTag, NText, useMessage} from 'naive-ui'
+import {NButton, NDataTable, NDropdown, NIcon, NTag, NText, useMessage} from 'naive-ui'
 import {formatBytes, formattedJson, isValidJson, renderIcon} from "../utils/common";
 import {AddFilled, MoreVertFilled, DriveFileMoveTwotone, AnnouncementOutlined, SearchFilled} from "@vicons/material";
 import {

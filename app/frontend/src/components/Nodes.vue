@@ -4,9 +4,12 @@
       <h2 style="width: 42px;">节点</h2>
       <n-button @click="getData" text :render-icon="renderIcon(RefreshOutlined)">refresh</n-button>
       <n-text>共计{{ data.length }}个</n-text>
+      <n-button @click="downloadCsv" :render-icon="renderIcon(DriveFileMoveTwotone)">导出为csv</n-button>
+
     </n-flex>
     <n-spin :show="loading" description="Connecting...">
       <n-data-table
+          ref="tableRef"
           :columns="columns"
           :data="data"
           size="small"
@@ -20,9 +23,9 @@
 import {onMounted} from "vue";
 import emitter from "../utils/eventBus";
 import { h, ref, computed } from 'vue'
-import {NDataTable, NProgress, NTag, NText, useMessage} from 'naive-ui'
+import {NButton, NDataTable, NProgress, NTag, NText, useMessage} from 'naive-ui'
 import {renderIcon} from "../utils/common";
-import {RefreshOutlined} from "@vicons/material";
+import {DriveFileMoveTwotone, RefreshOutlined} from "@vicons/material";
 import {GetNodes} from "../../wailsjs/go/service/ESService";
 
 const selectNode = async (node) => {
@@ -38,6 +41,7 @@ onMounted(async () => {
 const loading = ref(false)
 const data = ref([])
 const message = useMessage()
+const tableRef = ref();
 
 const getData = async () => {
   loading.value = true
@@ -57,6 +61,8 @@ const getProgressType = (value) => {
   if (numValue < 80) return 'warning'
   return 'error'
 }
+
+const downloadCsv = () => tableRef.value?.downloadCsv({fileName: "节点列表"});
 
 const renderProgress = (row, key) => {
   const value = Number(row[key])
