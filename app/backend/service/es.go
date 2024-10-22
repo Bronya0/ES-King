@@ -475,7 +475,7 @@ func (es *ESService) GetTasks() *types.ResultsResp {
 	if resp.StatusCode() != 200 {
 		return &types.ResultsResp{Err: string(resp.Body())}
 	}
-	nodes, _ := result["nodes"].(map[string]interface{})
+	nodes := result["nodes"].(map[string]interface{})
 
 	var data []interface{}
 	for _, nodeObj := range nodes {

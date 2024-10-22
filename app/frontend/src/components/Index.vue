@@ -95,7 +95,13 @@ import {h, onMounted, ref} from "vue";
 import emitter from "../utils/eventBus";
 import {NButton, NDataTable, NDropdown, NIcon, NTag, NText, useMessage} from 'naive-ui'
 import {createCsvContent, download_file, formatBytes, formattedJson, isValidJson, renderIcon} from "../utils/common";
-import {AddFilled, AnnouncementOutlined, DriveFileMoveTwotone, MoreVertFilled, SearchFilled} from "@vicons/material";
+import {
+  AddFilled,
+  AnnouncementOutlined,
+  DriveFileMoveTwotone,
+  MoreVertFilled,
+  SearchFilled
+} from "@vicons/material";
 import {
   CacheClear,
   CreateIndex,
@@ -271,10 +277,10 @@ const columns = [
             default: () => h(
                 NButton,
                 {
-                  quaternary: true,
-                  circle: true
+                  strong: true,
+                  secondary: true,
                 },
-                {default: () => h(NIcon, null, {default: () => h(MoreVertFilled)})}
+                {default: () => '操作', icon: () => h(NIcon, null, { default: () => h(MoreVertFilled) })}
             )
           }
       )

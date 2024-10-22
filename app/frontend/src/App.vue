@@ -71,6 +71,7 @@ import Nodes from './components/Nodes.vue'
 import Index from './components/Index.vue'
 import Rest from './components/Rest.vue'
 import Conn from './components/Conn.vue'
+import Task from './components/Task.vue'
 import Issue from './components/Issue.vue'
 import Snapshot from './components/Snapshot.vue'
 import {GetConfig, SaveTheme} from "../wailsjs/go/config/AppConfig";
@@ -81,7 +82,7 @@ import emitter from "./utils/eventBus";
 import {
   FavoriteTwotone,
   HiveOutlined,
-  SettingsSuggestOutlined,
+  SettingsSuggestOutlined,TaskAltFilled,
   AutoGraphOutlined, ApiOutlined, LibraryBooksOutlined, AllOutOutlined, BarChartOutlined, AddAPhotoTwotone
 } from '@vicons/material'
 import hljs from 'highlight.js/lib/core'
@@ -140,6 +141,12 @@ const sideMenuOptions = [
     component: Rest,
   },
   {
+    label: 'Task',
+    key: 'Task',
+    icon: renderIcon(TaskAltFilled),
+    component: Task,
+  },
+  {
     label: '健康',
     key: '健康',
     icon: renderIcon(FavoriteTwotone),
@@ -151,7 +158,6 @@ const sideMenuOptions = [
     icon: renderIcon(BarChartOutlined),
     component: Core,
   },
-
   {
     label: '快照',
     key: '快照',
