@@ -66,3 +66,30 @@ export function formatBytes(bytes, decimals = 2) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
+
+// 创建 CSV 内容的函数
+export function createCsvContent(allData, columns) {
+  // 过滤掉没有 title 的列
+  columns = columns.filter(col => col.title !== undefined);
+
+  const headers = columns.map(col => col.title).join(',')
+  const rows = allData.map(row =>
+      columns.map(col => row[col.key]).join(',')
+  ).join('\n')
+  return `${headers}\n${rows}`
+}
+
+// 下载件的函数，csv type：'text/csv;charset=utf-8;'
+export function download_file(content, fileName, type) {
+  const blob = new Blob([content], { type: type })
+  const link = document.createElement('a')
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', fileName)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+}

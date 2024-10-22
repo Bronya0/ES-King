@@ -10,7 +10,7 @@
 
       <n-button @click="search" :render-icon="renderIcon(SearchFilled)"></n-button>
       <n-button @click="CreateIndexDrawerVisible = true" :render-icon="renderIcon(AddFilled)">添加索引</n-button>
-      <n-button @click="downloadCsv" :render-icon="renderIcon(DriveFileMoveTwotone)">导出为csv</n-button>
+      <n-button @click="downloadAllDataCsv" :render-icon="renderIcon(DriveFileMoveTwotone)">导出为csv</n-button>
       <n-button @click="queryAlias" :render-icon="renderIcon(AnnouncementOutlined)">读取别名</n-button>
 
     </n-flex>
@@ -94,7 +94,14 @@ import {onMounted} from "vue";
 import emitter from "../utils/eventBus";
 import {h, ref, computed} from 'vue'
 import {NButton, NDataTable, NDropdown, NIcon, NTag, NText, useMessage} from 'naive-ui'
-import {formatBytes, formattedJson, isValidJson, renderIcon} from "../utils/common";
+import {
+  createCsvContent,
+  download_file,
+  formatBytes,
+  formattedJson,
+  isValidJson,
+  renderIcon
+} from "../utils/common";
 import {AddFilled, MoreVertFilled, DriveFileMoveTwotone, AnnouncementOutlined, SearchFilled} from "@vicons/material";
 import {
   GetIndexes,
@@ -233,7 +240,7 @@ const columns = [
     title: '占用存储',
     key: 'store.size',
     width: 60,
-    sorter: 'default',  // 因为原始数据就是数字，所以排序规则不用改
+    sorter: (a, b) => a['store.size'] - b['store.size'],
     render(row) {  // 这里要显示的是label，所以得转换一下
       return h('span', formatBytes(row['store.size']))
     }
@@ -424,8 +431,11 @@ const addIndex = async () => {
   })
 }
 
-const downloadCsv = () => tableRef.value?.downloadCsv({fileName: "索引列表"});
-
+// 下载所有数据的 CSV 文件
+const downloadAllDataCsv = async () => {
+  const csvContent = createCsvContent(data.value, columns)
+  download_file(csvContent, '索引列表.csv', 'text/csv;charset=utf-8;')
+}
 const queryAlias = async () => {
   loading.value = true
   let name_lst = []
