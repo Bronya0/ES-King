@@ -134,6 +134,12 @@ const sideMenuOptions = [
     component: Index,
   },
   {
+    label: 'REST',
+    key: 'REST',
+    icon: renderIcon(ApiOutlined),
+    component: Rest,
+  },
+  {
     label: '健康',
     key: '健康',
     icon: renderIcon(FavoriteTwotone),
@@ -145,12 +151,7 @@ const sideMenuOptions = [
     icon: renderIcon(BarChartOutlined),
     component: Core,
   },
-  {
-    label: 'REST',
-    key: 'REST',
-    icon: renderIcon(ApiOutlined),
-    component: Rest,
-  },
+
   {
     label: '快照',
     key: '快照',

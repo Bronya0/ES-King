@@ -6,7 +6,8 @@
       <n-text>共计{{ data.length }}个</n-text>
     </n-flex>
     <n-flex align="center">
-      <n-input @keydown.enter="search" v-model:value="search_text" autosize style="min-width: 20%" placeholder="模糊搜索索引"/>
+      <n-input @keydown.enter="search" v-model:value="search_text" autosize style="min-width: 20%"
+               placeholder="模糊搜索索引"/>
 
       <n-button @click="search" :render-icon="renderIcon(SearchFilled)"></n-button>
       <n-button @click="CreateIndexDrawerVisible = true" :render-icon="renderIcon(AddFilled)">添加索引</n-button>
@@ -90,29 +91,23 @@
   </n-flex>
 </template>
 <script setup>
-import {onMounted} from "vue";
+import {h, onMounted, ref} from "vue";
 import emitter from "../utils/eventBus";
-import {h, ref, computed} from 'vue'
 import {NButton, NDataTable, NDropdown, NIcon, NTag, NText, useMessage} from 'naive-ui'
+import {createCsvContent, download_file, formatBytes, formattedJson, isValidJson, renderIcon} from "../utils/common";
+import {AddFilled, AnnouncementOutlined, DriveFileMoveTwotone, MoreVertFilled, SearchFilled} from "@vicons/material";
 import {
-  createCsvContent,
-  download_file,
-  formatBytes,
-  formattedJson,
-  isValidJson,
-  renderIcon
-} from "../utils/common";
-import {AddFilled, MoreVertFilled, DriveFileMoveTwotone, AnnouncementOutlined, SearchFilled} from "@vicons/material";
-import {
-  GetIndexes,
-  GetDoc10,
-  GetIndexAliases,
-  GetIndexInfo,
   CacheClear,
   CreateIndex,
+  DeleteIndex,
+  Flush,
+  GetDoc10,
+  GetIndexAliases,
+  GetIndexes,
+  GetIndexInfo,
+  MergeSegments,
   OpenCloseIndex,
-  Refresh,
-  Flush, GetNodes, MergeSegments, DeleteIndex
+  Refresh
 } from "../../wailsjs/go/service/ESService";
 
 // 抽屉的可见性
@@ -187,7 +182,7 @@ const getType = (value) => {
     "green": "success",
     "yellow": "warning",
     "open": "success",
-    "close": "info",
+    "close": "error",
   }
   return type[value] || 'error'
 }
@@ -196,7 +191,11 @@ const columns = [
   {
     type: "selection",
   },
-  {title: '索引名', key: 'index', sorter: 'default', width: 120, resizable: true, ellipsis: {tooltip: true}},
+  {
+    title: '索引名', key: 'index', sorter: 'default', width: 120, resizable: true, ellipsis: {tooltip: true},
+    render: (row) => h('a',{onClick: () => viewIndexDocs(row)}, {default: () => row['index']}),
+
+  },
   {title: '别名', key: 'alias', sorter: 'default', width: 60, ellipsis: {tooltip: true}},
   {
     title: '健康',
@@ -325,14 +324,20 @@ const viewIndexAlias = async (row) => {
   }
 }
 const viewIndexDocs = async (row) => {
-  const res = await GetDoc10(row.index)
-  if (res.err !== "") {
-    message.error(res.err)
-  } else {
-    json_data.value = formattedJson(res.result)
-    drawer_title.value = row.index
-    drawerVisible.value = true
+  loading.value = true
+  try {
+    const res = await GetDoc10(row.index)
+    if (res.err !== "") {
+      message.error(res.err)
+    } else {
+      json_data.value = formattedJson(res.result)
+      drawer_title.value = row.index
+      drawerVisible.value = true
+    }
+  }catch (e) {
+    message.error(e)
   }
+  loading.value = false
 }
 const mergeSegments = async (row) => {
   const res = await MergeSegments(row.index)
@@ -405,7 +410,7 @@ const addIndex = async () => {
   formRef.value?.validate(async (errors) => {
     if (!errors) {
       // 测试mapping有的话，能不能json格式化
-      if (indexConfig.value.mapping){
+      if (indexConfig.value.mapping) {
         const err = isValidJson(indexConfig.value.mapping)
         if (!err) {
           message.error("mapping不是合法的json格式")
@@ -425,7 +430,7 @@ const addIndex = async () => {
         message.error(e)
       }
       CreateIndexDrawerVisible.value = false
-    }else {
+    } else {
       message.error('请填写所有必填字段')
     }
   })
