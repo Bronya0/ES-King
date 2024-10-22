@@ -24,8 +24,8 @@
 <script setup>
 
 import {
-  NSpace, NTabs, NTabPane, NSelect, NInput, NButton,
-  NGrid, NGridItem, NCard, NCode, useMessage, lightTheme, darkTheme
+  NSelect, NInput, NButton,
+  NGrid, NGridItem, useMessage
 } from 'naive-ui'
 import {onMounted, ref} from "vue";
 import JSONEditor from 'jsoneditor';
@@ -110,8 +110,9 @@ const sendRequest = async () => {
   }
   try {
     const res = await Search(method.value, path.value, editor.value.getText())
+    // 返回不是200也写入结果框
     if (res.err !== "") {
-      message.error(res.err)
+      response.value.set(res.err)
     } else {
       response.value.set(res.result)
     }
