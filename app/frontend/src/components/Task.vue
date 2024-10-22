@@ -24,16 +24,26 @@
       />
     </n-spin>
   </n-flex>
+
+  <n-drawer v-model:show="drawerVisible" :width="500">
+    <n-drawer-content title="结果" style="text-align: left;">
+      <n-code :code="json_data" language="json" show-line-numbers/>
+    </n-drawer-content>
+  </n-drawer>
+
 </template>
 <script setup>
 import {h, onMounted, ref} from "vue";
 import emitter from "../utils/eventBus";
 import {NButton, NDataTable, NDropdown, NIcon, NTag, NText, useMessage} from 'naive-ui'
-import {createCsvContent, download_file, formatDate, renderIcon} from "../utils/common";
+import {createCsvContent, download_file, formatDate, formattedJson, renderIcon} from "../utils/common";
 import {DriveFileMoveTwotone, DeleteOutlined, RefreshOutlined} from "@vicons/material";
 import {
   GetTasks,CancelTasks
 } from "../../wailsjs/go/service/ESService";
+
+const drawerVisible = ref(false)
+const json_data = ref(null)
 
 const loading = ref(false)
 const data = ref([])
@@ -62,6 +72,22 @@ const getData = async () => {
   }
 
 }
+
+const CancelTask = async (row) => {
+  loading.value = true
+  const res = await CancelTasks(row['task_id'])
+  console.log(res)
+  if (res.err !== "") {
+    message.error(res.err)
+  } else {
+    json_data.value = formattedJson(res.result)
+    drawerVisible.value = true
+  }
+
+  loading.value = false
+  await getData()
+}
+
 const pagination = ref({
   page: 1,
   pageSize: 10,
@@ -125,17 +151,6 @@ const columns = [
   }
 ]
 
-const CancelTask = async (row) => {
-  loading.value = true
-  const res = await CancelTasks(row['task_id'])
-  if (res.err !== "") {
-    message.error(res.err)
-  } else {
-    message.success(res.result)
-  }
-  loading.value = false
-  await getData()
-}
 
 // 下载所有数据的 CSV 文件
 const downloadAllDataCsv = async () => {
