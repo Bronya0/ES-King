@@ -79,7 +79,7 @@ const checkForUpdates = async () => {
     const v = await GetVersion()
     const resp = await CheckUpdate()
     if (!resp) {
-      message.error("无法连接github，请检查网络")
+      message.error("无法连接github，检查更新失败")
     } else if (resp.tag_name !== v) {
       check_msg.value = '发现新版本 ' + resp.tag_name
       version.value.body = resp.body
