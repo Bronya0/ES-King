@@ -1,16 +1,12 @@
 package service
 
 import (
-	"app/backend/config"
 	"app/backend/types"
-	"bytes"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -522,92 +518,4 @@ func (es *ESService) CancelTasks(taskID string) *types.ResultResp {
 		return &types.ResultResp{Err: string(resp.Body())}
 	}
 	return &types.ResultResp{Result: result}
-}
-
-func (es *ESService) BigModelSearch(content string) *types.ResultResp {
-
-	var result map[string]any
-
-	//给result赋值content内容
-	result = map[string]any{
-		"content": "未发送请求",
-	}
-
-	var res = &types.ResultResp{Result: result}
-
-	//调用大模型接口
-	url := "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
-
-	// 构造请求体
-	requestBody := map[string]interface{}{
-		"model": "qwen-plus",
-		"messages": []map[string]string{
-			{
-				"role": "system",
-				"content": "你是一个es程序员，能非常熟练的编写es查询语句。只需要回答es使用http方式查询的请求路径、请求方式、请求体即可，" +
-					"最终以文本格式输出，不要使用Markdown语法。拒绝回答与es无关的问题。" +
-					"参考格式为 ： 请求路径: /_search\n请求方式: GET\n请求体: \n{\n  \"query\": {\n    \"match_all\": {}\n  }\n}",
-			},
-			{
-				"role":    "user",
-				"content": content,
-			},
-		},
-	}
-
-	jsonBody, err := json.Marshal(requestBody)
-	if err != nil {
-		fmt.Println("JSON编码错误:", err)
-		return res
-	}
-
-	// 创建请求
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
-	if err != nil {
-		fmt.Println("创建请求失败:", err)
-		res.Err = err.Error()
-		return res
-	}
-
-	// 设置请求头
-	appConfig := &config.AppConfig{}
-	req.Header.Set("Authorization", "Bearer "+appConfig.GetConfig().Apikey)
-	req.Header.Set("Content-Type", "application/json")
-
-	// 发送请求
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("请求失败:", err)
-		res.Err = err.Error()
-		return res
-	}
-	defer resp.Body.Close()
-
-	// 读取响应
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("读取响应失败:", err)
-		res.Err = err.Error()
-		return res
-	}
-
-	fmt.Println("响应状态:", resp.Status)
-	//body中的内容格式为{"choices":[{"message":{"role":"assistant","content":"我是Qwen，由阿里云开发的超大规模语言模型。我被设计用于生成各种文本，如文章、故事、诗歌、故事等，并能根据不同的场景和需求进行对话、解答问题、提供信息和建议。很高兴为您服务！"},"finish_reason":"stop","index":0,"logprobs":null}],"object":"chat.completion","usage":{"prompt_tokens":32,"completion_tokens":53,"total_tokens":85},"created":1733816506,"system_fingerprint":null,"model":"qwen-plus","id":"chatcmpl-924d8063-e972-95db-956d-3c4b0262a9a7"}，解析出其中content中的内容
-	var responseBody map[string]any
-	err = json.Unmarshal(body, &responseBody)
-	if err != nil {
-		fmt.Println("JSON解析失败:", err)
-		res.Err = err.Error()
-		return res
-	}
-	var resContent = responseBody["choices"].([]any)[0].(map[string]any)["message"].(map[string]any)["content"]
-	//给result赋值content内容
-	result = map[string]any{
-		"content": resContent,
-	}
-
-	res = &types.ResultResp{Result: result}
-	fmt.Println("结果:", res)
-	return res
 }

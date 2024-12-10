@@ -30,7 +30,6 @@ func (a *AppConfig) GetConfig() *types.Config {
 		Language: common.Language,
 		Theme:    common.Theme,
 		Connects: make([]types.Connect, 0),
-		Apikey:   common.Apikey,
 	}
 	data, err := os.ReadFile(configPath)
 	if err != nil {
