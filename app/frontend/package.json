@@ -19,7 +19,7 @@
     "@vicons/material": "^0.12.0",
     "@vitejs/plugin-vue": "^5.1.4",
     "naive-ui": "^2.39.0",
-    "vite": "6.3.4"
+    "vite": "6.3.6"
   },
   "keywords": [],
   "author": "bronya0"
