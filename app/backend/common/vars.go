@@ -26,8 +26,8 @@ var (
 
 const (
 	AppName     = "ES-King"
-	Width       = 1600
-	Height      = 870
+	Width       = 1180
+	Height      = 760
 	Theme       = "dark"
 	ConfigDir   = ".es-king"
 	ConfigPath  = "config.yaml"
