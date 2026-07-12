@@ -29,6 +29,8 @@
 
 **同款Kafka客户端，已有上万人下载**：[Kafka-King](https://github.com/Bronya0/Kafka-King)
 
+**作者另一款开源编码 AI Agent**：[ally-agent](https://github.com/Bronya0/ally-agent)
+
 **使用&开发文档（AI生成）**：[https://zread.ai/Bronya0/ES-King](https://zread.ai/Bronya0/ES-King)
 
 
