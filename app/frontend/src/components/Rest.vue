@@ -21,6 +21,20 @@
       <h2>{{ t('rest.title') }}</h2>
       <n-text>{{ t('rest.desc') }}</n-text>
     </n-flex>
+
+    <!-- 查询Tab -->
+    <n-tabs
+        type="editable-card"
+        size="small"
+        :value="activeTabId"
+        :closable="tabs.length > 1"
+        @update:value="handleTabSwitch"
+        @add="addTab"
+        @close="closeTab"
+    >
+      <n-tab v-for="tab in tabs" :key="tab.id" :name="tab.id" :tab="tab.label"/>
+    </n-tabs>
+
     <n-flex align="center">
       <n-select v-model:value="method" :options="methodOptions" style="width: 120px;"/>
 
@@ -30,6 +44,11 @@
       <n-button :loading="send_loading" :render-icon="renderIcon(SendSharp)" @click="sendRequest">{{ t('rest.send') }}</n-button>
       <n-button :render-icon="renderIcon(HistoryOutlined)" @click="showHistoryDrawer = true">{{ t('rest.history') }}</n-button>
       <n-button :render-icon="renderIcon(MenuBookTwotone)" @click="showDrawer = true">{{ t('rest.examples') }}</n-button>
+      <n-button :render-icon="renderIcon(StarOutlined)" @click="openSaveFavorite">{{ t('rest.saveFavorite') }}</n-button>
+      <n-button :render-icon="renderIcon(BookmarksFilled)" @click="showFavoriteDrawer = true">{{ t('rest.favorites') }}</n-button>
+      <n-button :render-icon="renderIcon(TableRowsOutlined)" :type="showTableView ? 'primary' : 'default'"
+                @click="showTableView = !showTableView">{{ t('rest.tableView') }}
+      </n-button>
       <n-button :render-icon="renderIcon(ArrowDownwardOutlined)" @click="exportJson">{{ t('rest.exportResult') }}</n-button>
     </n-flex>
     <n-grid :cols="2" x-gap="20">
@@ -39,7 +58,18 @@
              @paste="toTree"></div>
       </n-grid-item>
       <n-grid-item>
-        <div id="json_view" class="editarea"></div>
+        <div v-show="!showTableView" id="json_view" class="editarea"></div>
+        <div v-show="showTableView" class="editarea">
+          <n-data-table
+              :bordered="false"
+              :columns="tableColumns"
+              :data="tableData"
+              :max-height="620"
+              virtual-scroll
+              size="small"
+              striped
+          />
+        </div>
       </n-grid-item>
     </n-grid>
   </n-flex>
@@ -48,64 +78,16 @@
     <n-drawer-content style="text-align: left;" :title="t('rest.queryExamples')">
       <n-flex vertical>
         <n-collapse>
-          <n-collapse-item name="1" title="1. Term查询">
-            <n-code :code="dslExamples.term" language="json"/>
-          </n-collapse-item>
-
-          <n-collapse-item name="2" title="2. Terms查询">
-            <n-code :code="dslExamples.terms" language="json"/>
-          </n-collapse-item>
-
-          <n-collapse-item name="3" title="3. Match查询">
-            <n-code :code="dslExamples.match" language="json"/>
-          </n-collapse-item>
-
-          <n-collapse-item name="4" title="4. Match Phrase查询">
-            <n-code :code="dslExamples.matchPhrase" language="json"/>
-          </n-collapse-item>
-
-          <n-collapse-item name="5" title="5. Range查询">
-            <n-code :code="dslExamples.range" language="json"/>
-          </n-collapse-item>
-
-          <n-collapse-item name="6" title="6. Bool复合查询">
-            <n-code :code="dslExamples.bool" language="json"/>
-          </n-collapse-item>
-
-          <n-collapse-item name="7" title="7. Terms Aggregation">
-            <n-code :code="dslExamples.termsAggs" language="json"/>
-          </n-collapse-item>
-
-          <n-collapse-item name="8" title="8. Date Histogram聚合">
-            <n-code :code="dslExamples.dateHistogram" language="json"/>
-          </n-collapse-item>
-
-          <n-collapse-item name="9" title="9. Nested查询">
-            <n-code :code="dslExamples.nested" language="json"/>
-          </n-collapse-item>
-
-          <n-collapse-item name="10" title="10. Exists查询">
-            <n-code :code="dslExamples.exists" language="json"/>
-          </n-collapse-item>
-
-          <n-collapse-item name="11" title="11. Multi-match查询">
-            <n-code :code="dslExamples.multiMatch" language="json"/>
-          </n-collapse-item>
-
-          <n-collapse-item name="12" title="12. Wildcard查询">
-            <n-code :code="dslExamples.wildcard" language="json"/>
-          </n-collapse-item>
-
-          <n-collapse-item name="13" title="13. Metrics聚合">
-            <n-code :code="dslExamples.metrics" language="json"/>
-          </n-collapse-item>
-
-          <n-collapse-item name="14" title="14. Cardinality聚合">
-            <n-code :code="dslExamples.cardinality" language="json"/>
-          </n-collapse-item>
-
-          <n-collapse-item name="15" title="15. Script查询">
-            <n-code :code="dslExamples.script" language="json"/>
+          <n-collapse-item v-for="(example, idx) in exampleList" :key="example.key" :name="String(idx + 1)">
+            <template #header>
+              <n-flex align="center" justify="space-between">
+                <span>{{ idx + 1 }}. {{ example.title }}</span>
+                <n-button size="tiny" type="primary" secondary @click.stop="insertExample(example.code)">
+                  {{ t('rest.insert') }}
+                </n-button>
+              </n-flex>
+            </template>
+            <n-code :code="example.code" language="json"/>
           </n-collapse-item>
         </n-collapse>
       </n-flex>
@@ -157,16 +139,52 @@
       </n-list>
     </n-drawer-content>
   </n-drawer>
+
+  <!-- 收藏查询抽屉 -->
+  <n-drawer v-model:show="showFavoriteDrawer" style="width: 38.2%">
+    <n-drawer-content :title="t('rest.favorites')">
+      <n-empty v-if="favorites.length === 0" :description="t('rest.noFavorites')"/>
+      <n-list v-else>
+        <n-list-item v-for="(item, idx) in favorites" :key="idx">
+          <n-flex vertical>
+            <n-flex align="center" justify="space-between">
+              <n-tag :type="getMethodTagType(item.method)" size="small">{{ item.method }}</n-tag>
+              <n-text>{{ item.name }}</n-text>
+              <n-flex>
+                <n-button size="small" quaternary type="info" @click="applyFavorite(item)">{{ t('rest.apply') }}</n-button>
+                <n-button size="small" quaternary type="error" @click="removeFavorite(idx)">{{ t('common.delete') }}</n-button>
+              </n-flex>
+            </n-flex>
+            <n-text depth="3" style="font-size: 12px;">{{ item.path }}</n-text>
+          </n-flex>
+        </n-list-item>
+      </n-list>
+    </n-drawer-content>
+  </n-drawer>
+
+  <!-- 保存收藏弹窗 -->
+  <n-modal v-model:show="saveFavoriteModal.show" preset="card" :title="t('rest.saveFavorite')" style="width: 460px;">
+    <n-input v-model:value="saveFavoriteModal.name" :placeholder="t('rest.favoriteName')" @keydown.enter="confirmSaveFavorite"/>
+    <template #footer>
+      <n-flex justify="end">
+        <n-button @click="saveFavoriteModal.show = false">{{ t('common.cancel') }}</n-button>
+        <n-button type="primary" @click="confirmSaveFavorite">{{ t('common.save') }}</n-button>
+      </n-flex>
+    </template>
+  </n-modal>
 </template>
 
 <script setup>
 
 import { useI18n } from 'vue-i18n'
-import {NButton, NGrid, NGridItem, NInput, NSelect, useMessage} from 'naive-ui'
+import {NGrid, NGridItem, NInput, NSelect, useMessage} from 'naive-ui'
 import {computed, nextTick, onMounted, ref} from "vue";
 import {Search} from "../../wailsjs/go/service/ESService";
-import {ArrowDownwardOutlined, HistoryOutlined, MenuBookTwotone, SearchFilled, SendSharp} from "@vicons/material";
-import {formatTimestamp, renderIcon} from "../utils/common";
+import {
+  ArrowDownwardOutlined, BookmarksFilled, HistoryOutlined, MenuBookTwotone, SearchFilled, SendSharp,
+  StarOutlined, TableRowsOutlined
+} from "@vicons/material";
+import {flattenObject, formatTimestamp, renderIcon} from "../utils/common";
 import {GetConfig, GetHistory, SaveHistory} from "../../wailsjs/go/config/AppConfig";
 import emitter from "../utils/eventBus";
 
@@ -185,13 +203,173 @@ const message = useMessage()
 const method = ref('POST')
 const searchText = ref('')
 const history = ref([])
-const editor = ref();
+const editor = ref()
 const response = ref()
 const send_loading = ref(false)
 const showDrawer = ref(false)
 const showHistoryDrawer = ref(false)
+const showFavoriteDrawer = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(10)
+const showTableView = ref(false)
+const lastResponseText = ref('')
+
+// ==================== 多Tab ====================
+let tabSeq = 1
+const tabs = ref([{id: 1, label: 'Tab 1', method: 'POST', path: '', dsl: '', response: ''}])
+const activeTabId = ref(1)
+
+const addTab = () => {
+  tabSeq += 1
+  tabs.value.push({
+    id: tabSeq,
+    label: `Tab ${tabSeq}`,
+    method: 'POST',
+    path: '',
+    dsl: '',
+    response: '',
+  })
+  handleTabSwitch(tabSeq)
+}
+
+const closeTab = (tabId) => {
+  const idx = tabs.value.findIndex(item => item.id === tabId)
+  if (idx === -1) return
+  tabs.value.splice(idx, 1)
+  if (tabs.value.length === 0) {
+    addTab()
+    return
+  }
+  if (activeTabId.value === tabId) {
+    const next = tabs.value[Math.min(idx, tabs.value.length - 1)]
+    handleTabSwitch(next.id)
+  }
+}
+
+const handleTabSwitch = (tabId) => {
+  if (tabId === activeTabId.value) return
+  persistToTab(activeTabId.value)
+  activeTabId.value = tabId
+  const tab = tabs.value.find(item => item.id === tabId)
+  if (!tab) return
+  method.value = tab.method
+  setAceValue(tab.path)
+  editor.value.setText(tab.dsl)
+  if (tab.response) {
+    try {
+      response.value.set(JSON.parse(tab.response))
+    } catch {
+      response.value.setText(tab.response)
+    }
+  } else {
+    response.value.setText(t('rest.responseResult'))
+  }
+  lastResponseText.value = tab.response || ''
+}
+
+// 把当前编辑器内容保存进对应tab
+const persistToTab = (tabId) => {
+  const tab = tabs.value.find(item => item.id === tabId)
+  if (!tab || !editor.value) return
+  tab.method = method.value
+  tab.path = getAceValue() || ''
+  tab.dsl = editor.value.getText() || ''
+  tab.response = lastResponseText.value || ''
+}
+
+// ==================== 收藏查询 ====================
+const FAVORITE_KEY = 'es_king_saved_queries'
+const favorites = ref([])
+
+const readFavorites = () => {
+  try {
+    favorites.value = JSON.parse(localStorage.getItem(FAVORITE_KEY)) || []
+  } catch {
+    favorites.value = []
+  }
+}
+
+const writeFavorites = () => {
+  localStorage.setItem(FAVORITE_KEY, JSON.stringify(favorites.value))
+}
+
+const saveFavoriteModal = ref({
+  show: false,
+  name: '',
+})
+
+const openSaveFavorite = () => {
+  saveFavoriteModal.value = {show: true, name: ''}
+}
+
+const confirmSaveFavorite = () => {
+  const name = saveFavoriteModal.value.name?.trim()
+  if (!name) {
+    message.warning(t('rest.inputFavoriteName'))
+    return
+  }
+  favorites.value.unshift({
+    name,
+    method: method.value,
+    path: getAceValue() || '',
+    dsl: editor.value?.getText() || '',
+  })
+  writeFavorites()
+  saveFavoriteModal.value.show = false
+  message.success(t('common.saveSuccess'))
+}
+
+const applyFavorite = (item) => {
+  method.value = item.method
+  setAceValue(item.path)
+  editor.value.setText(item.dsl)
+  showFavoriteDrawer.value = false
+}
+
+const removeFavorite = (idx) => {
+  favorites.value.splice(idx, 1)
+  writeFavorites()
+}
+
+// ==================== 结果表格视图 ====================
+const tableData = computed(() => {
+  if (!showTableView.value || !lastResponseText.value) return []
+  try {
+    const parsed = JSON.parse(lastResponseText.value)
+    const hits = parsed?.hits?.hits
+    if (!Array.isArray(hits)) return []
+    return hits.map(hit => ({
+      _id: hit._id,
+      _index: hit._index,
+      ...flattenObject(hit._source || {}),
+    }))
+  } catch {
+    return []
+  }
+})
+
+const tableColumns = computed(() => {
+  const keyCount = {}
+  for (const row of tableData.value.slice(0, 50)) {
+    for (const key of Object.keys(row)) {
+      keyCount[key] = (keyCount[key] || 0) + 1
+    }
+  }
+  return Object.keys(keyCount)
+      .sort((a, b) => keyCount[b] - keyCount[a] || a.localeCompare(b))
+      .slice(0, 20)
+      .map(key => ({
+        title: key,
+        key,
+        ellipsis: {tooltip: {scrollable: true}},
+        render: (row) => {
+          const value = row[key]
+          if (value === null || value === undefined) return ''
+          if (typeof value === 'object') return JSON.stringify(value)
+          return String(value)
+        },
+      }))
+})
 
 const methodOptions = [
   {label: 'GET', value: 'GET'},
@@ -255,6 +433,7 @@ const keywords = [
 
 const selectNode = (node) => {
   response.value.setText(t('rest.responseResult'))
+  lastResponseText.value = ''
   send_loading.value = false
 }
 
@@ -262,6 +441,7 @@ onMounted(async () => {
 
   emitter.on('selectNode', selectNode)
   emitter.on('update_theme', themeChange)
+  readFavorites()
 
   const loadedConfig = await GetConfig()
   let theme = 'ace/theme/jsoneditor'
@@ -451,14 +631,21 @@ const sendRequest = async () => {
       } catch {
         response.value.set(res.err)
       }
+      lastResponseText.value = ''
     } else {
       response.value.set(res.result)
+      lastResponseText.value = JSON.stringify(res.result)
       await write_history()
     }
   } catch (e) {
     message.error(e.message)
   }
   send_loading.value = false
+}
+
+const insertExample = (code) => {
+  editor.value.setText(code)
+  showDrawer.value = false
 }
 
 const toTree = () => {
@@ -676,6 +863,25 @@ const dslExamples = {
     }
   }, null, 2)
 }
+
+// 示例列表（带i18n标题，供抽屉渲染与一键插入）
+const exampleList = computed(() => [
+  {key: 'term', title: t('rest.exampleTerm'), code: dslExamples.term},
+  {key: 'terms', title: t('rest.exampleTerms'), code: dslExamples.terms},
+  {key: 'match', title: t('rest.exampleMatch'), code: dslExamples.match},
+  {key: 'matchPhrase', title: t('rest.exampleMatchPhrase'), code: dslExamples.matchPhrase},
+  {key: 'range', title: t('rest.exampleRange'), code: dslExamples.range},
+  {key: 'bool', title: t('rest.exampleBool'), code: dslExamples.bool},
+  {key: 'termsAggs', title: t('rest.exampleTermsAggs'), code: dslExamples.termsAggs},
+  {key: 'dateHistogram', title: t('rest.exampleDateHistogram'), code: dslExamples.dateHistogram},
+  {key: 'nested', title: t('rest.exampleNested'), code: dslExamples.nested},
+  {key: 'exists', title: t('rest.exampleExists'), code: dslExamples.exists},
+  {key: 'multiMatch', title: t('rest.exampleMultiMatch'), code: dslExamples.multiMatch},
+  {key: 'wildcard', title: t('rest.exampleWildcard'), code: dslExamples.wildcard},
+  {key: 'metrics', title: t('rest.exampleMetrics'), code: dslExamples.metrics},
+  {key: 'cardinality', title: t('rest.exampleCardinality'), code: dslExamples.cardinality},
+  {key: 'script', title: t('rest.exampleScript'), code: dslExamples.script},
+])
 
 </script>
 

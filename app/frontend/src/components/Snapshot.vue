@@ -184,6 +184,49 @@
           </n-form>
         </n-modal>
       </n-tab-pane>
+
+      <n-tab-pane name="ilm" :tab="t('snapshot.tabIlm')">
+        <n-flex vertical>
+          <n-flex align="center">
+            <n-button :render-icon="renderIcon(RefreshOutlined)" text @click="getILMPolicies">{{ t('common.refresh') }}</n-button>
+            <n-button :render-icon="renderIcon(AddFilled)" @click="openCreateILM">{{ t('snapshot.createIlmPolicy') }}</n-button>
+          </n-flex>
+          <n-spin :show="ilmLoading" :description="t('app.loading')">
+            <n-data-table
+                :bordered="false"
+                :columns="ilmColumns"
+                :data="ilmData"
+                :max-height="550"
+                size="small"
+                striped
+            />
+          </n-spin>
+        </n-flex>
+
+        <n-modal v-model:show="ilmForm.show" preset="card" :title="t('snapshot.createIlmPolicy')" style="width: 640px;">
+          <n-form label-placement="top">
+            <n-form-item :label="t('snapshot.colPolicyId')">
+              <n-input v-model:value="ilmForm.policyId" placeholder="logs-lifecycle"/>
+            </n-form-item>
+            <n-form-item :label="t('snapshot.ilmPolicyBody')">
+              <n-input v-model:value="ilmForm.policy" type="textarea" :autosize="{minRows: 12, maxRows: 24}"
+                       class="json-editor-input"
+                       :placeholder='JSON.stringify({"phases": {"hot": {"actions": {}}, "delete": {"min_age": "30d", "actions": {"delete": {}}}}}, null, 2)'/>
+            </n-form-item>
+          </n-form>
+          <n-text depth="3">{{ t('snapshot.ilmPolicyHint') }}</n-text>
+          <template #footer>
+            <n-flex justify="end">
+              <n-button @click="ilmForm.show = false">{{ t('common.cancel') }}</n-button>
+              <n-button type="primary" :loading="ilmForm.saving" @click="handleCreateILM">{{ t('common.save') }}</n-button>
+            </n-flex>
+          </template>
+        </n-modal>
+
+        <n-modal v-model:show="ilmDetail.show" preset="card" :title="ilmDetail.title" style="width: 680px;">
+          <n-code :code="ilmDetail.content" language="json" show-line-numbers/>
+        </n-modal>
+      </n-tab-pane>
     </n-tabs>
   </n-flex>
 </template>
@@ -200,6 +243,7 @@ import {
   VerifySnapshotRepository, CreateSnapshot, DeleteSnapshot, GetSnapshotDetail,
   RestoreSnapshot, GetSnapshotRestoreStatus,
   GetSLMPolicies, CreateSLMPolicy, DeleteSLMPolicy, ExecuteSLMPolicy,
+  GetILMPolicies, CreateILMPolicy, DeleteILMPolicy,
 } from "../../wailsjs/go/service/ESService";
 
 const { t } = useI18n()
@@ -650,11 +694,134 @@ const slmColumns = computed(() => [
   }
 ])
 
+// ==================== ILM 索引生命周期管理 ====================
+const ilmLoading = ref(false)
+const ilmData = ref([])
+
+const ilmForm = ref({
+  show: false,
+  policyId: '',
+  policy: '',
+  saving: false,
+})
+
+const ilmDetail = ref({
+  show: false,
+  title: '',
+  content: '',
+})
+
+const getILMPolicies = async () => {
+  ilmLoading.value = true
+  try {
+    const res = await GetILMPolicies()
+    if (res.err !== "") {
+      message.error(res.err)
+    } else {
+      ilmData.value = (res.results || []).sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+    }
+  } catch (e) {
+    message.error(e.message)
+  } finally {
+    ilmLoading.value = false
+  }
+}
+
+const openCreateILM = () => {
+  ilmForm.value = {show: true, policyId: '', policy: '', saving: false}
+}
+
+const handleCreateILM = async () => {
+  if (!ilmForm.value.policyId || !ilmForm.value.policy) {
+    message.warning(t('snapshot.ilmNeedIdAndBody'))
+    return
+  }
+  ilmForm.value.saving = true
+  try {
+    const res = await CreateILMPolicy(ilmForm.value.policyId, ilmForm.value.policy)
+    if (res.err !== "") {
+      message.error(res.err)
+    } else {
+      message.success(t('snapshot.ilmPolicyCreated'))
+      ilmForm.value.show = false
+      await getILMPolicies()
+    }
+  } catch (e) {
+    message.error(e.message)
+  } finally {
+    ilmForm.value.saving = false
+  }
+}
+
+const viewILMDetail = (row) => {
+  ilmDetail.value = {
+    show: true,
+    title: row.name,
+    content: JSON.stringify({policy: row.policy, in_use_by: row.in_use_by}, null, 2),
+  }
+}
+
+const handleDeleteILM = (policyId) => {
+  dialog.warning({
+    title: t('common.warning'),
+    content: t('snapshot.confirmDeleteIlmPolicy', {name: policyId}),
+    positiveText: t('common.confirm'),
+    negativeText: t('common.cancel'),
+    onPositiveClick: async () => {
+      const res = await DeleteILMPolicy(policyId)
+      if (res.err !== "") {
+        message.error(res.err)
+      } else {
+        message.success(t('snapshot.ilmPolicyDeleted'))
+        await getILMPolicies()
+      }
+    }
+  })
+}
+
+const renderPhases = (row) => {
+  const phases = row.policy && row.policy.phases
+  if (!phases || typeof phases !== 'object') return '-'
+  return Object.keys(phases).join(', ')
+}
+
+const renderIlmIndices = (row) => {
+  const indices = row.in_use_by && row.in_use_by.indices
+  if (!Array.isArray(indices) || indices.length === 0) return '-'
+  return indices.join(', ')
+}
+
+const ilmColumns = computed(() => [
+  {title: t('snapshot.colPolicyId'), key: 'name', width: 160},
+  {
+    title: t('snapshot.ilmPhases'), key: 'phases',
+    render: (row) => renderPhases(row),
+  },
+  {
+    title: t('snapshot.ilmIndicesInUse'), key: 'in_use_by',
+    render: (row) => renderIlmIndices(row),
+  },
+  {
+    title: t('snapshot.ilmModifiedDate'), key: 'modified_date', width: 170,
+    render: (row) => row.modified_date || '-',
+  },
+  {
+    title: t('common.operation'), key: 'actions', width: 180,
+    render: (row) => h('div', {style: 'display: flex; gap: 8px;'}, [
+      h(NButton, {size: 'small', quaternary: true, type: 'info', onClick: () => viewILMDetail(row)},
+          {default: () => t('common.details')}),
+      h(NButton, {size: 'small', quaternary: true, type: 'error', onClick: () => handleDeleteILM(row.name)},
+          {default: () => t('common.delete')}),
+    ])
+  }
+])
+
 // ==================== 生命周期 ====================
 const selectNode = async () => {
   repoData.value = []
   snapData.value = []
   slmData.value = []
+  ilmData.value = []
   await loadAllData()
 }
 
@@ -662,6 +829,7 @@ const loadAllData = async () => {
   await getRepos()
   await getSnapshots()
   await getSLMPolicies()
+  await getILMPolicies()
 }
 
 onMounted(() => {
@@ -671,4 +839,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.json-editor-input :deep(textarea) {
+  font-family: Consolas, Monaco, monospace;
+}
 </style>

@@ -1137,3 +1137,782 @@ func (es *ESService) DownloadESIndex(index string, queryDSL string, filePath str
 	success = true
 	return res
 }
+
+// ==================== 文档管理 ====================
+
+func (es *ESService) checkConnect() string {
+	if es.ConnectObj.Host == "" {
+		return "请先选择一个集群"
+	}
+	return ""
+}
+
+// SearchDocs 分页查询文档，query 为查询子句 JSON（如 {"term":{"a":1}}），也可传整个 {"query":{...}} 会自动解包
+func (es *ESService) SearchDocs(indexName, query string, from, size int) *types.ResultResp {
+	if msg := es.checkConnect(); msg != "" {
+		return &types.ResultResp{Err: msg}
+	}
+	body := types.H{
+		"from":             from,
+		"size":             size,
+		"track_total_hits": true,
+	}
+	if query != "" {
+		var q any
+		if err := json.Unmarshal([]byte(query), &q); err != nil {
+			return &types.ResultResp{Err: "查询DSL不是合法的JSON: " + err.Error()}
+		}
+		if m, ok := q.(map[string]any); ok {
+			if inner, ok := m["query"]; ok {
+				body["query"] = inner
+			} else {
+				body["query"] = m
+			}
+		}
+	} else {
+		body["query"] = types.H{"match_all": types.H{}}
+	}
+	var result map[string]any
+	resp, err := es.Client.R().
+		SetBody(body).
+		SetResult(&result).
+		Post(es.ConnectObj.Host + "/" + indexName + "/_search")
+	if err != nil {
+		return &types.ResultResp{Err: err.Error()}
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return &types.ResultResp{Err: string(resp.Body())}
+	}
+	return &types.ResultResp{Result: result}
+}
+
+// GetDoc 获取单个文档
+func (es *ESService) GetDoc(indexName, docID string) *types.ResultResp {
+	if msg := es.checkConnect(); msg != "" {
+		return &types.ResultResp{Err: msg}
+	}
+	var result map[string]any
+	resp, err := es.Client.R().
+		SetResult(&result).
+		Get(es.ConnectObj.Host + "/" + indexName + "/_doc/" + url.PathEscape(docID))
+	if err != nil {
+		return &types.ResultResp{Err: err.Error()}
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return &types.ResultResp{Err: string(resp.Body())}
+	}
+	return &types.ResultResp{Result: result}
+}
+
+// UpdateDoc 覆盖更新单个文档
+func (es *ESService) UpdateDoc(indexName, docID, doc string) *types.ResultResp {
+	if msg := es.checkConnect(); msg != "" {
+		return &types.ResultResp{Err: msg}
+	}
+	if !json.Valid([]byte(doc)) {
+		return &types.ResultResp{Err: "文档内容不是合法的JSON"}
+	}
+	var result map[string]any
+	resp, err := es.Client.R().
+		SetBody(doc).
+		SetResult(&result).
+		Put(es.ConnectObj.Host + "/" + indexName + "/_doc/" + url.PathEscape(docID))
+	if err != nil {
+		return &types.ResultResp{Err: err.Error()}
+	}
+	if resp.StatusCode() != http.StatusOK && resp.StatusCode() != http.StatusCreated {
+		return &types.ResultResp{Err: string(resp.Body())}
+	}
+	return &types.ResultResp{Result: result}
+}
+
+// DeleteDoc 删除单个文档
+func (es *ESService) DeleteDoc(indexName, docID string) *types.ResultResp {
+	if msg := es.checkConnect(); msg != "" {
+		return &types.ResultResp{Err: msg}
+	}
+	var result map[string]any
+	resp, err := es.Client.R().
+		SetResult(&result).
+		Delete(es.ConnectObj.Host + "/" + indexName + "/_doc/" + url.PathEscape(docID))
+	if err != nil {
+		return &types.ResultResp{Err: err.Error()}
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return &types.ResultResp{Err: string(resp.Body())}
+	}
+	return &types.ResultResp{Result: result}
+}
+
+// DeleteByQuery 按查询删除文档，query 为查询子句 JSON
+func (es *ESService) DeleteByQuery(indexName, query string) *types.ResultResp {
+	if msg := es.checkConnect(); msg != "" {
+		return &types.ResultResp{Err: msg}
+	}
+	if query == "" {
+		return &types.ResultResp{Err: "按查询删除必须提供查询条件，禁止全量删除"}
+	}
+	var q any
+	if err := json.Unmarshal([]byte(query), &q); err != nil {
+		return &types.ResultResp{Err: "查询DSL不是合法的JSON: " + err.Error()}
+	}
+	if m, ok := q.(map[string]any); ok {
+		if inner, ok := m["query"]; ok {
+			q = inner
+		}
+	}
+	var result map[string]any
+	resp, err := es.Client.R().
+		SetBody(types.H{"query": q}).
+		SetResult(&result).
+		Post(es.ConnectObj.Host + "/" + indexName + "/_delete_by_query?wait_for_completion=false")
+	if err != nil {
+		return &types.ResultResp{Err: err.Error()}
+	}
+	if resp.StatusCode() != http.StatusOK && resp.StatusCode() != http.StatusAccepted {
+		return &types.ResultResp{Err: string(resp.Body())}
+	}
+	return &types.ResultResp{Result: result}
+}
+
+// BulkImport 批量导入文档，docs 为 JSON 数组字符串
+func (es *ESService) BulkImport(indexName, docs string) *types.ResultResp {
+	if msg := es.checkConnect(); msg != "" {
+		return &types.ResultResp{Err: msg}
+	}
+	var arr []any
+	if err := json.Unmarshal([]byte(docs), &arr); err != nil {
+		return &types.ResultResp{Err: "文档数据必须是JSON数组: " + err.Error()}
+	}
+	if len(arr) == 0 {
+		return &types.ResultResp{Err: "没有可导入的文档"}
+	}
+
+	var ndjson strings.Builder
+	for _, doc := range arr {
+		meta, _ := json.Marshal(types.H{"index": types.H{"_index": indexName}})
+		docBytes, err := json.Marshal(doc)
+		if err != nil {
+			return &types.ResultResp{Err: "文档序列化失败: " + err.Error()}
+		}
+		ndjson.Write(meta)
+		ndjson.WriteByte('\n')
+		ndjson.Write(docBytes)
+		ndjson.WriteByte('\n')
+	}
+
+	var result map[string]any
+	resp, err := es.Client.R().
+		SetBody(ndjson.String()).
+		SetHeader("Content-Type", "application/x-ndjson").
+		SetResult(&result).
+		Post(es.ConnectObj.Host + "/_bulk")
+	if err != nil {
+		return &types.ResultResp{Err: err.Error()}
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return &types.ResultResp{Err: string(resp.Body())}
+	}
+
+	failed := 0
+	firstErr := ""
+	if items, ok := result["items"].([]any); ok {
+		for _, item := range items {
+			itemMap, ok := item.(map[string]any)
+			if !ok {
+				continue
+			}
+			for _, op := range itemMap {
+				opMap, ok := op.(map[string]any)
+				if !ok {
+					continue
+				}
+				if status, ok := opMap["status"].(float64); ok && status >= 400 {
+					failed++
+					if firstErr == "" {
+						errBytes, _ := json.Marshal(opMap["error"])
+						firstErr = string(errBytes)
+					}
+				}
+			}
+		}
+	}
+	summary := types.H{
+		"total":   len(arr),
+		"success": len(arr) - failed,
+		"failed":  failed,
+	}
+	if firstErr != "" {
+		summary["first_error"] = firstErr
+	}
+	return &types.ResultResp{Result: summary}
+}
+
+// GetFieldTopValues 字段Top值统计与基数
+func (es *ESService) GetFieldTopValues(indexName, field string, size int) *types.ResultResp {
+	if msg := es.checkConnect(); msg != "" {
+		return &types.ResultResp{Err: msg}
+	}
+	if field == "" {
+		return &types.ResultResp{Err: "请输入字段名"}
+	}
+	if size <= 0 {
+		size = 10
+	}
+	body := types.H{
+		"size": 0,
+		"aggs": types.H{
+			"top_values": types.H{
+				"terms": types.H{"field": field, "size": size},
+			},
+			"unique_count": types.H{
+				"cardinality": types.H{"field": field},
+			},
+		},
+	}
+	var result map[string]any
+	resp, err := es.Client.R().
+		SetBody(body).
+		SetResult(&result).
+		Post(es.ConnectObj.Host + "/" + indexName + "/_search")
+	if err != nil {
+		return &types.ResultResp{Err: err.Error()}
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return &types.ResultResp{Err: string(resp.Body())}
+	}
+	return &types.ResultResp{Result: result}
+}
+
+// ==================== 别名管理 ====================
+
+// AddIndexAlias 为索引添加别名，extra 为可选的 filter/routing 等 JSON
+func (es *ESService) AddIndexAlias(indexName, alias, extra string) *types.ResultResp {
+	if msg := es.checkConnect(); msg != "" {
+		return &types.ResultResp{Err: msg}
+	}
+	if indexName == "" || alias == "" {
+		return &types.ResultResp{Err: "索引名和别名不能为空"}
+	}
+	action := types.H{
+		"index": indexName,
+		"alias": alias,
+	}
+	if extra != "" {
+		var extraMap map[string]any
+		if err := json.Unmarshal([]byte(extra), &extraMap); err != nil {
+			return &types.ResultResp{Err: "别名参数不是合法的JSON: " + err.Error()}
+		}
+		for k, v := range extraMap {
+			action[k] = v
+		}
+	}
+	body := types.H{"actions": []any{types.H{"add": action}}}
+	var result map[string]any
+	resp, err := es.Client.R().
+		SetBody(body).
+		SetResult(&result).
+		Post(es.ConnectObj.Host + "/_aliases")
+	if err != nil {
+		return &types.ResultResp{Err: err.Error()}
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return &types.ResultResp{Err: string(resp.Body())}
+	}
+	return &types.ResultResp{Result: result}
+}
+
+// RemoveIndexAlias 移除索引别名
+func (es *ESService) RemoveIndexAlias(indexName, alias string) *types.ResultResp {
+	if msg := es.checkConnect(); msg != "" {
+		return &types.ResultResp{Err: msg}
+	}
+	if indexName == "" || alias == "" {
+		return &types.ResultResp{Err: "索引名和别名不能为空"}
+	}
+	body := types.H{"actions": []any{types.H{"remove": types.H{
+		"index": indexName,
+		"alias": alias,
+	}}}}
+	var result map[string]any
+	resp, err := es.Client.R().
+		SetBody(body).
+		SetResult(&result).
+		Post(es.ConnectObj.Host + "/_aliases")
+	if err != nil {
+		return &types.ResultResp{Err: err.Error()}
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return &types.ResultResp{Err: string(resp.Body())}
+	}
+	return &types.ResultResp{Result: result}
+}
+
+// ==================== Reindex ====================
+
+// Reindex 从源索引复制数据到目标索引（异步），query 为可选的查询子句 JSON
+func (es *ESService) Reindex(source, dest, query string) *types.ResultResp {
+	if msg := es.checkConnect(); msg != "" {
+		return &types.ResultResp{Err: msg}
+	}
+	if source == "" || dest == "" {
+		return &types.ResultResp{Err: "源索引和目标索引不能为空"}
+	}
+	sourceBody := types.H{"index": source}
+	if query != "" {
+		var q any
+		if err := json.Unmarshal([]byte(query), &q); err != nil {
+			return &types.ResultResp{Err: "查询DSL不是合法的JSON: " + err.Error()}
+		}
+		if m, ok := q.(map[string]any); ok {
+			if inner, ok := m["query"]; ok {
+				q = inner
+			}
+		}
+		sourceBody["query"] = q
+	}
+	body := types.H{
+		"source": sourceBody,
+		"dest":   types.H{"index": dest},
+	}
+	var result map[string]any
+	resp, err := es.Client.R().
+		SetBody(body).
+		SetResult(&result).
+		Post(es.ConnectObj.Host + "/_reindex?wait_for_completion=false")
+	if err != nil {
+		return &types.ResultResp{Err: err.Error()}
+	}
+	if resp.StatusCode() != http.StatusOK && resp.StatusCode() != http.StatusAccepted {
+		return &types.ResultResp{Err: string(resp.Body())}
+	}
+	return &types.ResultResp{Result: result}
+}
+
+// ==================== Mapping / Settings 编辑 ====================
+
+// UpdateIndexMappings 更新索引 mapping（只能新增字段，不能修改已有字段类型）
+func (es *ESService) UpdateIndexMappings(indexName, mapping string) *types.ResultResp {
+	if msg := es.checkConnect(); msg != "" {
+		return &types.ResultResp{Err: msg}
+	}
+	if !json.Valid([]byte(mapping)) {
+		return &types.ResultResp{Err: "mapping不是合法的JSON"}
+	}
+	var result map[string]any
+	resp, err := es.Client.R().
+		SetBody(mapping).
+		SetResult(&result).
+		Put(es.ConnectObj.Host + "/" + indexName + "/_mapping")
+	if err != nil {
+		return &types.ResultResp{Err: err.Error()}
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return &types.ResultResp{Err: string(resp.Body())}
+	}
+	return &types.ResultResp{Result: result}
+}
+
+// UpdateIndexSettings 更新索引动态设置
+func (es *ESService) UpdateIndexSettings(indexName, settings string) *types.ResultResp {
+	if msg := es.checkConnect(); msg != "" {
+		return &types.ResultResp{Err: msg}
+	}
+	if !json.Valid([]byte(settings)) {
+		return &types.ResultResp{Err: "settings不是合法的JSON"}
+	}
+	var result map[string]any
+	resp, err := es.Client.R().
+		SetBody(settings).
+		SetResult(&result).
+		Put(es.ConnectObj.Host + "/" + indexName + "/_settings")
+	if err != nil {
+		return &types.ResultResp{Err: err.Error()}
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return &types.ResultResp{Err: string(resp.Body())}
+	}
+	return &types.ResultResp{Result: result}
+}
+
+// ==================== ILM 索引生命周期管理 ====================
+
+// GetILMPolicies 获取所有ILM策略
+func (es *ESService) GetILMPolicies() *types.ResultsResp {
+	if msg := es.checkConnect(); msg != "" {
+		return &types.ResultsResp{Err: msg}
+	}
+	var policiesMap map[string]any
+	resp, err := es.Client.R().Get(es.ConnectObj.Host + "/_ilm/policy")
+	if err != nil {
+		return &types.ResultsResp{Err: err.Error()}
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return &types.ResultsResp{Err: string(resp.Body())}
+	}
+	if err := json.Unmarshal(resp.Body(), &policiesMap); err != nil {
+		return &types.ResultsResp{Err: err.Error()}
+	}
+	var result []any
+	for name, info := range policiesMap {
+		infoMap, ok := info.(map[string]any)
+		if !ok {
+			continue
+		}
+		infoMap["name"] = name
+		result = append(result, infoMap)
+	}
+	return &types.ResultsResp{Results: result}
+}
+
+// CreateILMPolicy 创建或更新ILM策略，policy 为完整的策略 JSON（含 phases）
+func (es *ESService) CreateILMPolicy(policyId, policy string) *types.ResultResp {
+	if msg := es.checkConnect(); msg != "" {
+		return &types.ResultResp{Err: msg}
+	}
+	if policyId == "" || policy == "" {
+		return &types.ResultResp{Err: "策略ID和策略内容不能为空"}
+	}
+	var body any
+	if err := json.Unmarshal([]byte(policy), &body); err != nil {
+		return &types.ResultResp{Err: "策略内容不是合法的JSON: " + err.Error()}
+	}
+	var result map[string]any
+	resp, err := es.Client.R().
+		SetBody(body).
+		SetResult(&result).
+		Put(es.ConnectObj.Host + "/_ilm/policy/" + url.PathEscape(policyId))
+	if err != nil {
+		return &types.ResultResp{Err: err.Error()}
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return &types.ResultResp{Err: string(resp.Body())}
+	}
+	return &types.ResultResp{Result: result}
+}
+
+// DeleteILMPolicy 删除ILM策略
+func (es *ESService) DeleteILMPolicy(policyId string) *types.ResultResp {
+	if msg := es.checkConnect(); msg != "" {
+		return &types.ResultResp{Err: msg}
+	}
+	if policyId == "" {
+		return &types.ResultResp{Err: "策略ID不能为空"}
+	}
+	var result map[string]any
+	resp, err := es.Client.R().
+		SetResult(&result).
+		Delete(es.ConnectObj.Host + "/_ilm/policy/" + url.PathEscape(policyId))
+	if err != nil {
+		return &types.ResultResp{Err: err.Error()}
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return &types.ResultResp{Err: string(resp.Body())}
+	}
+	return &types.ResultResp{Result: result}
+}
+
+// ==================== 索引模板 ====================
+
+// GetIndexTemplates 获取所有索引模板
+func (es *ESService) GetIndexTemplates() *types.ResultsResp {
+	if msg := es.checkConnect(); msg != "" {
+		return &types.ResultsResp{Err: msg}
+	}
+	var result map[string]any
+	resp, err := es.Client.R().SetResult(&result).Get(es.ConnectObj.Host + "/_index_template")
+	if err != nil {
+		return &types.ResultsResp{Err: err.Error()}
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return &types.ResultsResp{Err: string(resp.Body())}
+	}
+	var data []any
+	if templates, ok := result["index_templates"].([]any); ok {
+		for _, tpl := range templates {
+			tplMap, ok := tpl.(map[string]any)
+			if !ok {
+				continue
+			}
+			item := map[string]any{"name": tplMap["name"]}
+			if body, ok := tplMap["index_template"].(map[string]any); ok {
+				item["index_patterns"] = body["index_patterns"]
+				item["composed_of"] = body["composed_of"]
+				item["priority"] = body["priority"]
+				item["version"] = body["version"]
+				item["_template"] = body["template"]
+			}
+			data = append(data, item)
+		}
+	}
+	return &types.ResultsResp{Results: data}
+}
+
+// CreateIndexTemplate 创建或更新索引模板，body 为完整模板 JSON
+func (es *ESService) CreateIndexTemplate(name, body string) *types.ResultResp {
+	if msg := es.checkConnect(); msg != "" {
+		return &types.ResultResp{Err: msg}
+	}
+	if name == "" || body == "" {
+		return &types.ResultResp{Err: "模板名称和内容不能为空"}
+	}
+	var bodyAny any
+	if err := json.Unmarshal([]byte(body), &bodyAny); err != nil {
+		return &types.ResultResp{Err: "模板内容不是合法的JSON: " + err.Error()}
+	}
+	var result map[string]any
+	resp, err := es.Client.R().
+		SetBody(bodyAny).
+		SetResult(&result).
+		Put(es.ConnectObj.Host + "/_index_template/" + url.PathEscape(name))
+	if err != nil {
+		return &types.ResultResp{Err: err.Error()}
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return &types.ResultResp{Err: string(resp.Body())}
+	}
+	return &types.ResultResp{Result: result}
+}
+
+// DeleteIndexTemplate 删除索引模板
+func (es *ESService) DeleteIndexTemplate(name string) *types.ResultResp {
+	if msg := es.checkConnect(); msg != "" {
+		return &types.ResultResp{Err: msg}
+	}
+	if name == "" {
+		return &types.ResultResp{Err: "模板名称不能为空"}
+	}
+	var result map[string]any
+	resp, err := es.Client.R().
+		SetResult(&result).
+		Delete(es.ConnectObj.Host + "/_index_template/" + url.PathEscape(name))
+	if err != nil {
+		return &types.ResultResp{Err: err.Error()}
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return &types.ResultResp{Err: string(resp.Body())}
+	}
+	return &types.ResultResp{Result: result}
+}
+
+// GetComponentTemplates 获取所有组件模板
+func (es *ESService) GetComponentTemplates() *types.ResultsResp {
+	if msg := es.checkConnect(); msg != "" {
+		return &types.ResultsResp{Err: msg}
+	}
+	var result map[string]any
+	resp, err := es.Client.R().SetResult(&result).Get(es.ConnectObj.Host + "/_component_template")
+	if err != nil {
+		return &types.ResultsResp{Err: err.Error()}
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return &types.ResultsResp{Err: string(resp.Body())}
+	}
+	var data []any
+	if templates, ok := result["component_templates"].([]any); ok {
+		for _, tpl := range templates {
+			tplMap, ok := tpl.(map[string]any)
+			if !ok {
+				continue
+			}
+			item := map[string]any{"name": tplMap["name"]}
+			if body, ok := tplMap["component_template"].(map[string]any); ok {
+				item["version"] = body["version"]
+				item["_template"] = body["template"]
+			}
+			data = append(data, item)
+		}
+	}
+	return &types.ResultsResp{Results: data}
+}
+
+// CreateIndexFromTemplate 基于索引模板创建索引，合并模板中的 settings 和 mappings
+func (es *ESService) CreateIndexFromTemplate(indexName, templateName string, numberOfShards, numberOfReplicas int) *types.ResultResp {
+	if msg := es.checkConnect(); msg != "" {
+		return &types.ResultResp{Err: msg}
+	}
+	if indexName == "" || templateName == "" {
+		return &types.ResultResp{Err: "索引名和模板名不能为空"}
+	}
+
+	var tplResult map[string]any
+	resp, err := es.Client.R().
+		SetResult(&tplResult).
+		Get(es.ConnectObj.Host + "/_index_template/" + url.PathEscape(templateName))
+	if err != nil {
+		return &types.ResultResp{Err: err.Error()}
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return &types.ResultResp{Err: string(resp.Body())}
+	}
+
+	body := types.H{}
+	settings := types.H{
+		"number_of_shards":   numberOfShards,
+		"number_of_replicas": numberOfReplicas,
+	}
+	if templates, ok := tplResult["index_templates"].([]any); ok && len(templates) > 0 {
+		if tplMap, ok := templates[0].(map[string]any); ok {
+			if indexTemplate, ok := tplMap["index_template"].(map[string]any); ok {
+				if tpl, ok := indexTemplate["template"].(map[string]any); ok {
+					if s, ok := tpl["settings"].(map[string]any); ok {
+						for k, v := range s {
+							settings[k] = v
+						}
+					}
+					if m, ok := tpl["mappings"]; ok && m != nil {
+						body["mappings"] = m
+					}
+				}
+			}
+		}
+	}
+	body["settings"] = settings
+
+	var result map[string]any
+	resp, err = es.Client.R().
+		SetBody(body).
+		SetResult(&result).
+		Put(es.ConnectObj.Host + "/" + indexName)
+	if err != nil {
+		return &types.ResultResp{Err: err.Error()}
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return &types.ResultResp{Err: string(resp.Body())}
+	}
+	return &types.ResultResp{Result: result}
+}
+
+// ==================== 分片与诊断 ====================
+
+// GetShards 获取分片分布，index 为空时获取所有
+func (es *ESService) GetShards(index string) *types.ResultsResp {
+	if msg := es.checkConnect(); msg != "" {
+		return &types.ResultsResp{Err: msg}
+	}
+	api := "/_cat/shards?format=json&pretty&bytes=b"
+	if index != "" {
+		api = "/" + index + api
+	}
+	var result []any
+	resp, err := es.Client.R().SetResult(&result).Get(es.ConnectObj.Host + api)
+	if err != nil {
+		return &types.ResultsResp{Err: err.Error()}
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return &types.ResultsResp{Err: string(resp.Body())}
+	}
+	return &types.ResultsResp{Results: result}
+}
+
+// ExplainAllocation 解释分片分配情况
+func (es *ESService) ExplainAllocation(indexName string, shard int, primary bool) *types.ResultResp {
+	if msg := es.checkConnect(); msg != "" {
+		return &types.ResultResp{Err: msg}
+	}
+	if indexName == "" {
+		return &types.ResultResp{Err: "索引名不能为空"}
+	}
+	body := types.H{
+		"index":   indexName,
+		"shard":   shard,
+		"primary": primary,
+	}
+	var result map[string]any
+	resp, err := es.Client.R().
+		SetBody(body).
+		SetResult(&result).
+		Post(es.ConnectObj.Host + "/_cluster/allocation/explain")
+	if err != nil {
+		return &types.ResultResp{Err: err.Error()}
+	}
+	// ES 对已分配的分片返回 400 并附解释信息，同样返回给前端展示
+	if resp.StatusCode() != http.StatusOK && len(resp.Body()) == 0 {
+		return &types.ResultResp{Err: fmt.Sprintf("HTTP %d", resp.StatusCode())}
+	}
+	if resp.StatusCode() == http.StatusOK {
+		return &types.ResultResp{Result: result}
+	}
+	return &types.ResultResp{Err: string(resp.Body())}
+}
+
+// GetHotThreads 获取节点热点线程（文本）
+func (es *ESService) GetHotThreads() *types.ResultResp {
+	if msg := es.checkConnect(); msg != "" {
+		return &types.ResultResp{Err: msg}
+	}
+	resp, err := es.Client.R().Get(es.ConnectObj.Host + "/_nodes/hot_threads")
+	if err != nil {
+		return &types.ResultResp{Err: err.Error()}
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return &types.ResultResp{Err: string(resp.Body())}
+	}
+	return &types.ResultResp{Result: string(resp.Body())}
+}
+
+// GetPendingTasks 获取集群挂起的任务
+func (es *ESService) GetPendingTasks() *types.ResultsResp {
+	if msg := es.checkConnect(); msg != "" {
+		return &types.ResultsResp{Err: msg}
+	}
+	var result []any
+	resp, err := es.Client.R().SetResult(&result).Get(es.ConnectObj.Host + "/_cluster/pending_tasks?format=json")
+	if err != nil {
+		return &types.ResultsResp{Err: err.Error()}
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return &types.ResultsResp{Err: string(resp.Body())}
+	}
+	return &types.ResultsResp{Results: result}
+}
+
+// GetThreadPool 获取线程池状态
+func (es *ESService) GetThreadPool() *types.ResultsResp {
+	if msg := es.checkConnect(); msg != "" {
+		return &types.ResultsResp{Err: msg}
+	}
+	var result []any
+	resp, err := es.Client.R().SetResult(&result).Get(es.ConnectObj.Host + "/_cat/thread_pool?format=json&pretty")
+	if err != nil {
+		return &types.ResultsResp{Err: err.Error()}
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return &types.ResultsResp{Err: string(resp.Body())}
+	}
+	return &types.ResultsResp{Results: result}
+}
+
+// ==================== 分词调试 ====================
+
+// AnalyzeText 分词调试，indexName 为空时使用集群默认分词
+func (es *ESService) AnalyzeText(indexName, text, analyzer, field string) *types.ResultResp {
+	if msg := es.checkConnect(); msg != "" {
+		return &types.ResultResp{Err: msg}
+	}
+	if text == "" {
+		return &types.ResultResp{Err: "请输入要分析的文本"}
+	}
+	body := types.H{"text": []string{text}}
+	if field != "" {
+		body["field"] = field
+	} else if analyzer != "" {
+		body["analyzer"] = analyzer
+	}
+	api := "/_analyze"
+	if indexName != "" {
+		api = "/" + indexName + api
+	}
+	var result map[string]any
+	resp, err := es.Client.R().
+		SetBody(body).
+		SetResult(&result).
+		Post(es.ConnectObj.Host + api)
+	if err != nil {
+		return &types.ResultResp{Err: err.Error()}
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return &types.ResultResp{Err: string(resp.Body())}
+	}
+	return &types.ResultResp{Result: result}
+}

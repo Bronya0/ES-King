@@ -5,3 +5,4 @@ build/bin
 /app/frontend/wailsjs
 /app/frontend/dist
 /app/frontend/package.json.md5
+/app/build/bin

@@ -88,10 +88,14 @@ import Health from './components/Health.vue'
 import Core from './components/Core.vue'
 import Nodes from './components/Nodes.vue'
 import Index from './components/Index.vue'
+import Docs from './components/Docs.vue'
 import Rest from './components/Rest.vue'
 import Conn from './components/Conn.vue'
 import Task from './components/Task.vue'
 import Snapshot from './components/Snapshot.vue'
+import Templates from './components/Templates.vue'
+import Diag from './components/Diag.vue'
+import Analyze from './components/Analyze.vue'
 import About from './components/About.vue'
 import {GetConfig, SaveTheme} from "../wailsjs/go/config/AppConfig";
 import {renderIcon} from "./utils/common";
@@ -101,7 +105,8 @@ import {
   FavoriteTwotone,
   HiveOutlined,
   SettingsSuggestOutlined, TaskAltFilled,
-  ApiOutlined, LibraryBooksOutlined, AllOutOutlined, BarChartOutlined, AddAPhotoTwotone, InfoOutlined
+  ApiOutlined, LibraryBooksOutlined, AllOutOutlined, BarChartOutlined, AddAPhotoTwotone, InfoOutlined,
+  DescriptionOutlined, MonitorHeartOutlined, AutoAwesomeMotionOutlined, ManageSearchOutlined
 } from '@vicons/material'
 import hljs from 'highlight.js/lib/core'
 import json from 'highlight.js/lib/languages/json'
@@ -167,10 +172,28 @@ const sideMenuOptions = computed(() => [
     component: Index,
   },
   {
+    label: t('menu.docs'),
+    key: '文档',
+    icon: renderIcon(DescriptionOutlined),
+    component: Docs,
+  },
+  {
     label: t('menu.rest'),
     key: 'REST',
     icon: renderIcon(ApiOutlined),
     component: Rest,
+  },
+  {
+    label: t('menu.analyze'),
+    key: '分词',
+    icon: renderIcon(ManageSearchOutlined),
+    component: Analyze,
+  },
+  {
+    label: t('menu.diag'),
+    key: '诊断',
+    icon: renderIcon(MonitorHeartOutlined),
+    component: Diag,
   },
   {
     label: t('menu.task'),
@@ -195,6 +218,12 @@ const sideMenuOptions = computed(() => [
     key: '快照',
     icon: renderIcon(AddAPhotoTwotone),
     component: Snapshot,
+  },
+  {
+    label: t('menu.templates'),
+    key: '模板',
+    icon: renderIcon(AutoAwesomeMotionOutlined),
+    component: Templates,
   },
   {
     label: t('menu.settings'),

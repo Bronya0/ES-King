@@ -27,7 +27,7 @@
                @keydown.enter="search"/>
 
       <n-button :render-icon="renderIcon(SearchFilled)" @click="search"></n-button>
-      <n-button :render-icon="renderIcon(AddFilled)" @click="CreateIndexDrawerVisible = true">{{ t('index.addIndex') }}</n-button>
+      <n-button :render-icon="renderIcon(AddFilled)" @click="openCreateIndex">{{ t('index.addIndex') }}</n-button>
       <n-button :render-icon="renderIcon(DriveFileMoveTwotone)" @click="downloadAllDataCsv">{{ t('common.exportCsv') }}</n-button>
       <n-button :render-icon="renderIcon(AnnouncementOutlined)" @click="queryAlias">{{ t('index.readAlias') }}</n-button>
       <n-button :loading="downloadIndexConfig.loading" :render-icon="renderIcon(DriveFileMoveTwotone)"
@@ -97,6 +97,10 @@
             label-placement="top"
             style="text-align: left;"
         >
+          <n-form-item :label="t('index.fromTemplate')" path="template">
+            <n-select v-model:value="indexConfig.template" :options="templateOptions" clearable
+                      :placeholder="t('index.templateOptional')"/>
+          </n-form-item>
           <n-form-item :label="t('index.indexName')" path="name">
             <n-input v-model:value="indexConfig.name"/>
           </n-form-item>
@@ -144,6 +148,82 @@
         </template>
       </n-drawer-content>
     </n-drawer>
+
+    <!-- 别名管理 -->
+    <n-modal v-model:show="aliasModal.show" preset="card" :title="t('index.manageAlias') + ' - ' + aliasModal.index"
+             style="width: 560px;">
+      <n-spin :show="aliasModal.loading">
+        <n-empty v-if="aliasModal.aliases.length === 0" :description="t('index.noAlias')"/>
+        <n-list v-else>
+          <n-list-item v-for="alias in aliasModal.aliases" :key="alias">
+            <n-flex align="center" justify="space-between">
+              <n-tag type="info">{{ alias }}</n-tag>
+              <n-button size="small" quaternary type="error" @click="removeAlias(alias)">{{ t('common.delete') }}</n-button>
+            </n-flex>
+          </n-list-item>
+        </n-list>
+      </n-spin>
+      <n-divider/>
+      <n-form label-placement="top">
+        <n-form-item :label="t('index.newAlias')">
+          <n-input v-model:value="aliasModal.newAlias" placeholder="my-alias" @keydown.enter="addAlias"/>
+        </n-form-item>
+        <n-form-item :label="t('index.aliasExtra')">
+          <n-input v-model:value="aliasModal.extra" type="textarea" :autosize="{minRows: 1, maxRows: 5}"
+                   class="json-editor-input"
+                   :placeholder='JSON.stringify({"filter": {"term": {"env": "prod"}}, "routing": "1"}, null, 2)'/>
+        </n-form-item>
+      </n-form>
+      <n-flex justify="end">
+        <n-button @click="aliasModal.show = false">{{ t('common.close') }}</n-button>
+        <n-button type="primary" :loading="aliasModal.adding" @click="addAlias">{{ t('index.addAlias') }}</n-button>
+      </n-flex>
+    </n-modal>
+
+    <!-- Reindex -->
+    <n-modal v-model:show="reindexModal.show" preset="card" :title="t('index.reindex')" style="width: 560px;">
+      <n-form label-placement="top">
+        <n-form-item :label="t('index.sourceIndex')">
+          <n-input :value="reindexModal.source" disabled/>
+        </n-form-item>
+        <n-form-item :label="t('index.destIndex')">
+          <n-input v-model:value="reindexModal.dest" :placeholder="t('index.destIndexPlaceholder')"/>
+        </n-form-item>
+        <n-form-item :label="t('index.reindexQuery')">
+          <n-input v-model:value="reindexModal.query" type="textarea" :autosize="{minRows: 3, maxRows: 10}"
+                   class="json-editor-input" :placeholder='JSON.stringify({"term": {"status": "active"}}, null, 2)'/>
+        </n-form-item>
+      </n-form>
+      <n-text depth="3">{{ t('index.reindexHint') }}</n-text>
+      <n-flex justify="end" style="margin-top: 12px;">
+        <n-button @click="reindexModal.show = false">{{ t('common.cancel') }}</n-button>
+        <n-button type="primary" :loading="reindexModal.loading" @click="doReindex">{{ t('common.execute') }}</n-button>
+      </n-flex>
+    </n-modal>
+
+    <!-- Mapping 编辑 -->
+    <n-modal v-model:show="mappingModal.show" preset="card"
+             :title="t('index.editMapping') + ' - ' + mappingModal.index" style="width: 640px;">
+      <n-alert type="warning" :show-icon="true" style="margin-bottom: 12px;">{{ t('index.mappingEditWarning') }}</n-alert>
+      <n-input v-model:value="mappingModal.content" type="textarea" :autosize="{minRows: 12, maxRows: 24}"
+               class="json-editor-input"/>
+      <n-flex justify="end" style="margin-top: 12px;">
+        <n-button @click="mappingModal.show = false">{{ t('common.cancel') }}</n-button>
+        <n-button type="primary" :loading="mappingModal.saving" @click="saveMapping">{{ t('common.save') }}</n-button>
+      </n-flex>
+    </n-modal>
+
+    <!-- Settings 编辑 -->
+    <n-modal v-model:show="settingsModal.show" preset="card"
+             :title="t('index.editSettings') + ' - ' + settingsModal.index" style="width: 640px;">
+      <n-alert type="info" :show-icon="true" style="margin-bottom: 12px;">{{ t('index.settingsEditWarning') }}</n-alert>
+      <n-input v-model:value="settingsModal.content" type="textarea" :autosize="{minRows: 12, maxRows: 24}"
+               class="json-editor-input"/>
+      <n-flex justify="end" style="margin-top: 12px;">
+        <n-button @click="settingsModal.show = false">{{ t('common.cancel') }}</n-button>
+        <n-button type="primary" :loading="settingsModal.saving" @click="saveSettings">{{ t('common.save') }}</n-button>
+      </n-flex>
+    </n-modal>
   </n-flex>
 </template>
 
@@ -164,8 +244,10 @@ import {
 import {AddFilled, AnnouncementOutlined, DriveFileMoveTwotone, MoreVertFilled, SearchFilled} from "@vicons/material";
 import {
   AddDocument,
+  AddIndexAlias,
   CacheClear,
   CreateIndex,
+  CreateIndexFromTemplate,
   DeleteIndex,
   DownloadESIndex,
   Flush,
@@ -173,9 +255,14 @@ import {
   GetIndexAliases,
   GetIndexes,
   GetIndexInfo,
+  GetIndexTemplates,
   MergeSegments,
   OpenCloseIndex,
   Refresh,
+  RemoveIndexAlias,
+  Reindex,
+  UpdateIndexMappings,
+  UpdateIndexSettings,
 } from "../../wailsjs/go/service/ESService";
 
 const { t } = useI18n()
@@ -192,6 +279,7 @@ const indexConfig = ref({
   numberOfShards: 1,
   numberOfReplicas: 0,
   mapping: "",
+  template: null,
 });
 const data = ref([])
 const message = useMessage()
@@ -385,6 +473,10 @@ const columns = [
         {label: t('index.actViewDetails'), key: 'viewDetails'},
         {label: t('index.actViewAlias'), key: 'viewAlias'},
         {label: t('index.actViewDocs'), key: 'viewDocs'},
+        {label: t('index.actManageAlias'), key: 'manageAlias'},
+        {label: t('index.actEditMapping'), key: 'editMapping'},
+        {label: t('index.actEditSettings'), key: 'editSettings'},
+        {label: t('index.actReindex'), key: 'reindex'},
         {label: t('index.actMerge'), key: 'mergeSegments'},
         {label: t('index.actDelete'), key: 'deleteIndex'},
         {label: row.status === 'close' ? t('index.actOpen') : t('index.actClose'), key: 'openCloseIndex'},
@@ -420,6 +512,10 @@ const handleMenuSelect = async (key, row) => {
     "viewDetails": viewIndexDetails,
     "viewAlias": viewIndexAlias,
     "viewDocs": viewIndexDocs,
+    "manageAlias": manageAlias,
+    "editMapping": editMapping,
+    "editSettings": editSettings,
+    "reindex": openReindex,
     "mergeSegments": mergeSegments,
     "deleteIndex": deleteIndex,
     "refresh": refreshIndex,
@@ -599,9 +695,29 @@ const clearCache = async (row) => {
   }
 }
 const addIndexLoading = ref(false)
+
+// 打开创建索引抽屉时加载模板列表
+const openCreateIndex = async () => {
+  indexConfig.value.template = null
+  CreateIndexDrawerVisible.value = true
+  const res = await GetIndexTemplates()
+  if (res.err === "" && Array.isArray(res.results)) {
+    templateOptions.value = res.results.map(tpl => {
+      const patterns = Array.isArray(tpl.index_patterns) ? tpl.index_patterns.join(', ') : ''
+      return {label: patterns ? `${tpl.name} (${patterns})` : tpl.name, value: tpl.name}
+    })
+  }
+}
+
+const templateOptions = ref([])
+
 const addIndex = async () => {
   formRef.value?.validate(async (errors) => {
     if (!errors) {
+      if (indexConfig.value.template) {
+        await createIndexFromTemplate()
+        return
+      }
       if (indexConfig.value.mapping) {
         const err = isValidJson(indexConfig.value.mapping)
         if (!err) {
@@ -631,6 +747,29 @@ const addIndex = async () => {
   })
 }
 
+const createIndexFromTemplate = async () => {
+  addIndexLoading.value = true
+  try {
+    const res = await CreateIndexFromTemplate(
+        indexConfig.value.name,
+        indexConfig.value.template,
+        indexConfig.value.numberOfShards,
+        indexConfig.value.numberOfReplicas
+    )
+    if (res.err !== "") {
+      message.error(res.err)
+    } else {
+      message.success(t('index.indexCreated', {name: indexConfig.value.name}))
+      await search()
+      CreateIndexDrawerVisible.value = false
+    }
+  } catch (e) {
+    message.error(e.message)
+  } finally {
+    addIndexLoading.value = false
+  }
+}
+
 const downloadAllDataCsv = async () => {
   const csvContent = createCsvContent(data.value, columns)
   download_file(csvContent, t('index.csvFileName'), 'text/csv;charset=utf-8;')
@@ -642,8 +781,8 @@ const queryAlias = async () => {
   const start = (pagination.value.page - 1) * pagination.value.pageSize;
   const end = start + pagination.value.pageSize;
   let pagedData = data.value.slice(start, end);
-  for (const k in pagedData.value) {
-    name_lst.push(pagedData.value[k].index)
+  for (const k in pagedData) {
+    name_lst.push(pagedData[k].index)
   }
   try {
     const res = await GetIndexAliases(name_lst)
@@ -663,6 +802,221 @@ const queryAlias = async () => {
     message.error(e.message)
   }
   loading.value = false
+}
+
+// ==================== 别名管理 ====================
+const aliasModal = ref({
+  show: false,
+  index: '',
+  aliases: [],
+  newAlias: '',
+  extra: '',
+  loading: false,
+  adding: false,
+})
+
+const manageAlias = async (row) => {
+  aliasModal.value.show = true
+  aliasModal.value.index = row.index
+  aliasModal.value.newAlias = ''
+  aliasModal.value.extra = ''
+  aliasModal.value.loading = true
+  try {
+    const res = await GetIndexAliases([row.index])
+    if (res.err !== "") {
+      message.error(res.err)
+      aliasModal.value.aliases = []
+    } else {
+      const joined = res.result[row.index] || ''
+      aliasModal.value.aliases = joined ? joined.split(',') : []
+    }
+  } catch (e) {
+    message.error(e.message)
+  } finally {
+    aliasModal.value.loading = false
+  }
+}
+
+const refreshAliasList = async () => {
+  const res = await GetIndexAliases([aliasModal.value.index])
+  if (res.err !== "") {
+    message.error(res.err)
+    return
+  }
+  const joined = res.result[aliasModal.value.index] || ''
+  aliasModal.value.aliases = joined ? joined.split(',') : []
+}
+
+const addAlias = async () => {
+  if (!aliasModal.value.newAlias) {
+    message.warning(t('index.inputAlias'))
+    return
+  }
+  if (aliasModal.value.extra && !isValidJson(aliasModal.value.extra)) {
+    message.error(t('index.invalidAliasExtra'))
+    return
+  }
+  aliasModal.value.adding = true
+  try {
+    const res = await AddIndexAlias(aliasModal.value.index, aliasModal.value.newAlias, aliasModal.value.extra)
+    if (res.err !== "") {
+      message.error(res.err)
+    } else {
+      message.success(t('index.aliasAdded'))
+      aliasModal.value.newAlias = ''
+      aliasModal.value.extra = ''
+      await refreshAliasList()
+    }
+  } catch (e) {
+    message.error(e.message)
+  } finally {
+    aliasModal.value.adding = false
+  }
+}
+
+const removeAlias = async (alias) => {
+  dialog.warning({
+    title: t('common.warning'),
+    content: t('index.confirmRemoveAlias', {alias}),
+    positiveText: t('common.confirm'),
+    negativeText: t('common.cancel'),
+    onPositiveClick: async () => {
+      const res = await RemoveIndexAlias(aliasModal.value.index, alias)
+      if (res.err !== "") {
+        message.error(res.err)
+      } else {
+        message.success(t('index.aliasRemoved'))
+        await refreshAliasList()
+      }
+    }
+  })
+}
+
+// ==================== Reindex ====================
+const reindexModal = ref({
+  show: false,
+  source: '',
+  dest: '',
+  query: '',
+  loading: false,
+})
+
+const openReindex = (row) => {
+  reindexModal.value = {show: true, source: row.index, dest: '', query: '', loading: false}
+}
+
+const doReindex = async () => {
+  if (!reindexModal.value.dest) {
+    message.warning(t('index.inputDestIndex'))
+    return
+  }
+  if (reindexModal.value.query && !isValidJson(reindexModal.value.query)) {
+    message.error(t('docs.invalidQuery'))
+    return
+  }
+  reindexModal.value.loading = true
+  try {
+    const res = await Reindex(reindexModal.value.source, reindexModal.value.dest, reindexModal.value.query)
+    if (res.err !== "") {
+      message.error(res.err)
+    } else {
+      message.success(t('index.reindexSubmitted'))
+      reindexModal.value.show = false
+    }
+  } catch (e) {
+    message.error(e.message)
+  } finally {
+    reindexModal.value.loading = false
+  }
+}
+
+// ==================== Mapping / Settings 编辑 ====================
+const mappingModal = ref({
+  show: false,
+  index: '',
+  content: '',
+  saving: false,
+})
+
+const editMapping = async (row) => {
+  const res = await GetIndexInfo(row.index)
+  if (res.err !== "") {
+    message.error(res.err)
+    return
+  }
+  const info = (res.result && res.result[row.index]) || {}
+  const mappings = info.mappings || {}
+  mappingModal.value = {
+    show: true,
+    index: row.index,
+    content: JSON.stringify(mappings, null, 2),
+    saving: false,
+  }
+}
+
+const saveMapping = async () => {
+  if (!isValidJson(mappingModal.value.content)) {
+    message.error(t('index.invalidMapping'))
+    return
+  }
+  mappingModal.value.saving = true
+  try {
+    const res = await UpdateIndexMappings(mappingModal.value.index, mappingModal.value.content)
+    if (res.err !== "") {
+      message.error(res.err)
+    } else {
+      message.success(t('index.mappingSaved'))
+      mappingModal.value.show = false
+    }
+  } catch (e) {
+    message.error(e.message)
+  } finally {
+    mappingModal.value.saving = false
+  }
+}
+
+const settingsModal = ref({
+  show: false,
+  index: '',
+  content: '',
+  saving: false,
+})
+
+const editSettings = async (row) => {
+  const res = await GetIndexInfo(row.index)
+  if (res.err !== "") {
+    message.error(res.err)
+    return
+  }
+  const info = (res.result && res.result[row.index]) || {}
+  const settings = (info.settings && info.settings.index) || {}
+  settingsModal.value = {
+    show: true,
+    index: row.index,
+    content: JSON.stringify({index: settings}, null, 2),
+    saving: false,
+  }
+}
+
+const saveSettings = async () => {
+  if (!isValidJson(settingsModal.value.content)) {
+    message.error(t('index.invalidSettings'))
+    return
+  }
+  settingsModal.value.saving = true
+  try {
+    const res = await UpdateIndexSettings(settingsModal.value.index, settingsModal.value.content)
+    if (res.err !== "") {
+      message.error(res.err)
+    } else {
+      message.success(t('index.settingsSaved'))
+      settingsModal.value.show = false
+    }
+  } catch (e) {
+    message.error(e.message)
+  } finally {
+    settingsModal.value.saving = false
+  }
 }
 
 const bulk_delete = async () => {
