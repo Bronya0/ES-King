@@ -22,15 +22,23 @@
         <h2>{{ t('conn.title') }}</h2>
         <n-text>{{ t('common.total', { count: esNodes.length }) }}</n-text>
         <n-button @click="addNewNode" :render-icon="renderIcon(AddFilled)">{{ t('conn.addCluster') }}</n-button>
+        <n-button @click="triggerImport" :render-icon="renderIcon(FileUploadOutlined)">{{ t('conn.importConn') }}</n-button>
+        <n-button @click="exportConn" :render-icon="renderIcon(FileDownloadOutlined)">{{ t('conn.exportConn') }}</n-button>
+        <input ref="fileInputRef" type="file" accept="application/json,.json" style="display: none"
+               @change="onImportFileChange"/>
       </n-flex>
       <n-spin :show="spin_loading" :description="t('app.connecting')">
 
         <n-grid :x-gap="12" :y-gap="12" :cols="4">
           <n-gi v-for="node in esNodes" :key="node.id">
-            <n-card :title="node.name" @click="selectNode(node)" hoverable class="conn_card">
+            <n-card :title="node.name" @click="selectNode(node)" hoverable class="conn_card"
+                    :class="{ conn_card_selected: selectedNodeId === node.id }">
 
               <template #header-extra>
                 <n-space>
+                  <n-tag v-if="selectedNodeId === node.id" type="success" size="small" round>
+                    {{ t('conn.connected') }}
+                  </n-tag>
                   <n-button @click.stop="editNode(node)" size="small">
                     {{ t('common.edit') }}
                   </n-button>
@@ -112,9 +120,9 @@
 <script setup>
 import { useI18n } from 'vue-i18n'
 import {computed, onMounted, ref} from 'vue'
-import {useMessage} from 'naive-ui'
-import {renderIcon} from "../utils/common";
-import {AddFilled} from "@vicons/material";
+import {useDialog, useMessage} from 'naive-ui'
+import {download_file, renderIcon} from "../utils/common";
+import {AddFilled, FileDownloadOutlined, FileUploadOutlined} from "@vicons/material";
 import emitter from "../utils/eventBus";
 import {SetConnect, TestClient} from "../../wailsjs/go/service/ESService";
 import {GetConfig, SaveConfig} from "../../wailsjs/go/config/AppConfig";
@@ -123,19 +131,25 @@ const { t } = useI18n()
 
 const message = useMessage()
 
+const dialog = useDialog()
+
 const esNodes = ref([])
 
+const selectedNodeId = ref(null)
+
 const showEditDrawer = ref(false)
-const currentNode = ref({
+
+const defaultNode = () => ({
   name: '',
   host: '',
-  port: 9200,
   username: '',
   password: '',
   useSSL: false,
   skipSSLVerify: false,
   caCert: ''
 })
+
+const currentNode = ref(defaultNode())
 const isEditing = ref(false)
 const spin_loading = ref(false)
 const test_connect_loading = ref(false)
@@ -143,6 +157,8 @@ const test_connect_loading = ref(false)
 const drawerTitle = computed(() => isEditing.value ? t('conn.editTitle') : t('conn.addTitle'))
 
 const formRef = ref(null)
+
+const fileInputRef = ref(null)
 
 onMounted(() => {
   refreshNodeList()
@@ -162,7 +178,7 @@ function editNode(node) {
 }
 
 const addNewNode = async () => {
-  currentNode.value = {}
+  currentNode.value = defaultNode()
   isEditing.value = false
   showEditDrawer.value = true
 }
@@ -186,7 +202,11 @@ const saveNode = async () => {
 
       // 保存
       config.connects = esNodes.value
-      await SaveConfig(config)
+      const err = await SaveConfig(config)
+      if (err !== "") {
+        message.error(t('common.saveFailed', { msg: err }))
+        return
+      }
       showEditDrawer.value = false
 
       await refreshNodeList()
@@ -201,9 +221,164 @@ const deleteNode = async (id) => {
   esNodes.value = esNodes.value.filter(node => node.id !== id)
   const config = await GetConfig()
   config.connects = esNodes.value
-  await SaveConfig(config)
+  const err = await SaveConfig(config)
+  if (err !== "") {
+    message.error(t('common.saveFailed', { msg: err }))
+    await refreshNodeList()
+    return
+  }
+  if (selectedNodeId.value === id) {
+    selectedNodeId.value = null
+  }
   await refreshNodeList()
   message.success(t('common.saveSuccess'))
+}
+
+// ==================== 连接配置导出/导入 ====================
+
+const exportConn = () => {
+  if (!esNodes.value.length) {
+    message.warning(t('conn.exportEmpty'))
+    return
+  }
+  dialog.warning({
+    title: t('conn.exportTitle'),
+    content: t('conn.exportPwdAsk'),
+    positiveText: t('conn.exportWithPassword'),
+    negativeText: t('conn.exportWithoutPassword'),
+    onPositiveClick: () => doExport(true),
+    onNegativeClick: () => doExport(false),
+  })
+}
+
+const doExport = (includePassword) => {
+  const connects = esNodes.value.map(node => {
+    const item = {
+      name: node.name,
+      host: node.host,
+      useSSL: !!node.useSSL,
+      skipSSLVerify: !!node.skipSSLVerify,
+      caCert: node.caCert || '',
+    }
+    if (node.username) {
+      item.username = node.username
+    }
+    if (includePassword && node.password) {
+      item.password = node.password
+    }
+    return item
+  })
+  const payload = {
+    app: 'ES-King',
+    type: 'es-king-connections',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    connects,
+  }
+  const fileName = `es-king-connections-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`
+  download_file(JSON.stringify(payload, null, 2), fileName, 'application/json;charset=utf-8;')
+  message.success(t('conn.exportSuccess', { count: connects.length }))
+}
+
+const triggerImport = () => {
+  fileInputRef.value?.click()
+}
+
+const readAsText = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader()
+  reader.onload = () => resolve(reader.result)
+  reader.onerror = () => reject(reader.error)
+  reader.readAsText(file, 'utf-8')
+})
+
+const onImportFileChange = async (e) => {
+  const file = e.target.files?.[0]
+  e.target.value = ''
+  if (!file) {
+    return
+  }
+
+  let list
+  try {
+    const data = JSON.parse(await readAsText(file))
+    list = Array.isArray(data) ? data : (Array.isArray(data?.connects) ? data.connects : null)
+  } catch (err) {
+    list = null
+  }
+  if (!list) {
+    message.error(t('conn.importInvalid'))
+    return
+  }
+
+  const valid = list.filter(node => node && typeof node === 'object'
+      && typeof node.name === 'string' && node.name.trim() !== ''
+      && typeof node.host === 'string' && node.host.trim() !== '')
+  if (!valid.length) {
+    message.warning(t('conn.importEmpty'))
+    return
+  }
+
+  const normalize = (node) => ({
+    name: node.name.trim(),
+    host: node.host.trim(),
+    username: typeof node.username === 'string' ? node.username : '',
+    password: typeof node.password === 'string' ? node.password : '',
+    useSSL: !!node.useSSL,
+    skipSSLVerify: !!node.skipSSLVerify,
+    caCert: typeof node.caCert === 'string' ? node.caCert : '',
+  })
+
+  // 同名连接直接更新覆盖；空字段保留原值（如"不包含密码"导出的文件不会清掉已保存的密码）
+  const byName = new Map(esNodes.value.map(node => [node.name, node]))
+  const toAdd = []
+  let updated = 0
+  for (const raw of valid) {
+    const node = normalize(raw)
+    const exist = byName.get(node.name)
+    if (exist) {
+      exist.host = node.host
+      if (node.username) {
+        exist.username = node.username
+      }
+      if (node.password) {
+        exist.password = node.password
+      }
+      if (node.caCert) {
+        exist.caCert = node.caCert
+      }
+      if ('useSSL' in raw) {
+        exist.useSSL = node.useSSL
+      }
+      if ('skipSSLVerify' in raw) {
+        exist.skipSSLVerify = node.skipSSLVerify
+      }
+      updated += 1
+    } else {
+      byName.set(node.name, node)
+      toAdd.push(node)
+    }
+  }
+
+  let nextId = Math.max(...esNodes.value.map(node => node.id), 0)
+  for (const node of toAdd) {
+    nextId += 1
+    esNodes.value.push({...node, id: nextId})
+  }
+
+  const config = await GetConfig()
+  config.connects = esNodes.value
+  const err = await SaveConfig(config)
+  if (err !== "") {
+    message.error(t('common.saveFailed', { msg: err }))
+    await refreshNodeList()
+    return
+  }
+  await refreshNodeList()
+  if (toAdd.length) {
+    message.success(t('conn.importSuccess', { count: toAdd.length, updated }))
+  } else {
+    message.success(t('conn.importNoNew', { count: updated }))
+  }
 }
 
 const test_connect = async () => {
@@ -238,6 +413,7 @@ const selectNode = async (node) => {
       message.error(t('conn.connectFailed', { msg: res }))
     } else {
       await SetConnect(node.name, node.host, node.username, node.password, node.caCert, node.useSSL, node.skipSSLVerify)
+      selectedNodeId.value = node.id
       message.success(t('conn.connectSuccess'))
       emitter.emit('menu_select', "节点")
       emitter.emit('selectNode', node)
@@ -254,5 +430,32 @@ const selectNode = async (node) => {
 
 .lightTheme .conn_card {
   background-color: #fafafc
+}
+
+/* 连接卡片可点击的视觉反馈 */
+.conn_card {
+  cursor: pointer;
+  transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+
+.conn_card:hover {
+  border-color: #36ad6a;
+  box-shadow: 0 4px 14px rgba(24, 160, 88, .25);
+  transform: translateY(-2px);
+}
+
+.conn_card:active {
+  transform: translateY(0);
+}
+
+/* 当前已连接的集群卡片 */
+.conn_card.conn_card_selected,
+.conn_card.conn_card_selected:hover {
+  border-color: #18a058;
+  box-shadow: 0 0 0 1px #18a058 inset, 0 4px 14px rgba(24, 160, 88, .3);
+}
+
+.lightTheme .conn_card.conn_card_selected {
+  background-color: rgba(24, 160, 88, .05);
 }
 </style>

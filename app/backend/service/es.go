@@ -27,6 +27,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -57,12 +59,8 @@ type ESService struct {
 }
 
 func NewESService() *ESService {
-	client := resty.New()
-	client.SetTimeout(30 * time.Second)
-	client.SetRetryCount(0)
-	client.SetHeader("Content-Type", "application/json")
 	return &ESService{
-		Client:     client,
+		Client:     newESClient(),
 		ConnectObj: &types.Connect{},
 	}
 }
@@ -83,6 +81,14 @@ func ConfigureSSL(UseSSL, SkipSSLVerify bool, client *resty.Client, CACert strin
 	}
 }
 
+func newESClient() *resty.Client {
+	client := resty.New()
+	client.SetTimeout(30 * time.Second)
+	client.SetRetryCount(0)
+	client.SetHeader("Content-Type", "application/json")
+	return client
+}
+
 func (es *ESService) SetConnect(key, host, username, password, CACert string, UseSSL, SkipSSLVerify bool) {
 	es.mu.Lock()         // 加写锁
 	defer es.mu.Unlock() // 方法结束时解锁
@@ -96,16 +102,22 @@ func (es *ESService) SetConnect(key, host, username, password, CACert string, Us
 		SkipSSLVerify: SkipSSLVerify,
 		CACert:        CACert,
 	}
+	// 每次切换连接都重建 client，避免上一个集群的 BasicAuth、
+	// InsecureSkipVerify、CA 证书等配置残留到新连接
+	client := newESClient()
 	if username != "" && password != "" {
-		es.Client.SetBasicAuth(username, password)
+		client.SetBasicAuth(username, password)
 	}
-	ConfigureSSL(UseSSL, SkipSSLVerify, es.Client, CACert)
+	ConfigureSSL(UseSSL, SkipSSLVerify, client, CACert)
+	es.Client = client
 
 	fmt.Println("设置当前连接：", es.ConnectObj.Host)
 }
 
 func (es *ESService) TestClient(host, username, password, CACert string, UseSSL, SkipSSLVerify bool) string {
-	client := resty.New()
+	client := newESClient()
+	// 测试连接单独设置较短超时，避免连不上的主机长时间阻塞界面
+	client.SetTimeout(10 * time.Second)
 	if username != "" && password != "" {
 		client.SetBasicAuth(username, password)
 	}
@@ -193,7 +205,8 @@ func (es *ESService) GetIndexes(name string) *types.ResultsResp {
 	}
 	newUrl := es.ConnectObj.Host + AllIndexApi
 	if name != "" {
-		newUrl += "&index=" + "*" + name + "*"
+		// 搜索词需要转义，避免空格、& 等字符破坏 URL
+		newUrl += "&index=" + url.QueryEscape("*"+name+"*")
 	}
 	log.Println(newUrl)
 	var result []any
@@ -424,7 +437,8 @@ func (es *ESService) Search(method, path string, body any) *types.ResultResp {
 	if err != nil {
 		return &types.ResultResp{Err: err.Error()}
 	}
-	if resp.StatusCode() != http.StatusOK {
+	// REST 控制台会常见 201 Created、202 Accepted 等成功状态码，统一放行 2xx
+	if !resp.IsSuccess() {
 		return &types.ResultResp{Err: string(resp.Body())}
 	}
 	return &types.ResultResp{Result: result}
@@ -1046,6 +1060,14 @@ func (es *ESService) DownloadESIndex(index string, queryDSL string, filePath str
 		queryDSL = `{"match_all": {}}`
 	}
 
+	// 前端传来的路径以 / 开头，在 Windows 下会解析到盘符根目录（通常无写权限），改为落到用户主目录
+	if runtime.GOOS == "windows" && strings.HasPrefix(filePath, "/") {
+		rel := strings.TrimPrefix(filePath, "/")
+		if home, err := os.UserHomeDir(); err == nil {
+			filePath = filepath.Join(home, rel)
+		}
+	}
+
 	// 创建本地文件
 	file, err := os.Create(filePath)
 	if err != nil {
@@ -1134,7 +1156,15 @@ func (es *ESService) DownloadESIndex(index string, queryDSL string, filePath str
 	// 写入 JSON 数组的结尾
 	_, _ = writer.WriteString("]")
 
+	// 主动清理滚动上下文，不占用 ES 的 scroll 资源等待超时
+	if searchResponse.ScrollID != "" {
+		_, _ = es.Client.R().
+			SetBody(map[string]any{"scroll_id": []string{searchResponse.ScrollID}}).
+			Delete(es.ConnectObj.Host + "/_search/scroll")
+	}
+
 	success = true
+	res.Result = filePath
 	return res
 }
 

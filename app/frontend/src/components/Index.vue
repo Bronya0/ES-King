@@ -312,9 +312,6 @@ const downloadIndex = async () => {
     return;
   }
   const file_path = `/${indexName}-${Math.floor(Date.now() / 1000)}.json`
-  const downloadMsg = t('index.backupSuccess') + " " + file_path;
-  message.info(downloadMsg);
-  downloadIndexConfig.value.msg = downloadMsg;
 
   downloadIndexConfig.value.loading = true;
   try {
@@ -323,9 +320,11 @@ const downloadIndex = async () => {
       message.error(res.err);
       downloadIndexConfig.value.msg = res.err;
     } else {
-      message.success(t('index.backupSuccess'));
-      downloadIndexConfig.value.msg = t('index.backupSuccess');
-      CreateIndexDrawerVisible.value = false;
+      const savedPath = res.result || file_path;
+      const downloadMsg = t('index.backupSuccess') + " " + savedPath;
+      message.success(downloadMsg);
+      downloadIndexConfig.value.msg = downloadMsg;
+      downloadIndexConfig.value.show = false;
     }
   } catch (e) {
     message.error(e.message);
