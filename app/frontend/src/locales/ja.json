@@ -449,7 +449,14 @@
     "parseFailed": "解析失敗：{msg}",
     "startImport": "インポート開始",
     "importSuccess": "{count} 件のドキュメントをインポートしました",
-    "importPartial": "インポート完了：成功 {success} 件、失敗 {failed} 件。最初のエラー：{msg}"
+    "importPartial": "インポート完了：成功 {success} 件、失敗 {failed} 件。最初のエラー：{msg}",
+    "refreshIndexes": "インデックス一覧を更新",
+    "selectFile": "ローカルファイルを選択",
+    "fillSample": "サンプルを入力",
+    "clear": "クリア",
+    "recordsReady": "{count} 件のインポート対象データを検出",
+    "fileLoaded": "ファイルを読み込みました：{name}",
+    "fileReadError": "ファイルの読み込みに失敗しました"
   },
   "diag": {
     "title": "診断",

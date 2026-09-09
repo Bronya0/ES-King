@@ -449,7 +449,14 @@
     "parseFailed": "Parse failed: {msg}",
     "startImport": "Start Import",
     "importSuccess": "Successfully imported {count} documents",
-    "importPartial": "Import finished: {success} succeeded, {failed} failed. First error: {msg}"
+    "importPartial": "Import finished: {success} succeeded, {failed} failed. First error: {msg}",
+    "refreshIndexes": "Refresh index list",
+    "selectFile": "Select Local File",
+    "fillSample": "Fill Sample Template",
+    "clear": "Clear",
+    "recordsReady": "{count} documents ready to import",
+    "fileLoaded": "File loaded: {name}",
+    "fileReadError": "Failed to read file"
   },
   "diag": {
     "title": "Diagnose",

@@ -29,12 +29,18 @@
             <n-select
                 v-model:value="indexName"
                 :options="indexOptions"
+                :loading="indexLoading"
                 filterable
                 clearable
                 :placeholder="t('analyze.indexOptional')"
-                style="width: 280px;"
+                style="width: 280px; min-width: 240px;"
             />
-            <n-button :render-icon="renderIcon(RefreshOutlined)" text @click="loadIndexes"></n-button>
+            <n-tooltip trigger="hover">
+              <template #trigger>
+                <n-button :loading="indexLoading" :render-icon="renderIcon(RefreshOutlined)" @click="loadIndexes" />
+              </template>
+              {{ t('docs.refreshIndexes') }}
+            </n-tooltip>
           </n-flex>
         </n-form-item>
         <n-form-item :label="t('analyze.analyzer')">
@@ -84,9 +90,9 @@
 
 <script setup>
 import {useI18n} from 'vue-i18n'
-import {computed, h, onMounted, ref} from "vue";
+import {computed, h, onActivated, onMounted, onUnmounted, ref} from "vue";
 import emitter from "../utils/eventBus";
-import {NTag, useMessage} from 'naive-ui'
+import {NButton, NTag, NTooltip, useMessage} from 'naive-ui'
 import {refColumns, renderIcon} from "../utils/common";
 import {RefreshOutlined, SearchFilled} from "@vicons/material";
 import {AnalyzeText, GetIndexes} from "../../wailsjs/go/service/ESService";
@@ -95,7 +101,22 @@ const {t} = useI18n()
 const message = useMessage()
 
 const indexName = ref(null)
-const indexOptions = ref([])
+
+const loadCachedIndexes = () => {
+  try {
+    const raw = localStorage.getItem('es_king_indexes')
+    if (raw) {
+      const arr = JSON.parse(raw)
+      if (Array.isArray(arr) && arr.length > 0) {
+        return arr.map(idx => ({label: idx, value: idx}))
+      }
+    }
+  } catch (e) {}
+  return []
+}
+
+const indexOptions = ref(loadCachedIndexes())
+const indexLoading = ref(false)
 const analyzer = ref('standard')
 const field = ref("")
 const text = ref("")
@@ -108,11 +129,31 @@ const analyzerOptions = [
 ].map(v => ({label: v, value: v}))
 
 const loadIndexes = async () => {
-  const res = await GetIndexes("")
-  if (res.err !== "") {
-    return
+  indexLoading.value = true
+  try {
+    const res = await GetIndexes("")
+    if (res.err !== "") {
+      message.error(res.err)
+      return
+    }
+    const idxs = (res.results || []).map(item => item.index).filter(Boolean)
+    indexOptions.value = idxs.map(item => ({label: item, value: item}))
+    try {
+      const key = 'es_king_indexes'
+      const stored = localStorage.getItem(key)
+      let values = stored ? JSON.parse(stored) : []
+      for (const v of idxs) {
+        if (!values.includes(v)) {
+          values.push(v)
+        }
+      }
+      localStorage.setItem(key, JSON.stringify(values.slice(-1000)))
+    } catch (e) {}
+  } catch (e) {
+    message.error(e.message)
+  } finally {
+    indexLoading.value = false
   }
-  indexOptions.value = (res.results || []).map(item => ({label: item.index, value: item.index}))
 }
 
 const tokenColumns = computed(() => refColumns([
@@ -155,7 +196,6 @@ const doAnalyze = async () => {
 }
 
 const selectNode = async () => {
-  indexOptions.value = []
   tokens.value = []
   await loadIndexes()
 }
@@ -163,6 +203,16 @@ const selectNode = async () => {
 onMounted(() => {
   emitter.on('selectNode', selectNode)
   loadIndexes()
+})
+
+onActivated(() => {
+  if (indexOptions.value.length === 0) {
+    loadIndexes()
+  }
+})
+
+onUnmounted(() => {
+  emitter.off('selectNode', selectNode)
 })
 </script>
 

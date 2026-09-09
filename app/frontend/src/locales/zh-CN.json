@@ -448,7 +448,14 @@
     "parseFailed": "解析失败：{msg}",
     "startImport": "开始导入",
     "importSuccess": "成功导入 {count} 条文档",
-    "importPartial": "导入完成：成功 {success} 条，失败 {failed} 条，首个错误：{msg}"
+    "importPartial": "导入完成：成功 {success} 条，失败 {failed} 条，首个错误：{msg}",
+    "refreshIndexes": "刷新索引列表",
+    "selectFile": "选择本地文件",
+    "fillSample": "填入示例模板",
+    "clear": "清空",
+    "recordsReady": "已识别 {count} 条待导入数据",
+    "fileLoaded": "已读取文件：{name}",
+    "fileReadError": "文件读取失败"
   },
   "diag": {
     "title": "诊断",

@@ -22,7 +22,7 @@
       <n-text>{{ t('docs.desc') }}</n-text>
     </n-flex>
 
-    <n-tabs type="line" animated v-model:value="activeTab">
+    <n-tabs type="line" v-model:value="activeTab">
       <!-- ============ 文档浏览 ============ -->
       <n-tab-pane name="browse" :tab="t('docs.tabBrowse')">
         <n-flex vertical>
@@ -30,12 +30,19 @@
             <n-select
                 v-model:value="browseIndex"
                 :options="indexOptions"
+                :loading="indexLoading"
                 filterable
+                clearable
                 :placeholder="t('docs.selectIndex')"
-                style="width: 260px;"
+                style="width: 260px; min-width: 240px; flex-shrink: 0;"
                 @update:value="resetBrowse"
             />
-            <n-button :render-icon="renderIcon(RefreshOutlined)" text @click="loadIndexes"></n-button>
+            <n-tooltip trigger="hover">
+              <template #trigger>
+                <n-button :loading="indexLoading" :render-icon="renderIcon(RefreshOutlined)" @click="loadIndexes" />
+              </template>
+              {{ t('docs.refreshIndexes') }}
+            </n-tooltip>
             <n-input
                 v-model:value="queryDsl"
                 type="textarea"
@@ -86,13 +93,21 @@
             <n-select
                 v-model:value="statsIndex"
                 :options="indexOptions"
+                :loading="indexLoading"
                 filterable
+                clearable
                 :placeholder="t('docs.selectIndex')"
-                style="width: 260px;"
+                style="width: 260px; min-width: 240px; flex-shrink: 0;"
             />
-            <n-input v-model:value="statsField" :placeholder="t('docs.fieldName')" style="width: 220px"
+            <n-tooltip trigger="hover">
+              <template #trigger>
+                <n-button :loading="indexLoading" :render-icon="renderIcon(RefreshOutlined)" @click="loadIndexes" />
+              </template>
+              {{ t('docs.refreshIndexes') }}
+            </n-tooltip>
+            <n-input v-model:value="statsField" :placeholder="t('docs.fieldName')" style="width: 220px; flex-shrink: 0;"
                      @keydown.enter="queryFieldStats"/>
-            <n-input-number v-model:value="statsSize" :min="1" :max="1000" style="width: 140px"/>
+            <n-input-number v-model:value="statsSize" :min="1" :max="1000" style="width: 140px; flex-shrink: 0;"/>
             <n-button :loading="statsLoading" :render-icon="renderIcon(SearchFilled)" @click="queryFieldStats">
               {{ t('common.search') }}
             </n-button>
@@ -118,29 +133,69 @@
             <n-select
                 v-model:value="importIndex"
                 :options="indexOptions"
+                :loading="indexLoading"
                 filterable
+                clearable
                 :placeholder="t('docs.selectIndex')"
-                style="width: 260px;"
+                style="width: 260px; min-width: 240px; flex-shrink: 0;"
             />
-            <n-button :render-icon="renderIcon(RefreshOutlined)" text @click="loadIndexes"></n-button>
+            <n-tooltip trigger="hover">
+              <template #trigger>
+                <n-button :loading="indexLoading" :render-icon="renderIcon(RefreshOutlined)" @click="loadIndexes" />
+              </template>
+              {{ t('docs.refreshIndexes') }}
+            </n-tooltip>
             <n-radio-group v-model:value="importFormat">
-              <n-radio value="json">JSON</n-radio>
-              <n-radio value="csv">CSV</n-radio>
+              <n-radio-button value="json">JSON</n-radio-button>
+              <n-radio-button value="csv">CSV</n-radio-button>
             </n-radio-group>
+            <input
+                ref="fileInput"
+                type="file"
+                accept=".json,.csv,.txt"
+                style="display: none;"
+                @change="handleFileSelect"
+            />
+            <n-button :render-icon="renderIcon(DriveFileMoveTwotone)" @click="fileInput?.click()">
+              {{ t('docs.selectFile') }}
+            </n-button>
+            <n-button quaternary @click="fillSampleData">
+              {{ t('docs.fillSample') }}
+            </n-button>
+            <n-button quaternary @click="importData = ''">
+              {{ t('docs.clear') }}
+            </n-button>
           </n-flex>
-          <n-text depth="3">{{ importFormat === 'csv' ? t('docs.csvHint') : t('docs.jsonHint') }}</n-text>
+          <n-flex align="center" justify="space-between">
+            <n-text depth="3">{{ importFormat === 'csv' ? t('docs.csvHint') : t('docs.jsonHint') }}</n-text>
+            <n-tag v-if="parsedDocCount > 0" type="success" size="small" round>
+              {{ t('docs.recordsReady', { count: parsedDocCount }) }}
+            </n-tag>
+            <n-tag v-else-if="importData.trim() && parseErrorMessage" type="error" size="small" round>
+              {{ parseErrorMessage }}
+            </n-tag>
+          </n-flex>
           <n-input
               v-model:value="importData"
               type="textarea"
-              :autosize="{minRows: 10, maxRows: 18}"
+              :autosize="{minRows: 12, maxRows: 24}"
               :placeholder="importFormat === 'csv' ? t('docs.csvPlaceholder') : t('docs.jsonPlaceholder')"
               class="json-editor-input"
+              style="min-height: 260px;"
           />
-          <n-flex>
-            <n-button type="primary" :loading="importLoading" :render-icon="renderIcon(UploadFilled)"
-                      @click="importDocs">
+          <n-flex align="center">
+            <n-button
+                type="primary"
+                :loading="importLoading"
+                :disabled="!importIndex || !importData.trim()"
+                :render-icon="renderIcon(UploadFilled)"
+                @click="importDocs"
+            >
               {{ t('docs.startImport') }}
             </n-button>
+            <n-text depth="3" v-if="!importIndex">
+              {{ t('docs.selectIndexFirst') }}
+            </n-text>
           </n-flex>
         </n-flex>
       </n-tab-pane>
@@ -180,9 +235,9 @@
 
 <script setup>
 import {useI18n} from 'vue-i18n'
-import {computed, h, onMounted, ref, watch} from "vue";
+import {computed, h, onActivated, onMounted, onUnmounted, ref, watch} from "vue";
 import emitter from "../utils/eventBus";
-import {NButton, NDropdown, NIcon, NTag, useDialog, useMessage} from 'naive-ui'
+import {NButton, NDropdown, NIcon, NRadioButton, NRadioGroup, NTag, NTooltip, useDialog, useMessage} from 'naive-ui'
 import {formatNumber, isValidJson, refColumns, renderIcon} from "../utils/common";
 import {
   AddFilled, DeleteFilled, DriveFileMoveTwotone, MoreVertFilled, RefreshOutlined, SearchFilled, UploadFilled
@@ -206,14 +261,48 @@ const dialog = useDialog()
 const activeTab = ref('browse')
 
 // ==================== 索引下拉 ====================
-const indexOptions = ref([])
+const loadCachedIndexes = () => {
+  try {
+    const raw = localStorage.getItem('es_king_indexes')
+    if (raw) {
+      const arr = JSON.parse(raw)
+      if (Array.isArray(arr) && arr.length > 0) {
+        return arr.map(idx => ({label: idx, value: idx}))
+      }
+    }
+  } catch (e) {}
+  return []
+}
+
+const indexOptions = ref(loadCachedIndexes())
+const indexLoading = ref(false)
 
 const loadIndexes = async () => {
-  const res = await GetIndexes("")
-  if (res.err !== "") {
-    return
+  indexLoading.value = true
+  try {
+    const res = await GetIndexes("")
+    if (res.err !== "") {
+      message.error(res.err)
+      return
+    }
+    const idxs = (res.results || []).map(item => item.index).filter(Boolean)
+    indexOptions.value = idxs.map(idx => ({label: idx, value: idx}))
+    try {
+      const key = 'es_king_indexes'
+      const stored = localStorage.getItem(key)
+      let values = stored ? JSON.parse(stored) : []
+      for (const v of idxs) {
+        if (!values.includes(v)) {
+          values.push(v)
+        }
+      }
+      localStorage.setItem(key, JSON.stringify(values.slice(-1000)))
+    } catch (e) {}
+  } catch (e) {
+    message.error(e.message)
+  } finally {
+    indexLoading.value = false
   }
-  indexOptions.value = (res.results || []).map(item => ({label: item.index, value: item.index}))
 }
 
 // ==================== 文档浏览 ====================
@@ -524,6 +613,58 @@ const importIndex = ref(null)
 const importFormat = ref('json')
 const importData = ref("")
 const importLoading = ref(false)
+const fileInput = ref(null)
+
+const handleFileSelect = (e) => {
+  const file = e.target.files?.[0]
+  if (!file) return
+  const isCsv = file.name.toLowerCase().endsWith('.csv')
+  const reader = new FileReader()
+  reader.onload = (event) => {
+    importData.value = event.target?.result || ''
+    if (isCsv) {
+      importFormat.value = 'csv'
+    } else if (file.name.toLowerCase().endsWith('.json')) {
+      importFormat.value = 'json'
+    }
+    message.success(t('docs.fileLoaded', { name: file.name }))
+  }
+  reader.onerror = () => {
+    message.error(t('docs.fileReadError'))
+  }
+  reader.readAsText(file)
+  e.target.value = ''
+}
+
+const fillSampleData = () => {
+  if (importFormat.value === 'csv') {
+    importData.value = `title,category,views,publish_date
+Elasticsearch Guide,database,1500,2026-01-15
+Naive UI Tutorial,frontend,820,2026-02-20
+Go Wails Desktop App,golang,2300,2026-03-01`
+  } else {
+    importData.value = JSON.stringify([
+      {
+        "title": "Elasticsearch Guide",
+        "category": "database",
+        "views": 1500,
+        "publish_date": "2026-01-15"
+      },
+      {
+        "title": "Naive UI Tutorial",
+        "category": "frontend",
+        "views": 820,
+        "publish_date": "2026-02-20"
+      },
+      {
+        "title": "Go Wails Desktop App",
+        "category": "golang",
+        "views": 2300,
+        "publish_date": "2026-03-01"
+      }
+    ], null, 2)
+  }
+}
 
 // 简易 CSV 解析：支持双引号转义（引号内可含逗号/换行）
 const parseCsv = (text) => {
@@ -581,6 +722,52 @@ const csvToDocs = (text) => {
   })
 }
 
+const parsedDocCount = computed(() => {
+  const raw = importData.value.trim()
+  if (!raw) return 0
+  if (importFormat.value === 'json') {
+    try {
+      const parsed = JSON.parse(raw)
+      return Array.isArray(parsed) ? parsed.length : 0
+    } catch {
+      return 0
+    }
+  } else {
+    try {
+      const rows = parseCsv(raw)
+      return rows.length > 1 ? rows.length - 1 : 0
+    } catch {
+      return 0
+    }
+  }
+})
+
+const parseErrorMessage = computed(() => {
+  const raw = importData.value.trim()
+  if (!raw) return ''
+  if (importFormat.value === 'json') {
+    try {
+      const parsed = JSON.parse(raw)
+      if (!Array.isArray(parsed)) {
+        return t('docs.needJsonArray')
+      }
+      return ''
+    } catch (e) {
+      return e.message
+    }
+  } else {
+    try {
+      const rows = parseCsv(raw)
+      if (rows.length < 2) {
+        return t('docs.csvNeedHeader')
+      }
+      return ''
+    } catch (e) {
+      return e.message
+    }
+  }
+})
+
 const importDocs = async () => {
   if (!importIndex.value) {
     message.warning(t('docs.selectIndexFirst'))
@@ -624,22 +811,27 @@ const importDocs = async () => {
 const openImportTab = () => {
   if (browseIndex.value) {
     importIndex.value = browseIndex.value
+  } else if (!importIndex.value && indexOptions.value.length > 0) {
+    importIndex.value = indexOptions.value[0].value
   }
   activeTab.value = 'import'
 }
 
 watch(activeTab, (tab) => {
-  if (tab === 'import' && !importIndex.value && browseIndex.value) {
-    importIndex.value = browseIndex.value
+  if (tab === 'import') {
+    if (!importIndex.value) {
+      importIndex.value = browseIndex.value || (indexOptions.value[0]?.value ?? null)
+    }
   }
-  if (tab === 'fieldStats' && !statsIndex.value && browseIndex.value) {
-    statsIndex.value = browseIndex.value
+  if (tab === 'fieldStats') {
+    if (!statsIndex.value) {
+      statsIndex.value = browseIndex.value || (indexOptions.value[0]?.value ?? null)
+    }
   }
 })
 
 // ==================== 生命周期 ====================
 const selectNode = async () => {
-  indexOptions.value = []
   docs.value = []
   total.value = 0
   browseIndex.value = null
@@ -651,6 +843,16 @@ const selectNode = async () => {
 onMounted(() => {
   emitter.on('selectNode', selectNode)
   loadIndexes()
+})
+
+onActivated(() => {
+  if (indexOptions.value.length === 0) {
+    loadIndexes()
+  }
+})
+
+onUnmounted(() => {
+  emitter.off('selectNode', selectNode)
 })
 </script>
 
