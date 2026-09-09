@@ -26,12 +26,21 @@
       <!-- ============ 分片分布 ============ -->
       <n-tab-pane name="shards" :tab="t('diag.tabShards')">
         <n-flex vertical>
+          <n-alert v-if="!hasQueriedShards && shardData.length === 0" type="info" :show-icon="false" style="text-align: left;">
+            {{ t('diag.shardsEmptyPrompt') }}
+          </n-alert>
+
           <n-flex align="center">
-            <n-input v-model:value="shardFilter" :placeholder="t('diag.filterIndex')" style="width: 240px" clearable
-                     @keydown.enter="getShards"/>
+            <n-input v-model:value="shardFilter" :placeholder="t('diag.filterIndex')" style="width: 260px" clearable
+                     @keydown.enter="doSearchShards"/>
             <n-select v-model:value="shardStateFilter" :options="stateFilterOptions" style="width: 160px" clearable
                       :placeholder="t('diag.filterState')"/>
-            <n-button :render-icon="renderIcon(RefreshOutlined)" text @click="getShards">{{ t('common.refresh') }}</n-button>
+            <n-button type="primary" :loading="shardLoading" :render-icon="renderIcon(SearchFilled)" @click="doSearchShards">
+              {{ t('common.search') }}
+            </n-button>
+            <n-button :loading="shardLoading" :render-icon="renderIcon(RefreshOutlined)" @click="confirmGetAllShards">
+              {{ t('diag.queryAllShards') }}
+            </n-button>
             <n-button type="warning" ghost @click="explainFirstUnassigned">{{ t('diag.explainUnassigned') }}</n-button>
           </n-flex>
           <n-spin :show="shardLoading" :description="t('app.loading')">
@@ -54,7 +63,7 @@
           <n-flex align="center">
             <n-input v-model:value="threadPoolFilter" :placeholder="t('diag.filterThreadPool')" style="width: 240px"
                      clearable @keydown.enter="getThreadPool"/>
-            <n-button :render-icon="renderIcon(RefreshOutlined)" text @click="getThreadPool">{{ t('common.refresh') }}</n-button>
+            <n-button :render-icon="renderIcon(RefreshOutlined)" @click="getThreadPool">{{ t('common.refresh') }}</n-button>
           </n-flex>
           <n-spin :show="threadPoolLoading" :description="t('app.loading')">
             <n-data-table
@@ -73,9 +82,25 @@
       <!-- ============ 热点线程 ============ -->
       <n-tab-pane name="hotThreads" :tab="t('diag.tabHotThreads')">
         <n-flex vertical>
+          <n-alert type="info" :show-icon="false" style="text-align: left;">
+            {{ t('diag.hotThreadsPrompt') }}
+          </n-alert>
+
           <n-flex align="center">
-            <n-button :loading="hotThreadsLoading" :render-icon="renderIcon(RefreshOutlined)"
-                      @click="getHotThreads">{{ t('common.refresh') }}
+            <n-select
+                v-model:value="selectedHotThreadsNode"
+                :options="nodeOptions"
+                :placeholder="t('diag.selectNodePrompt')"
+                style="width: 280px"
+                clearable
+            />
+            <n-button
+                type="primary"
+                :loading="hotThreadsLoading"
+                :render-icon="renderIcon(RefreshOutlined)"
+                @click="handleGetHotThreads"
+            >
+              {{ t('diag.sampleHotThreads') }}
             </n-button>
           </n-flex>
           <n-spin :show="hotThreadsLoading" :description="t('app.loading')">
@@ -94,7 +119,7 @@
       <n-tab-pane name="pendingTasks" :tab="t('diag.tabPendingTasks')">
         <n-flex vertical>
           <n-flex align="center">
-            <n-button :render-icon="renderIcon(RefreshOutlined)" text @click="getPendingTasks">{{ t('common.refresh') }}</n-button>
+            <n-button :render-icon="renderIcon(RefreshOutlined)" @click="getPendingTasks">{{ t('common.refresh') }}</n-button>
           </n-flex>
           <n-spin :show="pendingLoading" :description="t('app.loading')">
             <n-data-table
@@ -137,14 +162,15 @@
 
 <script setup>
 import {useI18n} from 'vue-i18n'
-import {computed, h, onMounted, ref} from "vue";
+import {computed, h, onMounted, ref, watch} from "vue";
 import emitter from "../utils/eventBus";
-import {NButton, NScrollbar, NTag, useMessage} from 'naive-ui'
+import {NButton, NScrollbar, NTag, useDialog, useMessage} from 'naive-ui'
 import {formatBytes, formatMillis, refColumns, renderIcon} from "../utils/common";
-import {RefreshOutlined} from "@vicons/material";
+import {RefreshOutlined, SearchFilled} from "@vicons/material";
 import {
   ExplainAllocation,
   GetHotThreads,
+  GetNodeNames,
   GetPendingTasks,
   GetShards,
   GetThreadPool,
@@ -152,6 +178,7 @@ import {
 
 const {t} = useI18n()
 const message = useMessage()
+const dialog = useDialog()
 
 const activeTab = ref('shards')
 
@@ -160,6 +187,7 @@ const shardData = ref([])
 const shardLoading = ref(false)
 const shardFilter = ref("")
 const shardStateFilter = ref(null)
+const hasQueriedShards = ref(false)
 
 const stateFilterOptions = [
   {label: 'STARTED', value: 'STARTED'},
@@ -190,10 +218,11 @@ const shardPagination = ref({
   },
 })
 
-const getShards = async () => {
+const fetchShards = async (targetIndex) => {
   shardLoading.value = true
+  hasQueriedShards.value = true
   try {
-    const res = await GetShards(shardFilter.value.trim())
+    const res = await GetShards(targetIndex || '')
     if (res.err !== "") {
       message.error(res.err)
     } else {
@@ -204,6 +233,27 @@ const getShards = async () => {
   } finally {
     shardLoading.value = false
   }
+}
+
+const doSearchShards = () => {
+  const target = shardFilter.value.trim()
+  if (target === '') {
+    confirmGetAllShards()
+  } else {
+    fetchShards(target)
+  }
+}
+
+const confirmGetAllShards = () => {
+  dialog.warning({
+    title: t('diag.allShardsWarningTitle'),
+    content: t('diag.allShardsWarning'),
+    positiveText: t('common.confirm'),
+    negativeText: t('common.cancel'),
+    onPositiveClick: () => {
+      fetchShards('')
+    },
+  })
 }
 
 const explainModal = ref({
@@ -230,6 +280,10 @@ const explainShard = async (row) => {
 }
 
 const explainFirstUnassigned = () => {
+  if (shardData.value.length === 0) {
+    message.warning(t('diag.shardsEmptyPrompt'))
+    return
+  }
   const target = shardData.value.find(row => row.state === 'UNASSIGNED')
   if (!target) {
     message.info(t('diag.noUnassigned'))
@@ -337,11 +391,30 @@ const threadPoolColumns = computed(() => refColumns([
 // ==================== 热点线程 ====================
 const hotThreadsText = ref('')
 const hotThreadsLoading = ref(false)
+const selectedHotThreadsNode = ref(null)
+const nodeOptions = ref([])
 
-const getHotThreads = async () => {
+const loadNodeOptions = async () => {
+  try {
+    const res = await GetNodeNames()
+    if (res.err === "" && res.results) {
+      const options = [{ label: t('diag.allNodesOption'), value: '' }]
+      for (const n of res.results) {
+        const name = n.name || n.ip
+        const label = n.name ? `${n.name} (${n.ip})` : n.ip
+        options.push({ label, value: name })
+      }
+      nodeOptions.value = options
+    }
+  } catch (e) {
+    // ignore
+  }
+}
+
+const fetchHotThreads = async (node) => {
   hotThreadsLoading.value = true
   try {
-    const res = await GetHotThreads()
+    const res = await GetHotThreads(node || '')
     if (res.err !== "") {
       message.error(res.err)
     } else {
@@ -351,6 +424,22 @@ const getHotThreads = async () => {
     message.error(e.message)
   } finally {
     hotThreadsLoading.value = false
+  }
+}
+
+const handleGetHotThreads = () => {
+  if (!selectedHotThreadsNode.value) {
+    dialog.warning({
+      title: t('diag.hotThreadsAllNodesWarningTitle'),
+      content: t('diag.hotThreadsAllNodesWarning'),
+      positiveText: t('common.confirm'),
+      negativeText: t('common.cancel'),
+      onPositiveClick: () => {
+        fetchHotThreads('')
+      },
+    })
+  } else {
+    fetchHotThreads(selectedHotThreadsNode.value)
   }
 }
 
@@ -384,20 +473,35 @@ const getPendingTasks = async () => {
   }
 }
 
-// ==================== 生命周期 ====================
+// ==================== 生命周期与懒加载 ====================
 const selectNode = async () => {
   shardData.value = []
+  hasQueriedShards.value = false
   threadPoolData.value = []
   hotThreadsText.value = ''
   pendingData.value = []
-  await getShards()
-  await getThreadPool()
+  selectedHotThreadsNode.value = null
+  await loadNodeOptions()
+  if (activeTab.value === 'threadPool') {
+    await getThreadPool()
+  } else if (activeTab.value === 'pendingTasks') {
+    await getPendingTasks()
+  }
 }
+
+watch(activeTab, (tab) => {
+  if (tab === 'threadPool' && threadPoolData.value.length === 0) {
+    getThreadPool()
+  } else if (tab === 'pendingTasks' && pendingData.value.length === 0) {
+    getPendingTasks()
+  } else if (tab === 'hotThreads' && nodeOptions.value.length === 0) {
+    loadNodeOptions()
+  }
+})
 
 onMounted(() => {
   emitter.on('selectNode', selectNode)
-  getShards()
-  getThreadPool()
+  loadNodeOptions()
 })
 </script>
 

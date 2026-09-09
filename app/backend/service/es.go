@@ -1926,7 +1926,8 @@ func (es *ESService) GetShards(index string) *types.ResultsResp {
 	if msg := es.checkConnect(); msg != "" {
 		return &types.ResultsResp{Err: msg}
 	}
-	api := "/_cat/shards?format=json&pretty&bytes=b"
+	api := "/_cat/shards?format=json&bytes=b&h=index,shard,prirep,state,docs,store,ip,node"
+	index = strings.TrimSpace(index)
 	if index != "" {
 		api = "/" + index + api
 	}
@@ -1972,12 +1973,17 @@ func (es *ESService) ExplainAllocation(indexName string, shard int, primary bool
 	return &types.ResultResp{Err: string(resp.Body())}
 }
 
-// GetHotThreads 获取节点热点线程（文本）
-func (es *ESService) GetHotThreads() *types.ResultResp {
+// GetHotThreads 获取节点热点线程（文本），nodeId 为空时获取集群全部节点
+func (es *ESService) GetHotThreads(nodeId string) *types.ResultResp {
 	if msg := es.checkConnect(); msg != "" {
 		return &types.ResultResp{Err: msg}
 	}
-	resp, err := es.Client.R().Get(es.ConnectObj.Host + "/_nodes/hot_threads")
+	api := "/_nodes/hot_threads"
+	nodeId = strings.TrimSpace(nodeId)
+	if nodeId != "" {
+		api = "/_nodes/" + url.PathEscape(nodeId) + "/hot_threads"
+	}
+	resp, err := es.Client.R().Get(es.ConnectObj.Host + api)
 	if err != nil {
 		return &types.ResultResp{Err: err.Error()}
 	}
@@ -1985,6 +1991,22 @@ func (es *ESService) GetHotThreads() *types.ResultResp {
 		return &types.ResultResp{Err: string(resp.Body())}
 	}
 	return &types.ResultResp{Result: string(resp.Body())}
+}
+
+// GetNodeNames 获取集群简要节点列表（用于下拉选择节点）
+func (es *ESService) GetNodeNames() *types.ResultsResp {
+	if msg := es.checkConnect(); msg != "" {
+		return &types.ResultsResp{Err: msg}
+	}
+	var result []any
+	resp, err := es.Client.R().SetResult(&result).Get(es.ConnectObj.Host + "/_cat/nodes?format=json&h=name,ip,master,node.role")
+	if err != nil {
+		return &types.ResultsResp{Err: err.Error()}
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return &types.ResultsResp{Err: string(resp.Body())}
+	}
+	return &types.ResultsResp{Results: result}
 }
 
 // GetPendingTasks 获取集群挂起的任务
