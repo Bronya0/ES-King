@@ -28,7 +28,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -205,8 +204,8 @@ func (es *ESService) GetIndexes(name string) *types.ResultsResp {
 	}
 	newUrl := es.ConnectObj.Host + AllIndexApi
 	if name != "" {
-		// 搜索词需要转义，避免空格、& 等字符破坏 URL
-		newUrl += "&index=" + url.QueryEscape("*"+name+"*")
+		// 搜索词需要转义，避免空格、& 等字符破坏 URL，通配符 * 保持字面量
+		newUrl += "&index=*" + url.QueryEscape(name) + "*"
 	}
 	log.Println(newUrl)
 	var result []any
@@ -440,6 +439,10 @@ func (es *ESService) Search(method, path string, body any) *types.ResultResp {
 	// REST 控制台会常见 201 Created、202 Accepted 等成功状态码，统一放行 2xx
 	if !resp.IsSuccess() {
 		return &types.ResultResp{Err: string(resp.Body())}
+	}
+	// 若返回内容非 JSON（如纯文本输出），SetResult 不会赋值 result，返回原始响应文本
+	if result == nil && len(resp.Body()) > 0 {
+		return &types.ResultResp{Result: string(resp.Body())}
 	}
 	return &types.ResultResp{Result: result}
 }
@@ -1060,9 +1063,9 @@ func (es *ESService) DownloadESIndex(index string, queryDSL string, filePath str
 		queryDSL = `{"match_all": {}}`
 	}
 
-	// 前端传来的路径以 / 开头，在 Windows 下会解析到盘符根目录（通常无写权限），改为落到用户主目录
-	if runtime.GOOS == "windows" && strings.HasPrefix(filePath, "/") {
-		rel := strings.TrimPrefix(filePath, "/")
+	// 前端传来的路径以 / 或 \ 开头，在各操作系统下会解析到系统根目录（通常无写权限），统一落到用户主目录
+	if strings.HasPrefix(filePath, "/") || strings.HasPrefix(filePath, "\\") {
+		rel := strings.TrimLeft(filePath, "/\\")
 		if home, err := os.UserHomeDir(); err == nil {
 			filePath = filepath.Join(home, rel)
 		}
