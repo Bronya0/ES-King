@@ -32,25 +32,23 @@
                 :options="indexOptions"
                 filterable
                 :placeholder="t('docs.selectIndex')"
-                style="min-width: 220px"
+                style="width: 260px;"
                 @update:value="resetBrowse"
             />
             <n-button :render-icon="renderIcon(RefreshOutlined)" text @click="loadIndexes"></n-button>
-          </n-flex>
-          <n-flex align="center">
             <n-input
                 v-model:value="queryDsl"
                 type="textarea"
                 :autosize="{minRows: 1, maxRows: 6}"
                 :placeholder='t("docs.queryPlaceholder")'
-                style="min-width: 40%"
+                style="min-width: 280px; flex: 1;"
                 @keydown.enter="newSearch"
             />
             <n-button :loading="loading" :render-icon="renderIcon(SearchFilled)" @click="newSearch">
               {{ t('common.search') }}
             </n-button>
             <n-button :render-icon="renderIcon(AddFilled)" @click="openAddDoc">{{ t('docs.addDoc') }}</n-button>
-            <n-button :render-icon="renderIcon(DriveFileMoveTwotone)" @click="activeTab = 'import'">
+            <n-button :render-icon="renderIcon(DriveFileMoveTwotone)" @click="openImportTab">
               {{ t('docs.import') }}
             </n-button>
             <n-button type="error" ghost :render-icon="renderIcon(DeleteFilled)" @click="confirmDeleteByQuery">
@@ -90,7 +88,7 @@
                 :options="indexOptions"
                 filterable
                 :placeholder="t('docs.selectIndex')"
-                style="min-width: 220px"
+                style="width: 260px;"
             />
             <n-input v-model:value="statsField" :placeholder="t('docs.fieldName')" style="width: 220px"
                      @keydown.enter="queryFieldStats"/>
@@ -122,8 +120,9 @@
                 :options="indexOptions"
                 filterable
                 :placeholder="t('docs.selectIndex')"
-                style="min-width: 220px"
+                style="width: 260px;"
             />
+            <n-button :render-icon="renderIcon(RefreshOutlined)" text @click="loadIndexes"></n-button>
             <n-radio-group v-model:value="importFormat">
               <n-radio value="json">JSON</n-radio>
               <n-radio value="csv">CSV</n-radio>
@@ -135,6 +134,7 @@
               type="textarea"
               :autosize="{minRows: 10, maxRows: 18}"
               :placeholder="importFormat === 'csv' ? t('docs.csvPlaceholder') : t('docs.jsonPlaceholder')"
+              class="json-editor-input"
           />
           <n-flex>
             <n-button type="primary" :loading="importLoading" :render-icon="renderIcon(UploadFilled)"
@@ -147,8 +147,8 @@
     </n-tabs>
 
     <!-- 查看/编辑文档 -->
-    <n-modal v-model:show="docDetail.show" preset="card" :title="docDetail.title" style="width: 640px;">
-      <n-code v-if="!docDetail.editing" :code="docDetail.content" language="json" show-line-numbers/>
+    <n-modal v-model:show="docDetail.show" preset="card" :title="docDetail.title" style="width: 640px; text-align: left;">
+      <n-code v-if="!docDetail.editing" :code="docDetail.content" language="json" show-line-numbers style="text-align: left;"/>
       <template v-else>
         <n-input v-model:value="docDetail.content" type="textarea" :autosize="{minRows: 10, maxRows: 22}"
                  class="json-editor-input"/>
@@ -160,7 +160,7 @@
     </n-modal>
 
     <!-- 添加文档 -->
-    <n-modal v-model:show="addDoc.show" preset="card" :title="t('docs.addDoc')" style="width: 640px;">
+    <n-modal v-model:show="addDoc.show" preset="card" :title="t('docs.addDoc')" style="width: 640px; text-align: left;">
       <n-input v-model:value="addDoc.doc" type="textarea" :autosize="{minRows: 10, maxRows: 22}"
                :placeholder='JSON.stringify({"field1": "value1"}, null, 2)' class="json-editor-input"/>
       <n-flex justify="end" style="margin-top: 12px;">
@@ -173,7 +173,7 @@
 
 <script setup>
 import {useI18n} from 'vue-i18n'
-import {computed, h, onMounted, ref} from "vue";
+import {computed, h, onMounted, ref, watch} from "vue";
 import emitter from "../utils/eventBus";
 import {NButton, NDropdown, NIcon, NTag, useDialog, useMessage} from 'naive-ui'
 import {formatNumber, isValidJson, refColumns, renderIcon} from "../utils/common";
@@ -614,14 +614,31 @@ const importDocs = async () => {
   }
 }
 
+const openImportTab = () => {
+  if (browseIndex.value) {
+    importIndex.value = browseIndex.value
+  }
+  activeTab.value = 'import'
+}
+
+watch(activeTab, (tab) => {
+  if (tab === 'import' && !importIndex.value && browseIndex.value) {
+    importIndex.value = browseIndex.value
+  }
+  if (tab === 'fieldStats' && !statsIndex.value && browseIndex.value) {
+    statsIndex.value = browseIndex.value
+  }
+})
+
 // ==================== 生命周期 ====================
-const selectNode = () => {
+const selectNode = async () => {
   indexOptions.value = []
   docs.value = []
   total.value = 0
   browseIndex.value = null
   statsIndex.value = null
   importIndex.value = null
+  await loadIndexes()
 }
 
 onMounted(() => {
@@ -632,6 +649,7 @@ onMounted(() => {
 
 <style scoped>
 .json-editor-input :deep(textarea) {
+  text-align: left !important;
   font-family: Consolas, Monaco, monospace;
 }
 </style>

@@ -203,7 +203,7 @@
 
     <!-- Mapping 编辑 -->
     <n-modal v-model:show="mappingModal.show" preset="card"
-             :title="t('index.editMapping') + ' - ' + mappingModal.index" style="width: 640px;">
+             :title="t('index.editMapping') + ' - ' + mappingModal.index" style="width: 640px; text-align: left;">
       <n-alert type="warning" :show-icon="true" style="margin-bottom: 12px;">{{ t('index.mappingEditWarning') }}</n-alert>
       <n-input v-model:value="mappingModal.content" type="textarea" :autosize="{minRows: 12, maxRows: 24}"
                class="json-editor-input"/>
@@ -215,7 +215,7 @@
 
     <!-- Settings 编辑 -->
     <n-modal v-model:show="settingsModal.show" preset="card"
-             :title="t('index.editSettings') + ' - ' + settingsModal.index" style="width: 640px;">
+             :title="t('index.editSettings') + ' - ' + settingsModal.index" style="width: 640px; text-align: left;">
       <n-alert type="info" :show-icon="true" style="margin-bottom: 12px;">{{ t('index.settingsEditWarning') }}</n-alert>
       <n-input v-model:value="settingsModal.content" type="textarea" :autosize="{minRows: 12, maxRows: 24}"
                class="json-editor-input"/>
@@ -1057,5 +1057,8 @@ const bulk_options = [
 </script>
 
 <style scoped>
-
+.json-editor-input :deep(textarea) {
+  text-align: left !important;
+  font-family: Consolas, Monaco, monospace;
+}
 </style>

@@ -24,22 +24,30 @@
 
     <!-- 查询Tab -->
     <n-tabs
+        v-model:value="activeTabId"
         type="editable-card"
         size="small"
-        :value="activeTabId"
+        addable
         :closable="tabs.length > 1"
         @update:value="handleTabSwitch"
         @add="addTab"
         @close="closeTab"
     >
-      <n-tab v-for="tab in tabs" :key="tab.id" :name="tab.id" :tab="tab.label"/>
+      <n-tab-pane v-for="tab in tabs" :key="tab.id" :name="tab.id" :tab="tab.label"/>
     </n-tabs>
 
     <n-flex align="center">
       <n-select v-model:value="method" :options="methodOptions" style="width: 120px;"/>
 
-      <div :id="ace_editorId" class="ace-editor" style="height:34px;min-width: 46.8%;text-align: left;
-        line-height: 34px;box-sizing: border-box;"/>
+      <n-auto-complete
+          v-model:value="urlPath"
+          :options="urlCompletions"
+          :placeholder="t('rest.enterApi')"
+          clearable
+          style="min-width: 320px; flex: 1;"
+          @update:value="handleUrlInput"
+          @keydown.enter="sendRequest"
+      />
 
       <n-button :loading="send_loading" :render-icon="renderIcon(SendSharp)" @click="sendRequest">{{ t('rest.send') }}</n-button>
       <n-button :render-icon="renderIcon(HistoryOutlined)" @click="showHistoryDrawer = true">{{ t('rest.history') }}</n-button>
@@ -218,8 +226,64 @@ const lastResponseText = ref('')
 let tabSeq = 1
 const tabs = ref([{id: 1, label: 'Tab 1', method: 'POST', path: '', dsl: '', response: ''}])
 const activeTabId = ref(1)
+const urlPath = ref('')
+
+const defaultEndpoints = [
+  '_search', '_cluster/health', '_cluster/state', '_cluster/stats',
+  '_cat/indices', '_cat/nodes', '_cat/shards', '_cat/allocation',
+  '_cat/count', '_cat/health', '_nodes/stats', '_tasks', '_flush',
+  '_refresh', '_mapping', '_settings', '_stats', '_bulk', '_update',
+  '_msearch', '_aliases', '_rollover', '_reindex', '_forcemerge',
+  '_count', '_analyze'
+]
+
+const urlCompletions = computed(() => {
+  const cur = (urlPath.value || '').trim()
+  let list = [...defaultEndpoints]
+  try {
+    const stored = localStorage.getItem('es_king_indexes')
+    if (stored) {
+      const idxList = JSON.parse(stored)
+      for (const idx of idxList) {
+        list.push(idx)
+        list.push(`${idx}/_search`)
+        list.push(`${idx}/_mapping`)
+        list.push(`${idx}/_settings`)
+        list.push(`${idx}/_count`)
+      }
+    }
+  } catch (e) {}
+
+  if (!cur) {
+    return list.slice(0, 20).map(v => {
+      const val = '/' + v.replace(/^\//, '')
+      return {label: val, value: val}
+    })
+  }
+
+  const query = cur.replace(/^\//, '').toLowerCase()
+  const matched = list.filter(item => item.toLowerCase().includes(query))
+  return matched.slice(0, 25).map(v => {
+    const val = cur.startsWith('/') ? '/' + v.replace(/^\//, '') : v
+    return {label: val, value: val}
+  })
+})
+
+const handleUrlInput = (val) => {
+  urlPath.value = val
+  const tab = tabs.value.find(item => item.id === activeTabId.value)
+  if (tab) {
+    tab.path = val
+    if (val && val.trim()) {
+      tab.label = val.trim().split('?')[0].slice(0, 18)
+    } else {
+      tab.label = `Tab ${tab.id}`
+    }
+  }
+}
 
 const addTab = () => {
+  persistToTab(activeTabId.value)
   tabSeq += 1
   tabs.value.push({
     id: tabSeq,
@@ -237,7 +301,16 @@ const closeTab = (tabId) => {
   if (idx === -1) return
   tabs.value.splice(idx, 1)
   if (tabs.value.length === 0) {
-    addTab()
+    tabSeq = 1
+    tabs.value.push({
+      id: 1,
+      label: 'Tab 1',
+      method: 'POST',
+      path: '',
+      dsl: '',
+      response: '',
+    })
+    handleTabSwitch(1)
     return
   }
   if (activeTabId.value === tabId) {
@@ -252,17 +325,21 @@ const handleTabSwitch = (tabId) => {
   activeTabId.value = tabId
   const tab = tabs.value.find(item => item.id === tabId)
   if (!tab) return
-  method.value = tab.method
-  setAceValue(tab.path)
-  editor.value.setText(tab.dsl)
-  if (tab.response) {
-    try {
-      response.value.set(JSON.parse(tab.response))
-    } catch {
-      response.value.setText(tab.response)
+  method.value = tab.method || 'POST'
+  urlPath.value = tab.path || ''
+  if (editor.value) {
+    editor.value.setText(tab.dsl || '')
+  }
+  if (response.value) {
+    if (tab.response) {
+      try {
+        response.value.set(JSON.parse(tab.response))
+      } catch {
+        response.value.setText(tab.response)
+      }
+    } else {
+      response.value.setText(t('rest.responseResult'))
     }
-  } else {
-    response.value.setText(t('rest.responseResult'))
   }
   lastResponseText.value = tab.response || ''
 }
@@ -270,10 +347,10 @@ const handleTabSwitch = (tabId) => {
 // 把当前编辑器内容保存进对应tab
 const persistToTab = (tabId) => {
   const tab = tabs.value.find(item => item.id === tabId)
-  if (!tab || !editor.value) return
+  if (!tab) return
   tab.method = method.value
-  tab.path = getAceValue() || ''
-  tab.dsl = editor.value.getText() || ''
+  tab.path = urlPath.value || ''
+  tab.dsl = editor.value ? editor.value.getText() : (tab.dsl || '')
   tab.response = lastResponseText.value || ''
 }
 
@@ -311,7 +388,7 @@ const confirmSaveFavorite = () => {
   favorites.value.unshift({
     name,
     method: method.value,
-    path: getAceValue() || '',
+    path: urlPath.value || '',
     dsl: editor.value?.getText() || '',
   })
   writeFavorites()
@@ -321,8 +398,8 @@ const confirmSaveFavorite = () => {
 
 const applyFavorite = (item) => {
   method.value = item.method
-  setAceValue(item.path)
-  editor.value.setText(item.dsl)
+  handleUrlInput(item.path)
+  editor.value?.setText(item.dsl)
   showFavoriteDrawer.value = false
 }
 
@@ -490,81 +567,7 @@ onMounted(async () => {
     response.value.setText(t('rest.responseResult'))
   }
   await read_history()
-
-  await nextTick()
-  initAce(t('rest.enterApi'), loadedConfig.theme)
-  await setAceIndex()
-
 });
-
-const ace_editor = ref(null)
-const ace_editorId = "ace-editor"
-
-const initAce = (defaultValue, theme) => {
-  ace.config.set('basePath', '/node_modules/ace-builds/src-noconflict')
-
-  ace_editor.value = ace.edit(document.getElementById(ace_editorId), {
-    mode: `ace/mode/text`,
-    theme: theme === 'light'? 'ace/theme/textmate': 'ace/theme/monokai',
-    placeholder: defaultValue,
-    fontSize: 14,
-    enableBasicAutocompletion: true,
-    enableLiveAutocompletion: true,
-    enableSnippets: true,
-    showLineNumbers: false,
-    maxLines: 1,
-    minLines: 1,
-    showGutter: false,
-    showPrintMargin: false,
-  })
-}
-
-const getAceValue = () => {
-  return ace_editor.value?.getValue()
-}
-
-const setAceValue = (newValue) => {
-  ace_editor.value?.setValue(newValue, -1)
-}
-
-const setAceCompleter = (completions) => {
-  const customCompleter = {
-    getCompletions: function (editor, session, pos, prefix, callback) {
-      callback(null, completions);
-    }
-  };
-  ace_editor.value.completers = [customCompleter]
-}
-
-const setAceIndex = async () => {
-  const keywords = [
-    '_search', '_cluster', '_cat', '_nodes', '_doc', '_tasks', '_flush', '_refresh',
-    '_mapping', '_settings', '_stats', '_bulk', '_update', '_msearch', '_alias',
-    '_rollover', '_reindex', '_snapshot', '_forcemerge', '_indices', '_count',
-    '_validate', '_explain', '_field_caps', '_search_shards', '_analyze',
-    'pretty', 'human', 'master_timeout', 'ignore_unavailable', 'allow_no_indices',
-    'expand_wildcards', 'wait_for_active_shards', 'wait_for_completion',
-    'format=json', 'size', 'from', 'q', 'scroll', 'routing', 'preference',
-    'timeout', 'filter_path',
-  ];
-  let completions = [];
-  for (let k of keywords) {
-    completions.push({value: k});
-  }
-  const key = 'es_king_indexes';
-  const stored = localStorage.getItem(key);
-  if (stored) {
-    const values = JSON.parse(stored)
-    for (let v of values) {
-      completions.push({
-        value: v,
-      })
-    }
-  }
-  if (completions.length > 0) {
-    setAceCompleter(completions)
-  }
-}
 
 const read_history = async () => {
   try {
@@ -579,8 +582,8 @@ const write_history = async () => {
     history.value.unshift({
       timestamp: Date.now(),
       method: method.value,
-      path: getAceValue(),
-      dsl: editor.value.getText()
+      path: urlPath.value || '',
+      dsl: editor.value ? editor.value.getText() : ''
     })
     if (history.value.length > 100) {
       history.value = history.value.slice(0, 100)
@@ -596,16 +599,15 @@ const write_history = async () => {
 
 function handleHistoryClick(m, p, d) {
   method.value = m
-  setAceValue(p)
-  editor.value.setText(d)
+  handleUrlInput(p)
+  editor.value?.setText(d)
   showHistoryDrawer.value = false
 }
 
 function themeChange(newTheme) {
   const new_editor_theme = newTheme.name === 'dark' ? 'ace/theme/monokai' : 'ace/theme/textmate'
-  editor.value.aceEditor.setTheme(new_editor_theme)
-  response.value.aceEditor.setTheme(new_editor_theme)
-  ace_editor.value?.setTheme(new_editor_theme)
+  editor.value?.aceEditor?.setTheme(new_editor_theme)
+  response.value?.aceEditor?.setTheme(new_editor_theme)
 }
 
 const formatDSL = (dsl) => {
@@ -618,13 +620,15 @@ const formatDSL = (dsl) => {
 
 const sendRequest = async () => {
   send_loading.value = true
-  response.value.set({})
-  let path = getAceValue()
-  if (!path.startsWith('/')) {
-    setAceValue('/' + path);
+  if (response.value) response.value.set({})
+  let path = (urlPath.value || '').trim()
+  if (path && !path.startsWith('/')) {
+    path = '/' + path
+    handleUrlInput(path)
   }
   try {
-    const res = await Search(method.value, path, editor.value.getText())
+    const dsl = editor.value ? editor.value.getText() : ''
+    const res = await Search(method.value, path, dsl)
     if (res.err !== "") {
       try {
         response.value.set(JSON.parse(res.err))
@@ -639,8 +643,10 @@ const sendRequest = async () => {
     }
   } catch (e) {
     message.error(e.message)
+  } finally {
+    persistToTab(activeTabId.value)
+    send_loading.value = false
   }
-  send_loading.value = false
 }
 
 const insertExample = (code) => {

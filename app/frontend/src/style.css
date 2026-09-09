@@ -43,5 +43,16 @@ body {
 }
 
 h2  {
-    text-align: left
+    text-align: left;
 }
+
+.n-card,
+.n-modal,
+.n-drawer,
+.n-input__textarea-el,
+.n-input__input-el,
+.n-code,
+pre,
+code {
+    text-align: left !important;
+}

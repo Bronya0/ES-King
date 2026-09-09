@@ -1647,7 +1647,7 @@ func (es *ESService) DeleteILMPolicy(policyId string) *types.ResultResp {
 
 // ==================== 索引模板 ====================
 
-// GetIndexTemplates 获取所有索引模板
+// GetIndexTemplates 获取所有索引模板（支持 ES 7.8+ _index_template 与旧版本 _template）
 func (es *ESService) GetIndexTemplates() *types.ResultsResp {
 	if msg := es.checkConnect(); msg != "" {
 		return &types.ResultsResp{Err: msg}
@@ -1658,6 +1658,37 @@ func (es *ESService) GetIndexTemplates() *types.ResultsResp {
 		return &types.ResultsResp{Err: err.Error()}
 	}
 	if resp.StatusCode() != http.StatusOK {
+		// 旧版 ES (<7.8) 不支持 _index_template，回退至 legacy _template
+		if strings.Contains(string(resp.Body()), "invalid_index_name_exception") {
+			var legacyResult map[string]any
+			legacyResp, lErr := es.Client.R().SetResult(&legacyResult).Get(es.ConnectObj.Host + "/_template")
+			if lErr != nil {
+				return &types.ResultsResp{Err: lErr.Error()}
+			}
+			if legacyResp.StatusCode() != http.StatusOK {
+				return &types.ResultsResp{Err: string(legacyResp.Body())}
+			}
+			var data []any
+			for name, tpl := range legacyResult {
+				tplMap, ok := tpl.(map[string]any)
+				if !ok {
+					continue
+				}
+				item := map[string]any{
+					"name":           name,
+					"index_patterns": tplMap["index_patterns"],
+					"priority":       tplMap["order"],
+					"version":        tplMap["version"],
+					"_template": map[string]any{
+						"settings": tplMap["settings"],
+						"mappings": tplMap["mappings"],
+						"aliases":  tplMap["aliases"],
+					},
+				}
+				data = append(data, item)
+			}
+			return &types.ResultsResp{Results: data}
+		}
 		return &types.ResultsResp{Err: string(resp.Body())}
 	}
 	var data []any
@@ -1702,6 +1733,20 @@ func (es *ESService) CreateIndexTemplate(name, body string) *types.ResultResp {
 		return &types.ResultResp{Err: err.Error()}
 	}
 	if resp.StatusCode() != http.StatusOK {
+		if strings.Contains(string(resp.Body()), "invalid_index_name_exception") {
+			// 旧版本 ES (<7.8) 回退至 /_template/{name}
+			resp, err = es.Client.R().
+				SetBody(bodyAny).
+				SetResult(&result).
+				Put(es.ConnectObj.Host + "/_template/" + url.PathEscape(name))
+			if err != nil {
+				return &types.ResultResp{Err: err.Error()}
+			}
+			if resp.StatusCode() != http.StatusOK {
+				return &types.ResultResp{Err: string(resp.Body())}
+			}
+			return &types.ResultResp{Result: result}
+		}
 		return &types.ResultResp{Err: string(resp.Body())}
 	}
 	return &types.ResultResp{Result: result}
@@ -1723,6 +1768,19 @@ func (es *ESService) DeleteIndexTemplate(name string) *types.ResultResp {
 		return &types.ResultResp{Err: err.Error()}
 	}
 	if resp.StatusCode() != http.StatusOK {
+		if strings.Contains(string(resp.Body()), "invalid_index_name_exception") {
+			// 旧版本 ES (<7.8) 回退至 /_template/{name}
+			resp, err = es.Client.R().
+				SetResult(&result).
+				Delete(es.ConnectObj.Host + "/_template/" + url.PathEscape(name))
+			if err != nil {
+				return &types.ResultResp{Err: err.Error()}
+			}
+			if resp.StatusCode() != http.StatusOK {
+				return &types.ResultResp{Err: string(resp.Body())}
+			}
+			return &types.ResultResp{Result: result}
+		}
 		return &types.ResultResp{Err: string(resp.Body())}
 	}
 	return &types.ResultResp{Result: result}
@@ -1739,6 +1797,10 @@ func (es *ESService) GetComponentTemplates() *types.ResultsResp {
 		return &types.ResultsResp{Err: err.Error()}
 	}
 	if resp.StatusCode() != http.StatusOK {
+		// 旧版 ES (<7.8) 无组件模板概念，返回空列表
+		if strings.Contains(string(resp.Body()), "invalid_index_name_exception") {
+			return &types.ResultsResp{Results: []any{}}
+		}
 		return &types.ResultsResp{Err: string(resp.Body())}
 	}
 	var data []any
@@ -1776,6 +1838,47 @@ func (es *ESService) CreateIndexFromTemplate(indexName, templateName string, num
 		return &types.ResultResp{Err: err.Error()}
 	}
 	if resp.StatusCode() != http.StatusOK {
+		if strings.Contains(string(resp.Body()), "invalid_index_name_exception") {
+			// 旧版 ES (<7.8) 回退至 /_template/{name}
+			var legacyTpl map[string]any
+			resp, err = es.Client.R().
+				SetResult(&legacyTpl).
+				Get(es.ConnectObj.Host + "/_template/" + url.PathEscape(templateName))
+			if err != nil {
+				return &types.ResultResp{Err: err.Error()}
+			}
+			if resp.StatusCode() != http.StatusOK {
+				return &types.ResultResp{Err: string(resp.Body())}
+			}
+			if tplObj, ok := legacyTpl[templateName].(map[string]any); ok {
+				body := types.H{}
+				settings := types.H{
+					"number_of_shards":   numberOfShards,
+					"number_of_replicas": numberOfReplicas,
+				}
+				if s, ok := tplObj["settings"].(map[string]any); ok {
+					for k, v := range s {
+						settings[k] = v
+					}
+				}
+				if m, ok := tplObj["mappings"]; ok && m != nil {
+					body["mappings"] = m
+				}
+				body["settings"] = settings
+				var createResult map[string]any
+				resp, err = es.Client.R().
+					SetBody(body).
+					SetResult(&createResult).
+					Put(es.ConnectObj.Host + "/" + indexName)
+				if err != nil {
+					return &types.ResultResp{Err: err.Error()}
+				}
+				if resp.StatusCode() != http.StatusOK {
+					return &types.ResultResp{Err: string(resp.Body())}
+				}
+				return &types.ResultResp{Result: createResult}
+			}
+		}
 		return &types.ResultResp{Err: string(resp.Body())}
 	}
 

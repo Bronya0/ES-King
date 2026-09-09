@@ -25,14 +25,14 @@
     <n-card size="small">
       <n-form label-placement="left" label-width="auto" style="max-width: 860px;">
         <n-form-item :label="t('analyze.index')">
-          <n-flex align="center" style="width: 100%;">
+          <n-flex align="center">
             <n-select
                 v-model:value="indexName"
                 :options="indexOptions"
                 filterable
                 clearable
                 :placeholder="t('analyze.indexOptional')"
-                style="min-width: 240px"
+                style="width: 280px;"
             />
             <n-button :render-icon="renderIcon(RefreshOutlined)" text @click="loadIndexes"></n-button>
           </n-flex>
@@ -46,11 +46,11 @@
               clearable
               :placeholder="t('analyze.analyzerPlaceholder')"
               :disabled="field !== ''"
-              style="min-width: 240px"
+              style="width: 280px;"
           />
         </n-form-item>
         <n-form-item :label="t('analyze.field')">
-          <n-input v-model:value="field" :placeholder="t('analyze.fieldPlaceholder')" style="width: 240px"/>
+          <n-input v-model:value="field" :placeholder="t('analyze.fieldPlaceholder')" style="width: 280px;"/>
         </n-form-item>
         <n-form-item :label="t('analyze.text')">
           <n-input
@@ -154,9 +154,10 @@ const doAnalyze = async () => {
   }
 }
 
-const selectNode = () => {
+const selectNode = async () => {
   indexOptions.value = []
   tokens.value = []
+  await loadIndexes()
 }
 
 onMounted(() => {

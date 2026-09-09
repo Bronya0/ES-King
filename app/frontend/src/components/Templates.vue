@@ -66,12 +66,12 @@
     </n-tabs>
 
     <!-- 模板详情 -->
-    <n-modal v-model:show="detail.show" preset="card" :title="detail.title" style="width: 720px;">
-      <n-code :code="detail.content" language="json" show-line-numbers/>
+    <n-modal v-model:show="detail.show" preset="card" :title="detail.title" style="width: 720px; text-align: left;">
+      <n-code :code="detail.content" language="json" show-line-numbers style="text-align: left;"/>
     </n-modal>
 
     <!-- 创建模板 -->
-    <n-modal v-model:show="createForm.show" preset="card" :title="t('templates.createTemplate')" style="width: 640px;">
+    <n-modal v-model:show="createForm.show" preset="card" :title="t('templates.createTemplate')" style="width: 640px; text-align: left;">
       <n-form label-placement="top">
         <n-form-item :label="t('templates.tplName')">
           <n-input v-model:value="createForm.name" placeholder="my-template"/>
@@ -273,9 +273,11 @@ const compColumns = computed(() => refColumns([
 ]))
 
 // ==================== 生命周期 ====================
-const selectNode = () => {
+const selectNode = async () => {
   tplData.value = []
   compData.value = []
+  await getTemplates()
+  await getComponentTemplates()
 }
 
 onMounted(() => {
@@ -287,6 +289,7 @@ onMounted(() => {
 
 <style scoped>
 .json-editor-input :deep(textarea) {
+  text-align: left !important;
   font-family: Consolas, Monaco, monospace;
 }
 </style>
