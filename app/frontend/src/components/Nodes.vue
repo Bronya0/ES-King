@@ -19,7 +19,6 @@
   <n-flex vertical>
     <n-flex align="center">
       <h2>{{ t('nodes.title') }}</h2>
-      <n-button :render-icon="renderIcon(RefreshOutlined)" text @click="getData">refresh</n-button>
       <n-text>{{ t('nodes.total', { count: data.length }) }}</n-text>
       <n-button :render-icon="renderIcon(RefreshOutlined)" @click="getData">{{ t('common.refresh') }}</n-button>
       <n-button :render-icon="renderIcon(DriveFileMoveTwotone)" @click="downloadAllDataCsv">{{ t('common.exportCsv') }}</n-button>

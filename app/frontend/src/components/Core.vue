@@ -19,7 +19,7 @@
   <n-flex vertical>
     <n-flex align="center">
       <h2>{{ t('core.title') }}</h2>
-      <n-button @click="getData" text :render-icon="renderIcon(RefreshOutlined)">refresh</n-button>
+      <n-button @click="getData" text :render-icon="renderIcon(RefreshOutlined)">{{ t('common.refresh') }}</n-button>
     </n-flex>
     <n-spin :show="loading" :description="t('app.connecting')">
       <n-collapse>

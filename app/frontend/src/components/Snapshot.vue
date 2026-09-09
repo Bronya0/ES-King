@@ -97,7 +97,7 @@
           </n-flex>
 
           <n-card :title="t('snapshot.tabRestore')" size="small">
-            <n-form label-placement="left" label-width="auto">
+            <n-form label-placement="left" label-width="auto" style="max-width: 680px;">
               <n-form-item :label="t('snapshot.repoName')">
                 <n-select v-model:value="restoreForm.repository" :options="repoSelectOptions"
                           :placeholder="t('snapshot.selectRepo')" @update:value="onRestoreRepoChange"/>
@@ -210,7 +210,7 @@
           </n-spin>
         </n-flex>
 
-        <n-modal v-model:show="ilmForm.show" preset="card" :title="t('snapshot.createIlmPolicy')" style="width: 640px;">
+        <n-modal v-model:show="ilmForm.show" preset="card" :title="t('snapshot.createIlmPolicy')" style="width: 640px; text-align: left;">
           <n-form label-placement="top">
             <n-form-item :label="t('snapshot.colPolicyId')">
               <n-input v-model:value="ilmForm.policyId" placeholder="logs-lifecycle"/>
@@ -854,6 +854,7 @@ onMounted(() => {
 
 <style scoped>
 .json-editor-input :deep(textarea) {
+  text-align: left !important;
   font-family: Consolas, Monaco, monospace;
 }
 </style>

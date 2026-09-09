@@ -20,13 +20,13 @@
 
     <n-flex align="center">
       <h2>{{ t('task.title') }}</h2>
-      <n-button :render-icon="renderIcon(RefreshOutlined)" text @click="getData">refresh</n-button>
+      <n-button :render-icon="renderIcon(RefreshOutlined)" text @click="getData">{{ t('common.refresh') }}</n-button>
     </n-flex>
     <n-flex align="center">
-      <n-input v-model:value="taskIdFilter" :placeholder="t('task.filterTaskId')" style="width: 150px; margin-right: 10px" />
-      <n-input v-model:value="nodeFilter" :placeholder="t('task.filterNode')" style="width: 150px; margin-right: 10px" />
-      <n-input v-model:value="actionFilter" :placeholder="t('task.filterAction')" style="width: 150px; margin-right: 10px" />
-      <n-button @click="applyFilters" style="margin-right: 10px">{{ t('task.query') }}</n-button>
+      <n-input v-model:value="taskIdFilter" :placeholder="t('task.filterTaskId')" style="width: 160px;" clearable />
+      <n-input v-model:value="nodeFilter" :placeholder="t('task.filterNode')" style="width: 160px;" clearable />
+      <n-input v-model:value="actionFilter" :placeholder="t('task.filterAction')" style="width: 160px;" clearable />
+      <n-button @click="applyFilters">{{ t('task.query') }}</n-button>
       <n-button :render-icon="renderIcon(DriveFileMoveTwotone)" @click="downloadAllDataCsv">{{ t('task.exportCsv') }}</n-button>
     </n-flex>
 
@@ -47,7 +47,7 @@
 
   <n-drawer v-model:show="drawerVisible" style="width: 38.2%">
     <n-drawer-content style="text-align: left;" :title="t('common.result')">
-      <n-code :code="json_data" language="json" show-line-numbers/>
+      <n-code :code="json_data" language="json" show-line-numbers word-wrap style="text-align: left;"/>
     </n-drawer-content>
   </n-drawer>
 </template>
@@ -217,5 +217,11 @@ const downloadAllDataCsv = async () => {
 </script>
 
 <style scoped>
-
+:deep(.n-code),
+:deep(.n-code pre),
+:deep(.n-code code) {
+  text-align: left !important;
+  white-space: pre-wrap !important;
+  word-break: break-all !important;
+}
 </style>

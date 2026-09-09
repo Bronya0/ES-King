@@ -80,7 +80,7 @@
 
     <n-drawer v-model:show="drawerVisible" style="width: 38.2%">
       <n-drawer-content :title="drawer_title" style="text-align: left;">
-        <n-code :code="json_data" language="json" show-line-numbers/>
+        <n-code :code="json_data" language="json" show-line-numbers word-wrap style="text-align: left;"/>
       </n-drawer-content>
     </n-drawer>
 
@@ -151,7 +151,7 @@
 
     <!-- 别名管理 -->
     <n-modal v-model:show="aliasModal.show" preset="card" :title="t('index.manageAlias') + ' - ' + aliasModal.index"
-             style="width: 560px;">
+             style="width: 560px; text-align: left;">
       <n-spin :show="aliasModal.loading">
         <n-empty v-if="aliasModal.aliases.length === 0" :description="t('index.noAlias')"/>
         <n-list v-else>
@@ -181,7 +181,7 @@
     </n-modal>
 
     <!-- Reindex -->
-    <n-modal v-model:show="reindexModal.show" preset="card" :title="t('index.reindex')" style="width: 560px;">
+    <n-modal v-model:show="reindexModal.show" preset="card" :title="t('index.reindex')" style="width: 560px; text-align: left;">
       <n-form label-placement="top">
         <n-form-item :label="t('index.sourceIndex')">
           <n-input :value="reindexModal.source" disabled/>

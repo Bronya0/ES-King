@@ -95,7 +95,7 @@
                 </n-button>
               </n-flex>
             </template>
-            <n-code :code="example.code" language="json"/>
+            <n-code :code="example.code" language="json" word-wrap style="text-align: left;"/>
           </n-collapse-item>
         </n-collapse>
       </n-flex>
@@ -139,7 +139,7 @@
                 </n-text>
               </div>
             </template>
-            <n-code v-if="item.dsl !== ''" :code="formatDSL(item.dsl)" language="json" style="text-align: left;"/>
+            <n-code v-if="item.dsl !== ''" :code="formatDSL(item.dsl)" language="json" word-wrap style="text-align: left;"/>
 
           </n-tooltip>
         </n-list-item>
@@ -171,7 +171,7 @@
   </n-drawer>
 
   <!-- 保存收藏弹窗 -->
-  <n-modal v-model:show="saveFavoriteModal.show" preset="card" :title="t('rest.saveFavorite')" style="width: 460px;">
+  <n-modal v-model:show="saveFavoriteModal.show" preset="card" :title="t('rest.saveFavorite')" style="width: 460px; text-align: left;">
     <n-input v-model:value="saveFavoriteModal.name" :placeholder="t('rest.favoriteName')" @keydown.enter="confirmSaveFavorite"/>
     <template #footer>
       <n-flex justify="end">

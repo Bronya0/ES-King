@@ -19,7 +19,7 @@
   <n-flex vertical>
     <n-flex align="center">
       <h2>{{ t('health.title') }}</h2>
-      <n-button :render-icon="renderIcon(RefreshOutlined)" text @click="getData">refresh</n-button>
+      <n-button :render-icon="renderIcon(RefreshOutlined)" text @click="getData">{{ t('common.refresh') }}</n-button>
     </n-flex>
     <n-spin :show="loading" :description="t('app.connecting')">
       <n-table :bordered="false" :single-line="false">
