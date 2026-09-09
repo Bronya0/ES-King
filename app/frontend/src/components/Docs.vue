@@ -147,8 +147,15 @@
     </n-tabs>
 
     <!-- 查看/编辑文档 -->
-    <n-modal v-model:show="docDetail.show" preset="card" :title="docDetail.title" style="width: 640px; text-align: left;">
-      <n-code v-if="!docDetail.editing" :code="docDetail.content" language="json" show-line-numbers style="text-align: left;"/>
+    <n-modal v-model:show="docDetail.show" preset="card" :title="docDetail.title" style="width: 680px; max-width: 90vw; text-align: left;">
+      <template v-if="!docDetail.editing">
+        <n-scrollbar style="max-height: 65vh;">
+          <n-code :code="docDetail.content" language="json" show-line-numbers word-wrap style="text-align: left;"/>
+        </n-scrollbar>
+        <n-flex justify="end" style="margin-top: 12px;">
+          <n-button @click="docDetail.show = false">{{ t('common.close') }}</n-button>
+        </n-flex>
+      </template>
       <template v-else>
         <n-input v-model:value="docDetail.content" type="textarea" :autosize="{minRows: 10, maxRows: 22}"
                  class="json-editor-input"/>

@@ -66,8 +66,15 @@
     </n-tabs>
 
     <!-- 模板详情 -->
-    <n-modal v-model:show="detail.show" preset="card" :title="detail.title" style="width: 720px; text-align: left;">
-      <n-code :code="detail.content" language="json" show-line-numbers style="text-align: left;"/>
+    <n-modal v-model:show="detail.show" preset="card" :title="detail.title" style="width: 720px; max-width: 90vw; text-align: left;">
+      <n-scrollbar style="max-height: 65vh;">
+        <n-code :code="detail.content" language="json" show-line-numbers word-wrap style="text-align: left;"/>
+      </n-scrollbar>
+      <template #footer>
+        <n-flex justify="end">
+          <n-button @click="detail.show = false">{{ t('common.close') }}</n-button>
+        </n-flex>
+      </template>
     </n-modal>
 
     <!-- 创建模板 -->

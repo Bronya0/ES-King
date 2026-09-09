@@ -111,8 +111,26 @@
     </n-tabs>
 
     <!-- 分配解释 -->
-    <n-modal v-model:show="explainModal.show" preset="card" :title="t('diag.explainTitle')" style="width: 720px;">
-      <n-code :code="explainModal.content" language="json" show-line-numbers/>
+    <n-modal
+        v-model:show="explainModal.show"
+        preset="card"
+        :title="t('diag.explainTitle')"
+        style="width: 800px; max-width: 90vw; text-align: left;"
+    >
+      <n-scrollbar style="max-height: 65vh;">
+        <n-code
+            :code="explainModal.content"
+            language="json"
+            show-line-numbers
+            word-wrap
+            style="text-align: left;"
+        />
+      </n-scrollbar>
+      <template #footer>
+        <n-flex justify="end">
+          <n-button @click="explainModal.show = false">{{ t('common.close') }}</n-button>
+        </n-flex>
+      </template>
     </n-modal>
   </n-flex>
 </template>
@@ -121,7 +139,7 @@
 import {useI18n} from 'vue-i18n'
 import {computed, h, onMounted, ref} from "vue";
 import emitter from "../utils/eventBus";
-import {NTag, useMessage} from 'naive-ui'
+import {NButton, NScrollbar, NTag, useMessage} from 'naive-ui'
 import {formatBytes, formatMillis, refColumns, renderIcon} from "../utils/common";
 import {RefreshOutlined} from "@vicons/material";
 import {
@@ -247,11 +265,18 @@ const shardColumns = computed(() => refColumns([
   {title: 'node', key: 'node'},
   {title: 'ip', key: 'ip', width: 130},
   {
-    title: t('common.operation'), key: 'actions', width: 120,
-    render: (row) => h('a', {
-      style: 'cursor: pointer;',
-      onClick: () => explainShard(row),
-    }, {default: () => t('diag.explain')}),
+    title: t('common.operation'), key: 'actions', width: 100,
+    render: (row) => h(
+        NButton,
+        {
+          size: 'small',
+          secondary: true,
+          strong: true,
+          type: 'info',
+          onClick: () => explainShard(row),
+        },
+        {default: () => t('diag.explain')}
+    ),
   },
 ]))
 
@@ -360,11 +385,13 @@ const getPendingTasks = async () => {
 }
 
 // ==================== 生命周期 ====================
-const selectNode = () => {
+const selectNode = async () => {
   shardData.value = []
   threadPoolData.value = []
   hotThreadsText.value = ''
   pendingData.value = []
+  await getShards()
+  await getThreadPool()
 }
 
 onMounted(() => {
@@ -376,6 +403,14 @@ onMounted(() => {
 
 <style scoped>
 .hot-threads-text :deep(textarea) {
+  text-align: left !important;
   font-family: Consolas, Monaco, monospace;
+}
+:deep(.n-code),
+:deep(.n-code pre),
+:deep(.n-code code) {
+  text-align: left !important;
+  white-space: pre-wrap !important;
+  word-break: break-all !important;
 }
 </style>

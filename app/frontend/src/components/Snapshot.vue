@@ -77,8 +77,15 @@
           <n-text depth="3">{{ t('snapshot.asyncCreateHint') }}</n-text>
         </n-modal>
 
-        <n-modal v-model:show="snapDetail.show" preset="card" :title="t('common.details')" style="width: 600px;">
-          <n-code :code="snapDetail.content" language="json" show-line-numbers/>
+        <n-modal v-model:show="snapDetail.show" preset="card" :title="t('common.details')" style="width: 600px; max-width: 90vw; text-align: left;">
+          <n-scrollbar style="max-height: 65vh;">
+            <n-code :code="snapDetail.content" language="json" show-line-numbers word-wrap style="text-align: left;"/>
+          </n-scrollbar>
+          <template #footer>
+            <n-flex justify="end">
+              <n-button @click="snapDetail.show = false">{{ t('common.close') }}</n-button>
+            </n-flex>
+          </template>
         </n-modal>
       </n-tab-pane>
 
@@ -223,8 +230,15 @@
           </template>
         </n-modal>
 
-        <n-modal v-model:show="ilmDetail.show" preset="card" :title="ilmDetail.title" style="width: 680px;">
-          <n-code :code="ilmDetail.content" language="json" show-line-numbers/>
+        <n-modal v-model:show="ilmDetail.show" preset="card" :title="ilmDetail.title" style="width: 680px; max-width: 90vw; text-align: left;">
+          <n-scrollbar style="max-height: 65vh;">
+            <n-code :code="ilmDetail.content" language="json" show-line-numbers word-wrap style="text-align: left;"/>
+          </n-scrollbar>
+          <template #footer>
+            <n-flex justify="end">
+              <n-button @click="ilmDetail.show = false">{{ t('common.close') }}</n-button>
+            </n-flex>
+          </template>
         </n-modal>
       </n-tab-pane>
     </n-tabs>

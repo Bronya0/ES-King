@@ -52,7 +52,15 @@ h2  {
 .n-input__textarea-el,
 .n-input__input-el,
 .n-code,
+.n-code *,
 pre,
 code {
     text-align: left !important;
+}
+
+.n-code pre,
+.n-code code {
+    white-space: pre-wrap !important;
+    word-break: break-all !important;
+    word-wrap: break-word !important;
 }
