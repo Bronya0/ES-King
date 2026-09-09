@@ -3,7 +3,7 @@
     <n-flex align="center">
       <h2>{{ t('snapshot.title') }}</h2>
     </n-flex>
-    <n-tabs type="line" animated>
+    <n-tabs v-model:value="activeTab" type="line" animated>
       <n-tab-pane name="repo" :tab="t('snapshot.tabRepo')">
         <n-flex vertical>
           <n-flex align="center">
@@ -263,6 +263,7 @@ import {
 const { t } = useI18n()
 const message = useMessage()
 const dialog = useDialog()
+const activeTab = ref('repo')
 
 // ==================== 仓库管理 ====================
 const repoLoading = ref(false)
@@ -460,10 +461,11 @@ const snapColumns = computed(() => [
       }, {default: () => t('common.details')}),
       h(NButton, {
         size: 'small', quaternary: true, type: 'warning',
-        onClick: () => {
+        onClick: async () => {
           restoreForm.value.repository = row.repository
+          await onRestoreRepoChange(row.repository)
           restoreForm.value.snapshot = row.snapshot
-          message.info(t('rest.dumpToRestore'))
+          activeTab.value = 'restore'
         }
       }, {default: () => t('common.execute')}),
       h(NButton, {
@@ -680,15 +682,15 @@ const slmColumns = computed(() => [
   {
     title: t('snapshot.colLastSuccess'), key: 'last_success', width: 170,
     render: (row) => {
-      if (row.last_success && row.last_success.time) return row.last_success.time
+      if (row.last_success && row.last_success.time_string) return row.last_success.time_string
       return '-'
     }
   },
   {
     title: t('snapshot.colLastFailure'), key: 'last_failure', width: 170,
     render: (row) => {
-      if (row.last_failure && row.last_failure.time) {
-        return h(NTag, {size: 'small', type: 'error'}, {default: () => row.last_failure.time})
+      if (row.last_failure && row.last_failure.time_string) {
+        return h(NTag, {size: 'small', type: 'error'}, {default: () => row.last_failure.time_string})
       }
       return '-'
     }

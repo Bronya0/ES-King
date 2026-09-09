@@ -649,6 +649,7 @@ func (es *ESService) GetSnapshots() *types.ResultsResp {
 					continue
 				}
 				state, _ := snapshot["state"].(string)
+				shards, _ := snapshot["shards"].(map[string]interface{})
 				items = append(items, map[string]interface{}{
 					"snapshot":          snapshot["snapshot"],
 					"repository":        repo,
@@ -656,8 +657,8 @@ func (es *ESService) GetSnapshots() *types.ResultsResp {
 					"start_time":        snapshot["start_time"],
 					"end_time":          snapshot["end_time"],
 					"indices":           snapshot["indices"],
-					"total_shards":      snapshot["shards_total"],
-					"successful_shards": snapshot["shards_successful"],
+					"total_shards":      shards["total"],
+					"successful_shards": shards["successful"],
 				})
 			}
 			mu.Lock()
@@ -1929,7 +1930,7 @@ func (es *ESService) GetShards(index string) *types.ResultsResp {
 	api := "/_cat/shards?format=json&bytes=b&h=index,shard,prirep,state,docs,store,ip,node"
 	index = strings.TrimSpace(index)
 	if index != "" {
-		api = "/" + index + api
+		api = "/_cat/shards/" + index + "?format=json&bytes=b&h=index,shard,prirep,state,docs,store,ip,node"
 	}
 	var result []any
 	resp, err := es.Client.R().SetResult(&result).Get(es.ConnectObj.Host + api)
@@ -2014,15 +2015,17 @@ func (es *ESService) GetPendingTasks() *types.ResultsResp {
 	if msg := es.checkConnect(); msg != "" {
 		return &types.ResultsResp{Err: msg}
 	}
-	var result []any
-	resp, err := es.Client.R().SetResult(&result).Get(es.ConnectObj.Host + "/_cluster/pending_tasks?format=json")
+	var result struct {
+		Tasks []any `json:"tasks"`
+	}
+	resp, err := es.Client.R().SetResult(&result).Get(es.ConnectObj.Host + "/_cluster/pending_tasks")
 	if err != nil {
 		return &types.ResultsResp{Err: err.Error()}
 	}
 	if resp.StatusCode() != http.StatusOK {
 		return &types.ResultsResp{Err: string(resp.Body())}
 	}
-	return &types.ResultsResp{Results: result}
+	return &types.ResultsResp{Results: result.Tasks}
 }
 
 // GetThreadPool 获取线程池状态

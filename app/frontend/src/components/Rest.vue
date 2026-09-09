@@ -25,11 +25,10 @@
     <!-- 查询Tab -->
     <n-tabs
         v-model:value="activeTabId"
-        type="editable-card"
+        type="card"
         size="small"
         addable
         :closable="tabs.length > 1"
-        @update:value="handleTabSwitch"
         @add="addTab"
         @close="closeTab"
     >
@@ -46,14 +45,11 @@
           clearable
           style="min-width: 320px; flex: 1;"
           @update:value="handleUrlInput"
-          @keydown.enter="sendRequest"
       />
 
       <n-button :loading="send_loading" :render-icon="renderIcon(SendSharp)" @click="sendRequest">{{ t('rest.send') }}</n-button>
       <n-button :render-icon="renderIcon(HistoryOutlined)" @click="showHistoryDrawer = true">{{ t('rest.history') }}</n-button>
       <n-button :render-icon="renderIcon(MenuBookTwotone)" @click="showDrawer = true">{{ t('rest.examples') }}</n-button>
-      <n-button :render-icon="renderIcon(StarOutlined)" @click="openSaveFavorite">{{ t('rest.saveFavorite') }}</n-button>
-      <n-button :render-icon="renderIcon(BookmarksFilled)" @click="showFavoriteDrawer = true">{{ t('rest.favorites') }}</n-button>
       <n-button :render-icon="renderIcon(TableRowsOutlined)" :type="showTableView ? 'primary' : 'default'"
                 @click="showTableView = !showTableView">{{ t('rest.tableView') }}
       </n-button>
@@ -72,6 +68,8 @@
               :bordered="false"
               :columns="tableColumns"
               :data="tableData"
+              :scroll-x="tableScrollX"
+              :row-key="rowKey"
               :max-height="620"
               virtual-scroll
               size="small"
@@ -147,50 +145,17 @@
       </n-list>
     </n-drawer-content>
   </n-drawer>
-
-  <!-- 收藏查询抽屉 -->
-  <n-drawer v-model:show="showFavoriteDrawer" style="width: 38.2%">
-    <n-drawer-content :title="t('rest.favorites')">
-      <n-empty v-if="favorites.length === 0" :description="t('rest.noFavorites')"/>
-      <n-list v-else>
-        <n-list-item v-for="(item, idx) in favorites" :key="idx">
-          <n-flex vertical>
-            <n-flex align="center" justify="space-between">
-              <n-tag :type="getMethodTagType(item.method)" size="small">{{ item.method }}</n-tag>
-              <n-text>{{ item.name }}</n-text>
-              <n-flex>
-                <n-button size="small" quaternary type="info" @click="applyFavorite(item)">{{ t('rest.apply') }}</n-button>
-                <n-button size="small" quaternary type="error" @click="removeFavorite(idx)">{{ t('common.delete') }}</n-button>
-              </n-flex>
-            </n-flex>
-            <n-text depth="3" style="font-size: 12px;">{{ item.path }}</n-text>
-          </n-flex>
-        </n-list-item>
-      </n-list>
-    </n-drawer-content>
-  </n-drawer>
-
-  <!-- 保存收藏弹窗 -->
-  <n-modal v-model:show="saveFavoriteModal.show" preset="card" :title="t('rest.saveFavorite')" style="width: 460px; text-align: left;">
-    <n-input v-model:value="saveFavoriteModal.name" :placeholder="t('rest.favoriteName')" @keydown.enter="confirmSaveFavorite"/>
-    <template #footer>
-      <n-flex justify="end">
-        <n-button @click="saveFavoriteModal.show = false">{{ t('common.cancel') }}</n-button>
-        <n-button type="primary" @click="confirmSaveFavorite">{{ t('common.save') }}</n-button>
-      </n-flex>
-    </template>
-  </n-modal>
 </template>
 
 <script setup>
 
 import { useI18n } from 'vue-i18n'
 import {NGrid, NGridItem, NInput, NSelect, useMessage} from 'naive-ui'
-import {computed, nextTick, onMounted, ref} from "vue";
+import {computed, nextTick, onMounted, ref, watch} from "vue";
 import {Search} from "../../wailsjs/go/service/ESService";
 import {
-  ArrowDownwardOutlined, BookmarksFilled, HistoryOutlined, MenuBookTwotone, SearchFilled, SendSharp,
-  StarOutlined, TableRowsOutlined
+  ArrowDownwardOutlined, HistoryOutlined, MenuBookTwotone, SearchFilled, SendSharp,
+  TableRowsOutlined
 } from "@vicons/material";
 import {flattenObject, formatTimestamp, renderIcon} from "../utils/common";
 import {GetConfig, GetHistory, SaveHistory} from "../../wailsjs/go/config/AppConfig";
@@ -216,7 +181,6 @@ const response = ref()
 const send_loading = ref(false)
 const showDrawer = ref(false)
 const showHistoryDrawer = ref(false)
-const showFavoriteDrawer = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(10)
 const showTableView = ref(false)
@@ -274,16 +238,10 @@ const handleUrlInput = (val) => {
   const tab = tabs.value.find(item => item.id === activeTabId.value)
   if (tab) {
     tab.path = val
-    if (val && val.trim()) {
-      tab.label = val.trim().split('?')[0].slice(0, 18)
-    } else {
-      tab.label = `Tab ${tab.id}`
-    }
   }
 }
 
 const addTab = () => {
-  persistToTab(activeTabId.value)
   tabSeq += 1
   tabs.value.push({
     id: tabSeq,
@@ -293,7 +251,7 @@ const addTab = () => {
     dsl: '',
     response: '',
   })
-  handleTabSwitch(tabSeq)
+  activeTabId.value = tabSeq
 }
 
 const closeTab = (tabId) => {
@@ -310,19 +268,24 @@ const closeTab = (tabId) => {
       dsl: '',
       response: '',
     })
-    handleTabSwitch(1)
+    activeTabId.value = 1
     return
   }
   if (activeTabId.value === tabId) {
     const next = tabs.value[Math.min(idx, tabs.value.length - 1)]
-    handleTabSwitch(next.id)
+    activeTabId.value = next.id
   }
 }
 
-const handleTabSwitch = (tabId) => {
-  if (tabId === activeTabId.value) return
-  persistToTab(activeTabId.value)
-  activeTabId.value = tabId
+// 切tab：先把当前内容存进旧tab，再恢复新tab的内容
+watch(activeTabId, (newId, oldId) => {
+  if (oldId !== undefined && oldId !== newId) {
+    persistToTab(oldId)
+  }
+  loadTab(newId)
+})
+
+const loadTab = (tabId) => {
   const tab = tabs.value.find(item => item.id === tabId)
   if (!tab) return
   method.value = tab.method || 'POST'
@@ -352,60 +315,6 @@ const persistToTab = (tabId) => {
   tab.path = urlPath.value || ''
   tab.dsl = editor.value ? editor.value.getText() : (tab.dsl || '')
   tab.response = lastResponseText.value || ''
-}
-
-// ==================== 收藏查询 ====================
-const FAVORITE_KEY = 'es_king_saved_queries'
-const favorites = ref([])
-
-const readFavorites = () => {
-  try {
-    favorites.value = JSON.parse(localStorage.getItem(FAVORITE_KEY)) || []
-  } catch {
-    favorites.value = []
-  }
-}
-
-const writeFavorites = () => {
-  localStorage.setItem(FAVORITE_KEY, JSON.stringify(favorites.value))
-}
-
-const saveFavoriteModal = ref({
-  show: false,
-  name: '',
-})
-
-const openSaveFavorite = () => {
-  saveFavoriteModal.value = {show: true, name: ''}
-}
-
-const confirmSaveFavorite = () => {
-  const name = saveFavoriteModal.value.name?.trim()
-  if (!name) {
-    message.warning(t('rest.inputFavoriteName'))
-    return
-  }
-  favorites.value.unshift({
-    name,
-    method: method.value,
-    path: urlPath.value || '',
-    dsl: editor.value?.getText() || '',
-  })
-  writeFavorites()
-  saveFavoriteModal.value.show = false
-  message.success(t('common.saveSuccess'))
-}
-
-const applyFavorite = (item) => {
-  method.value = item.method
-  handleUrlInput(item.path)
-  editor.value?.setText(item.dsl)
-  showFavoriteDrawer.value = false
-}
-
-const removeFavorite = (idx) => {
-  favorites.value.splice(idx, 1)
-  writeFavorites()
 }
 
 // ==================== 结果表格视图 ====================
@@ -438,6 +347,7 @@ const tableColumns = computed(() => {
       .map(key => ({
         title: key,
         key,
+        width: key === '_id' || key === '_index' ? 220 : 180,
         ellipsis: {tooltip: {scrollable: true}},
         render: (row) => {
           const value = row[key]
@@ -447,6 +357,10 @@ const tableColumns = computed(() => {
         },
       }))
 })
+
+const tableScrollX = computed(() => tableColumns.value.reduce((sum, col) => sum + (col.width || 120), 0))
+
+const rowKey = (row, index) => `${row._index ?? ''}#${row._id ?? ''}#${index}`
 
 const methodOptions = [
   {label: 'GET', value: 'GET'},
@@ -518,7 +432,6 @@ onMounted(async () => {
 
   emitter.on('selectNode', selectNode)
   emitter.on('update_theme', themeChange)
-  readFavorites()
 
   const loadedConfig = await GetConfig()
   let theme = 'ace/theme/jsoneditor'
