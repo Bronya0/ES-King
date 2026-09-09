@@ -30,6 +30,9 @@
       <n-form-item :label="t('about.kafkaClient')">
         <n-button @click="BrowserOpenURL(kafka_home_url)" :render-icon="renderIcon(HouseTwotone)">KafKa-King</n-button>
       </n-form-item>
+      <n-form-item :label="t('about.allyAgent')">
+        <n-button @click="BrowserOpenURL(ally_agent_url)" :render-icon="renderIcon(SmartToyTwotone)">ally-agent</n-button>
+      </n-form-item>
       <n-form-item :label="t('about.techGroup')">
         <n-button :focusable="false" @click="openUrl(qq_url)">{{ t('about.techGroup') }}✨</n-button>
       </n-form-item>
@@ -46,11 +49,12 @@ import { useI18n } from 'vue-i18n'
 import {NButton, NForm, NFormItem,} from 'naive-ui'
 import {BrowserOpenURL} from "../../wailsjs/runtime";
 import {openUrl, renderIcon} from "../utils/common";
-import {HouseTwotone} from '@vicons/material'
+import {HouseTwotone, SmartToyTwotone} from '@vicons/material'
 
 const { t } = useI18n()
 
 const kafka_home_url = "https://github.com/Bronya0/kafka-King"
+const ally_agent_url = "https://github.com/Bronya0/ally-agent"
 const qq_url = "https://qm.qq.com/cgi-bin/qm/qr?k=pDqlVFyLMYEEw8DPJlRSBN27lF8qHV2v&jump_from=webapi&authKey=Wle/K0ARM1YQWlpn6vvfiZuMedy2tT9BI73mUvXVvCuktvi0fNfmNR19Jhyrf2Nz"
 const home_url = "https://github.com/Bronya0/ES-King"
 </script>
