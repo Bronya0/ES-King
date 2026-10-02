@@ -433,6 +433,9 @@ onMounted(async () => {
   emitter.on('selectNode', selectNode)
   emitter.on('update_theme', themeChange)
 
+  // 先读历史：即使后面的编辑器初始化/文案渲染出错，历史记录也不会因此丢失
+  await read_history()
+
   const loadedConfig = await GetConfig()
   let theme = 'ace/theme/jsoneditor'
   if (loadedConfig) {
@@ -479,19 +482,24 @@ onMounted(async () => {
 
     response.value.setText(t('rest.responseResult'))
   }
-  await read_history()
 });
 
 const read_history = async () => {
   try {
-    history.value = await GetHistory()
+    const loaded = await GetHistory()
+    // 兜底：拿到的不是数组时按空历史处理，否则后面 unshift 会抛错、导致永远存不进历史
+    history.value = Array.isArray(loaded) ? loaded : []
   } catch (e) {
+    history.value = []
     message.error(e.message)
   }
 }
 
 const write_history = async () => {
   try {
+    if (!Array.isArray(history.value)) {
+      history.value = []
+    }
     history.value.unshift({
       timestamp: Date.now(),
       method: method.value,
@@ -588,9 +596,10 @@ const filteredHistory = computed(() => {
     return history.value
   } else {
     return history.value.filter(item => {
-      return item.method.includes(searchText.value) ||
-          item.path.includes(searchText.value) ||
-          item.dsl.includes(searchText.value)
+      const kw = searchText.value
+      return String(item.method || '').includes(kw) ||
+          String(item.path || '').includes(kw) ||
+          String(item.dsl || '').includes(kw)
     })
   }
 })

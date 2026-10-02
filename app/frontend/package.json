@@ -5,8 +5,9 @@
   "main": "",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "build": "npm run check:i18n && vite build",
+    "preview": "vite preview",
+    "check:i18n": "node scripts/check-i18n.js"
   },
   "dependencies": {
     "ace-builds": "1.4.12",
