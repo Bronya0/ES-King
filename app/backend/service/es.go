@@ -1087,8 +1087,13 @@ func (es *ESService) DownloadESIndex(index string, queryDSL string, filePath str
 	}()
 
 	// 构造初始搜索请求的 body，设置每批次大小为 10000
-	bodyStr := fmt.Sprintf(`{"size": 10000, "query": %s}`, queryDSL)
-	resp, err := es.Client.R().SetBody(bodyStr).Post(es.ConnectObj.Host + "/" + index + "/_search?scroll=3m")
+	// 查询条件先解析成 JSON 再序列化，避免字符串拼接被注入额外顶层字段（如 ,"aggs":{...}）
+	var query any
+	if err := json.Unmarshal([]byte(queryDSL), &query); err != nil {
+		res.Err = "查询DSL不是合法的JSON: " + err.Error()
+		return res
+	}
+	resp, err := es.Client.R().SetBody(types.H{"size": 10000, "query": query}).Post(es.ConnectObj.Host + "/" + index + "/_search?scroll=3m")
 	if err != nil {
 		res.Err = fmt.Sprintf("初始搜索请求失败: %v", err)
 		return res
@@ -1930,7 +1935,10 @@ func (es *ESService) GetShards(index string) *types.ResultsResp {
 	api := "/_cat/shards?format=json&bytes=b&h=index,shard,prirep,state,docs,store,ip,node"
 	index = strings.TrimSpace(index)
 	if index != "" {
-		api = "/_cat/shards/" + index + "?format=json&bytes=b&h=index,shard,prirep,state,docs,store,ip,node"
+		// index 来自前端的自由输入框，必须转义后再拼路径：
+		// 否则里面的 # 会把后面拼的 ?format=json 变成 URL 片段丢掉，ES 返回纯文本，
+		// 而 resty 只在 JSON/XML 响应时才反序列化，界面表现为空表且无任何报错
+		api = "/_cat/shards/" + url.PathEscape(index) + "?format=json&bytes=b&h=index,shard,prirep,state,docs,store,ip,node"
 	}
 	var result []any
 	resp, err := es.Client.R().SetResult(&result).Get(es.ConnectObj.Host + api)

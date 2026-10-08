@@ -35,16 +35,16 @@
                     :class="{ conn_card_selected: selectedNodeId === node.id }">
 
               <template #header-extra>
-                <n-space>
+                <n-space size="small">
                   <n-tag v-if="selectedNodeId === node.id" type="success" size="small" round>
                     {{ t('conn.connected') }}
                   </n-tag>
-                  <n-button @click.stop="editNode(node)" size="small">
+                  <n-button @click.stop="editNode(node)" size="tiny">
                     {{ t('common.edit') }}
                   </n-button>
                   <n-popconfirm @positive-click="deleteNode(node.id)" :negative-text="t('common.cancel')" :positive-text="t('common.confirm')">
                     <template #trigger>
-                      <n-button @click.stop size="small">
+                      <n-button @click.stop size="tiny">
                         {{ t('common.delete') }}
                       </n-button>
                     </template>
@@ -52,11 +52,7 @@
                   </n-popconfirm>
                 </n-space>
               </template>
-              <n-descriptions :column="1" label-placement="left">
-                <n-descriptions-item :label="t('conn.host')">
-                  {{ node.host }}
-                </n-descriptions-item>
-              </n-descriptions>
+              <n-text>{{ node.host }}</n-text>
             </n-card>
           </n-gi>
         </n-grid>
@@ -457,5 +453,25 @@ const selectNode = async (node) => {
 
 .lightTheme .conn_card.conn_card_selected {
   background-color: rgba(24, 160, 88, .05);
+}
+
+/* 卡片头部窄的时候：标题整行显示（超长用省略号），按钮自动换到下一行右对齐，
+   避免标题被挤成一个字一行、把卡片撑高。
+   naive 的卡片样式是运行时注入、优先级相当或更高，所以这两条要 !important 才能盖住；
+   flex-basis 必须是 auto：naive 默认的 flex:1 基准宽度是 0，会让标题被当成 0 宽而跟按钮挤在同一行 */
+.conn_card .n-card-header {
+  flex-wrap: wrap !important;
+  row-gap: 6px;
+}
+
+.conn_card .n-card-header__main {
+  flex: 1 1 auto !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conn_card .n-card-header__extra {
+  margin-left: auto;
 }
 </style>

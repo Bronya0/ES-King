@@ -20,6 +20,7 @@
   <n-menu
       :mode="'vertical'"
       :value="props.value"
+      :theme-overrides="{ itemHeight: (props.itemSize || 32) + 'px' }"
       @update:value="handleMenuSelect"
       :options="props.options"
       style="--wails-draggable:no-drag"
@@ -32,7 +33,7 @@
 
 import emitter from "../utils/eventBus";
 
-const props = defineProps(['options', 'value']);
+const props = defineProps(['options', 'value', 'itemSize']);
 
 const handleMenuSelect = (key, item) => {
   emitter.emit('menu_select', key)
@@ -41,5 +42,13 @@ const handleMenuSelect = (key, item) => {
 </script>
 
 <style>
+/* 收起态菜单：naive 默认行距 6px，缩到 32px 方块后图标显得挤，这里放到 12px；
+   首项保持 6px，免得顶栏下面空档过大 */
+.n-menu--collapsed .n-menu-item {
+  margin-top: 12px;
+}
 
+.n-menu--collapsed .n-menu-item:first-child {
+  margin-top: 6px;
+}
 </style>

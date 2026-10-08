@@ -38,12 +38,12 @@
                 <n-layout-sider
                     bordered
                     collapse-mode="width"
-                    :collapsed-width="60"
+                    :collapsed-width="siderWidth"
                     :collapsed="true"
                     style="--wails-draggable:drag"
                 >
                   <Aside
-                      :collapsed-width="60"
+                      :item-size="menuItemSize"
                       :value="activeItem.key"
                       :options="sideMenuOptions"
                   />
@@ -115,6 +115,11 @@ const { t, locale } = useI18n()
 
 let headerClass = shallowRef('lightTheme')
 let Theme = shallowRef(lightTheme)
+
+// 收起态侧栏：菜单高亮方块要正方形，所以行高 = 方块边长；
+// 侧栏宽度 = 方块边长 + 左右各 8px（naive 菜单自带的内缩）
+const menuItemSize = 32
+const siderWidth = menuItemSize + 16
 
 // Naive UI locale 映射表
 const naiveLocaleMap = {
